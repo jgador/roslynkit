@@ -8,7 +8,7 @@ public sealed class EnvelopeTests
     public async Task RunAsync_WritesJsonEnvelope_ForHelp()
     {
         using var writer = new StringWriter();
-        var exitCode = await new CliApplication(writer).RunAsync(["help"]);
+        var exitCode = await new CliApplication(writer).RunAsync(["help"], TestContext.Current.CancellationToken);
 
         using var document = JsonDocument.Parse(writer.ToString());
         var root = document.RootElement;

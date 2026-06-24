@@ -18,7 +18,7 @@ RoslynKit is a .NET 10 command-line tool. Production code lives under `src/Rosly
 
 - `dotnet restore .\RoslynKit.slnx` restores packages for the solution.
 - `dotnet build .\RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"` builds the CLI and tests with concise output.
-- `dotnet test .\RoslynKit.slnx --nologo` runs the xUnit test suite.
+- `dotnet test .\RoslynKit.slnx` runs the xUnit test suite through Microsoft Testing Platform.
 - `dotnet run --project .\src\RoslynKit -- help` runs the CLI locally.
 - `dotnet pack .\src\RoslynKit\RoslynKit.csproj` creates the .NET tool package.
 
@@ -70,6 +70,8 @@ Follow the existing style in touched files. Keep comments sparse; prefer clear n
 
 - Preserve the CLI-first architecture: no MCP server, no LSP client, no background daemon, and no editor-specific protocol coupling.
 - Prefer direct Roslyn/MSBuild APIs over shelling out to editors, language servers, or IDEs.
+- Prioritize read-only Roslyn intelligence: inspect, navigate, understand, and verify C# code before edit-producing workflows.
+- If formatting, rename, or code-action features are added, return deterministic proposed edits before adding any source-mutating apply mode.
 - Keep command execution separate from argument parsing.
 - Keep JSON contracts stable, deterministic, camelCase, and covered by parser/envelope tests when changed.
 - Pass `CancellationToken` through async Roslyn operations when available.
@@ -77,7 +79,7 @@ Follow the existing style in touched files. Keep comments sparse; prefer clear n
 
 ## Testing Guidelines
 
-Tests use xUnit in `tests/RoslynKit.Tests`. Name test methods as behavior statements, for example `Parse_RejectsDuplicateOption`. Add parser/envelope tests for CLI contract changes and focused Roslyn execution tests when command behavior changes. Run `dotnet test .\RoslynKit.slnx --nologo` before publishing changes.
+Tests use xUnit through Microsoft Testing Platform in `tests/RoslynKit.Tests`. Name test methods as behavior statements, for example `Parse_RejectsDuplicateOption`. Add parser/envelope tests for CLI contract changes and focused Roslyn execution tests when command behavior changes. Run `dotnet test .\RoslynKit.slnx` before publishing changes.
 
 ## Commit & Pull Request Guidelines
 

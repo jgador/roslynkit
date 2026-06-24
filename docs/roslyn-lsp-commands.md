@@ -6,15 +6,17 @@ Roslyn does not have a CLI command registry equivalent to RoslynKit's `BuiltinCo
 
 Use this document as reference material when deciding which Roslyn capabilities RoslynKit may expose as CLI commands. RoslynKit is intended to give coding agents C# language intelligence through a deterministic CLI and accompanying `SKILL.md`; it is not a design commitment to make RoslynKit a JSON-RPC LSP client or server.
 
+RoslynKit should prioritize read-only Roslyn functionality. The near-term surface should help agents inspect, navigate, understand, and verify C# code without modifying source files or project state. Edit-producing features such as formatting, rename, and code actions are lower priority; if exposed later, they should produce deterministic proposed edits before any apply mode exists.
+
 ## Priority Model
 
 Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents such as Codex, Claude Code, and Copilot.
 
 - `Implemented`: already exposed by RoslynKit and should remain stable. This means the command exists, not that the command is feature-complete.
 - `P0`: core read-only intelligence needed for a useful first agent skill.
-- `P1`: high-value edit, refactor, or deeper navigation support after the P0 surface is stable.
-- `P2`: useful for specialized workflows, but not required for the first strong agent-facing CLI.
-- `Defer`: LSP/editor lifecycle, client UI, Visual Studio-specific, or duplicate protocol plumbing that does not make sense as a direct RoslynKit command.
+- `P1`: high-value read-only navigation, context, or generated-code inspection after the P0 surface is stable.
+- `P2`: useful specialized read-only workflows or preview-only edit planning, but not required for the first strong agent-facing CLI.
+- `Defer`: LSP/editor lifecycle, client UI, direct source mutation, Visual Studio-specific behavior, or duplicate protocol plumbing that does not make sense as a direct RoslynKit command.
 
 ## Recommended RoslynKit Roadmap
 
@@ -31,14 +33,14 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 | P0 | `quick-info` | `textDocument/hover`, QuickInfo services | Gives agents exact type, signature, and documentation context at a position. |
 | P0 | `signature-help` | `textDocument/signatureHelp` | Helps agents call overloaded C# APIs correctly. |
 | P1 | `completion` | `textDocument/completion`, `completionItem/resolve` | Useful for member discovery, importable symbols, and API exploration. |
-| P1 | `code-actions` | `textDocument/codeAction`, `codeAction/resolve`, `codeAction/resolveFixAll` | Enables structured fixes such as add using, apply analyzer fix, and fix-all workflows. Prefer previewing edits before applying them. |
-| P1 | `format` | `textDocument/formatting`, `textDocument/rangeFormatting` | Lets agents normalize C# edits without relying on editor integration. |
-| P1 | `rename` | `textDocument/prepareRename`, `textDocument/rename`, `Renamer` | Enables safe symbol and document rename workflows. |
 | P1 | `document-highlights` | `textDocument/documentHighlight` | Helps agents understand local symbol usage inside a file. |
 | P1 | `call-hierarchy` | `textDocument/prepareCallHierarchy`, `callHierarchy/incomingCalls`, `callHierarchy/outgoingCalls` | Useful for tracing call flow and impact in service-style C# code. |
 | P1 | `type-hierarchy` | `textDocument/prepareTypeHierarchy`, `typeHierarchy/supertypes`, `typeHierarchy/subtypes` | Useful for inheritance, interface, and framework-extension analysis. |
 | P1 | `source-generators` | `workspace/_roslyn_refreshSourceGenerators`, source generated document APIs | Important for modern C# projects where generated code affects symbols and diagnostics. |
 | P1 | `generated-documents` | `workspace/textDocumentContent`, source generated document APIs | Gives agents access to generated or virtual source when needed for accurate reasoning. |
+| P2 | `code-actions` | `textDocument/codeAction`, `codeAction/resolve`, `codeAction/resolveFixAll` | Useful for structured fix planning, but edit-producing behavior must be preview-first and is lower priority than read-only intelligence. |
+| P2 | `format` | `textDocument/formatting`, `textDocument/rangeFormatting` | Useful for proposed formatting edits, but should not apply source changes by default. |
+| P2 | `rename` | `textDocument/prepareRename`, `textDocument/rename`, `Renamer` | Useful for safe symbol rename planning, but should return proposed edits before any apply mode exists. |
 | P2 | `semantic-tokens` | `textDocument/semanticTokens/full`, `textDocument/semanticTokens/range` | Can expose semantic classification, but agents usually need symbols and diagnostics first. |
 | P2 | `folding-ranges` | `textDocument/foldingRange` | Mostly editor UI, but can support coarse document chunking. |
 | P2 | `selection-ranges` | `textDocument/selectionRange` | Can help structure-aware selection/edit planning, but lower value than symbols and ranges from syntax. |
@@ -89,7 +91,7 @@ These method names have handlers in `C:\repo\GitHub\roslyn\src\LanguageServer\Pr
 - `workspace/executeCommand` - `Defer`
 - `workspace/symbol` - `Implemented`
 - `workspace/textDocumentContent` - `P1`
-- `workspace/willRenameFiles` - `P1`
+- `workspace/willRenameFiles` - `Defer`
 
 ### Navigation And Symbols
 
@@ -115,19 +117,19 @@ These method names have handlers in `C:\repo\GitHub\roslyn\src\LanguageServer\Pr
 - `textDocument/completion` - `P1`
 - `completionItem/resolve` - `P1`
 - `textDocument/signatureHelp` - `P0`
-- `textDocument/codeAction` - `P1`
-- `codeAction/resolve` - `P1`
-- `codeAction/resolveFixAll` - `P1`
+- `textDocument/codeAction` - `P2`
+- `codeAction/resolve` - `P2`
+- `codeAction/resolveFixAll` - `P2`
 - `textDocument/codeLens` - `P2`
 - `codeLens/resolve` - `P2`
 
 ### Editing
 
-- `textDocument/formatting` - `P1`
-- `textDocument/rangeFormatting` - `P1`
+- `textDocument/formatting` - `P2`
+- `textDocument/rangeFormatting` - `P2`
 - `textDocument/onTypeFormatting` - `P2`
-- `textDocument/prepareRename` - `P1`
-- `textDocument/rename` - `P1`
+- `textDocument/prepareRename` - `P2`
+- `textDocument/rename` - `P2`
 
 ### Document Structure And Presentation
 
@@ -205,9 +207,6 @@ These Roslyn command families are not currently exposed by RoslynKit and are pla
 ### P1 Gaps
 
 - completion
-- code actions
-- formatting
-- rename
 - document highlights
 - call hierarchy
 - type hierarchy
@@ -220,6 +219,9 @@ These Roslyn command families are not currently exposed by RoslynKit and are pla
 - selection range
 - inlay hints
 - semantic tokens
+- code actions as proposed edits
+- formatting as proposed edits
+- rename as proposed edits
 
 ## Verification Notes
 

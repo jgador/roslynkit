@@ -4,9 +4,12 @@ RoslynKit is an unofficial Roslyn-powered C# code intelligence CLI for coding ag
 
 It is deliberately not an MCP server and not an LSP client. The CLI loads C# solutions or projects through Roslyn/MSBuild APIs and returns deterministic JSON on stdout.
 
+RoslynKit prioritizes read-only Roslyn intelligence: inspect, navigate, understand, and verify C# code without changing source files or project state.
+
 ## Goals
 
 - Use Roslyn APIs directly instead of shelling out to an editor, language server, or IDE.
+- Prioritize read-only code intelligence before edit-producing refactor or formatting features.
 - Keep commands deterministic and scriptable for agents and terminal workflows.
 - Emit one JSON envelope for every command, including usage and error responses.
 - Support solution-level and project-level inspection with stable sorting and one-based source positions.
@@ -83,3 +86,4 @@ dotnet test .\RoslynKit.slnx
 - No LSP transport.
 - No background daemon.
 - No editor-specific protocol coupling.
+- No source mutation by default; any future edit-producing feature should emit proposed changes before applying them.

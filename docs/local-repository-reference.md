@@ -170,7 +170,8 @@ Keep RoslynKit's product boundary explicit:
 - CLI-first.
 - JSON stdout for commands.
 - Direct Roslyn/MSBuild APIs.
+- Read-only Roslyn intelligence first: inspect, navigate, understand, and verify C# code before adding edit-producing workflows.
+- Preview proposed edits before any future apply mode for formatting, rename, or code actions.
 - No MCP server.
 - No LSP client.
 - No background daemon.
-
