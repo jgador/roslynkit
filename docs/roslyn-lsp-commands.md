@@ -10,7 +10,7 @@ Use this document as reference material when deciding which Roslyn capabilities 
 
 Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents such as Codex, Claude Code, and Copilot.
 
-- `Implemented`: already exposed by RoslynKit and should remain stable.
+- `Implemented`: already exposed by RoslynKit and should remain stable. This means the command exists, not that the command is feature-complete.
 - `P0`: core read-only intelligence needed for a useful first agent skill.
 - `P1`: high-value edit, refactor, or deeper navigation support after the P0 surface is stable.
 - `P2`: useful for specialized workflows, but not required for the first strong agent-facing CLI.
@@ -20,7 +20,7 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 
 | Priority | RoslynKit command family | Roslyn method or API source | Why it matters for agents |
 | --- | --- | --- | --- |
-| Implemented | `workspace` | `MSBuildWorkspace`, solution/project/document APIs | Establishes the loaded C# workspace and source set. |
+| P0 | `workspace` | `MSBuildWorkspace`, `Project`, `Document`, source-generated, additional, and analyzer-config document APIs | Registered, but incomplete. It loads targets and lists baseline projects/documents, but agents cannot fully trust workspace context until it has focused execution tests, stronger generated-document filtering, source-generated document support, additional/analyzer-config document reporting, target-framework context, references, and option metadata. |
 | Implemented | `diagnostics` | compiler diagnostics, `textDocument/diagnostic`, `workspace/diagnostic` | Lets agents verify build/compiler issues before and after edits. |
 | Implemented | `symbols` | `workspace/symbol`, `SymbolFinder`, declarations | Lets agents locate named C# declarations without text-only search. |
 | Implemented | `document-symbols` | `textDocument/documentSymbol` | Gives compact structure for one file. |
@@ -54,7 +54,7 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 
 RoslynKit currently registers these commands:
 
-- `workspace`
+- `workspace` - registered, but incomplete; treat as P0 work
 - `diagnostics`
 - `symbols`
 - `document-symbols`
@@ -196,6 +196,7 @@ These Roslyn command families are not currently exposed by RoslynKit and are pla
 
 ### P0 Gaps
 
+- workspace
 - type definition
 - implementation search
 - hover or quick info
