@@ -5,6 +5,22 @@ namespace RoslynKit;
 
 public static class RoslynCommandExecutor
 {
+    private static readonly string[] SupportedSymbolKinds =
+    [
+        "namespace",
+        "type",
+        "member",
+        "method",
+        "property",
+        "field",
+        "event",
+        "class",
+        "interface",
+        "struct",
+        "enum",
+        "delegate",
+    ];
+
     public static async Task<object> ExecuteAsync(ParsedCommand command, CancellationToken cancellationToken)
     {
         return command.Name switch
@@ -98,27 +114,26 @@ public static class RoslynCommandExecutor
     {
         var query = command.Required("query");
         var maxResults = command.OptionalInt("max-results", 200, 1);
-        var comparison = command.Flag("case-sensitive") ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        var exact = command.Flag("exact");
+        var caseSensitive = command.Flag("case-sensitive");
+        var kind = command.Optional("kind");
+        var symbolFilter = GetSymbolFilter(command.Name, kind);
+        var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
-        var symbols = new List<SymbolDto>();
+        var sourcePaths = RoslynDocumentFilters.GetSolutionSourcePaths(loaded.Solution);
+        var foundSymbols = exact
+            ? await SymbolFinder.FindSourceDeclarationsAsync(loaded.Solution, query, ignoreCase: !caseSensitive, symbolFilter, cancellationToken).ConfigureAwait(false)
+            : await SymbolFinder.FindSourceDeclarationsWithPatternAsync(loaded.Solution, query, symbolFilter, cancellationToken).ConfigureAwait(false);
 
-        foreach (var project in loaded.Solution.Projects.OrderBy(project => project.Name, StringComparer.Ordinal))
-        {
-            var projectSourcePaths = RoslynDocumentFilters.GetProjectSourcePaths(project);
-            var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
-            if (compilation is null)
-            {
-                continue;
-            }
-
-            foreach (var symbol in RoslynSymbolSearch.EnumerateSourceSymbols(compilation.GlobalNamespace, cancellationToken))
-            {
-                if (RoslynDocumentFilters.IsDeclaredInProject(symbol, projectSourcePaths) && SymbolMatches(symbol, query, comparison))
-                {
-                    symbols.Add(SymbolDto.FromSymbol(symbol, project.Name));
-                }
-            }
-        }
+        var symbols = foundSymbols
+            .Where(symbol => RoslynSymbolSearch.IsCodeSymbol(symbol))
+            .Where(symbol => IsSpecificSymbolKindMatch(symbol, kind))
+            .Where(symbol => RoslynDocumentFilters.IsDeclaredInProject(symbol, sourcePaths))
+            .Where(symbol => exact || !caseSensitive || SymbolMatches(symbol, query, comparison))
+            .Select(symbol => SymbolDto.FromSymbol(symbol, GetProjectName(symbol, loaded.Solution), sourcePaths))
+            .Where(symbol => symbol.Declarations.Count > 0)
+            .DistinctBy(symbol => string.Concat(symbol.ProjectName, "|", symbol.Kind, "|", symbol.DisplayName, "|", symbol.PrimaryLocation?.Path, "|", symbol.PrimaryLocation?.Line, "|", symbol.PrimaryLocation?.Column))
+            .ToArray();
 
         var ordered = symbols
             .OrderBy(symbol => symbol.DisplayName, StringComparer.Ordinal)
@@ -128,7 +143,7 @@ public static class RoslynCommandExecutor
             .Take(maxResults)
             .ToArray();
 
-        return new SymbolsResult(loaded.TargetPath, query, symbols.Count, ordered.Length, symbols.Count > ordered.Length, ordered, loaded.WorkspaceDiagnostics);
+        return new SymbolsResult(loaded.TargetPath, query, symbols.Length, ordered.Length, symbols.Length > ordered.Length, ordered, loaded.WorkspaceDiagnostics);
     }
 
     private static async Task<object> DocumentSymbolsAsync(ParsedCommand command, CancellationToken cancellationToken)
@@ -228,5 +243,59 @@ public static class RoslynCommandExecutor
         return symbol.Name.Contains(query, comparison)
             || symbol.MetadataName.Contains(query, comparison)
             || (!RoslynSymbolSearch.IsConstructor(symbol) && symbol.ToDisplayString(SymbolDisplayFormats.Qualified).Contains(query, comparison));
+    }
+
+    private static SymbolFilter GetSymbolFilter(string commandName, string? kind)
+    {
+        return kind switch
+        {
+            null => SymbolFilter.All,
+            "namespace" => SymbolFilter.Namespace,
+            "type" or "class" or "interface" or "struct" or "enum" or "delegate" => SymbolFilter.Type,
+            "member" or "method" or "property" or "field" or "event" => SymbolFilter.Member,
+            _ => throw new CliUsageException(commandName, $"Unknown symbol kind '{kind}'. Supported values: {string.Join(", ", SupportedSymbolKinds)}."),
+        };
+    }
+
+    private static bool IsSpecificSymbolKindMatch(ISymbol symbol, string? kind)
+    {
+        return kind switch
+        {
+            null => true,
+            "namespace" => symbol.Kind == SymbolKind.Namespace,
+            "type" => symbol is ITypeSymbol,
+            "member" => RoslynSymbolSearch.IsCodeSymbol(symbol) && symbol.Kind is not SymbolKind.Namespace and not SymbolKind.NamedType,
+            "method" => symbol.Kind == SymbolKind.Method && !RoslynSymbolSearch.IsConstructor(symbol),
+            "property" => symbol.Kind == SymbolKind.Property,
+            "field" => symbol.Kind == SymbolKind.Field,
+            "event" => symbol.Kind == SymbolKind.Event,
+            "class" => symbol is INamedTypeSymbol { TypeKind: TypeKind.Class },
+            "interface" => symbol is INamedTypeSymbol { TypeKind: TypeKind.Interface },
+            "struct" => symbol is INamedTypeSymbol { TypeKind: TypeKind.Struct },
+            "enum" => symbol is INamedTypeSymbol { TypeKind: TypeKind.Enum },
+            "delegate" => symbol is INamedTypeSymbol { TypeKind: TypeKind.Delegate },
+            _ => false,
+        };
+    }
+
+    private static string GetProjectName(ISymbol symbol, Solution solution)
+    {
+        foreach (var location in symbol.Locations.Where(location => location.IsInSource))
+        {
+            if (location.SourceTree is not null && solution.GetDocument(location.SourceTree) is { } document)
+            {
+                return document.Project.Name;
+            }
+        }
+
+        foreach (var reference in symbol.DeclaringSyntaxReferences)
+        {
+            if (solution.GetDocument(reference.SyntaxTree) is { } document)
+            {
+                return document.Project.Name;
+            }
+        }
+
+        return symbol.ContainingAssembly?.Name ?? string.Empty;
     }
 }

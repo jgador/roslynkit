@@ -30,6 +30,13 @@ public static class RoslynDocumentFilters
             .ToHashSet(PathComparer);
     }
 
+    public static HashSet<string> GetSolutionSourcePaths(Solution solution)
+    {
+        return solution.Projects
+            .SelectMany(GetProjectSourcePaths)
+            .ToHashSet(PathComparer);
+    }
+
     public static bool IsDeclaredInProject(ISymbol symbol, ISet<string> projectSourcePaths)
     {
         return symbol.Locations.Any(location => LocationMatchesAnyPath(location, projectSourcePaths));

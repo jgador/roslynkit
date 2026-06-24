@@ -108,9 +108,25 @@ public sealed record SymbolDto(
 
     public static SymbolDto FromSymbol(ISymbol symbol, string projectName, string? restrictDeclarationsToPath)
     {
+        return FromSymbol(
+            symbol,
+            projectName,
+            location => restrictDeclarationsToPath is null || RoslynDocumentFilters.LocationMatchesPath(location, restrictDeclarationsToPath));
+    }
+
+    public static SymbolDto FromSymbol(ISymbol symbol, string projectName, ISet<string> restrictDeclarationsToPaths)
+    {
+        return FromSymbol(
+            symbol,
+            projectName,
+            location => RoslynDocumentFilters.LocationMatchesAnyPath(location, restrictDeclarationsToPaths));
+    }
+
+    private static SymbolDto FromSymbol(ISymbol symbol, string projectName, Func<Location, bool> includeDeclaration)
+    {
         var declarations = symbol.Locations
             .Where(location => location.IsInSource)
-            .Where(location => restrictDeclarationsToPath is null || RoslynDocumentFilters.LocationMatchesPath(location, restrictDeclarationsToPath))
+            .Where(includeDeclaration)
             .Select(SourceLocationDto.FromLocation)
             .OrderBy(location => location.Path, StringComparer.Ordinal)
             .ThenBy(location => location.Line)

@@ -19,4 +19,19 @@ public sealed class EnvelopeTests
         Assert.True(root.GetProperty("success").GetBoolean());
         Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
     }
+
+    [Fact]
+    public async Task RunAsync_ReturnsUsageError_ForInvalidSymbolKind()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(["symbols", "--target", "missing.slnx", "--query", "Foo", "--kind", "banana"], TestContext.Current.CancellationToken);
+
+        using var document = JsonDocument.Parse(writer.ToString());
+        var root = document.RootElement;
+
+        Assert.Equal(2, exitCode);
+        Assert.Equal("symbols", root.GetProperty("command").GetString());
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Contains("Unknown symbol kind 'banana'", root.GetProperty("errors")[0].GetProperty("message").GetString(), StringComparison.Ordinal);
+    }
 }

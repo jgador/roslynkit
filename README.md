@@ -35,6 +35,7 @@ Available commands:
 dotnet run --project .\src\RoslynKit -- workspace --target .\RoslynKit.slnx
 dotnet run --project .\src\RoslynKit -- diagnostics --target .\RoslynKit.slnx
 dotnet run --project .\src\RoslynKit -- symbols --target .\RoslynKit.slnx --query CliApplication
+dotnet run --project .\src\RoslynKit -- symbols --target .\RoslynKit.slnx --query RoslynCommandExecutor --exact --kind class
 dotnet run --project .\src\RoslynKit -- document-symbols --target .\RoslynKit.slnx --file .\src\RoslynKit\CliApplication.cs
 dotnet run --project .\src\RoslynKit -- definition --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 7 --column 20
 dotnet run --project .\src\RoslynKit -- references --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 7 --column 20
@@ -58,6 +59,7 @@ Examples:
 ```powershell
 dotnet run --project .\src\RoslynKit -- help symbols
 dotnet run --project .\src\RoslynKit -- symbols --target=.\RoslynKit.slnx --query=CliApplication --max=5
+dotnet run --project .\src\RoslynKit -- symbols --target=.\RoslynKit.slnx --query=ExecuteAsync --exact --kind=method
 dotnet run --project .\src\RoslynKit -- symbols --help
 ```
 

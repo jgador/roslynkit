@@ -25,12 +25,14 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "symbols",
             "Search source declarations by symbol name.",
-            ["roslynkit symbols --target <target> --query <text> [--max-results <n>] [--case-sensitive]"],
+            ["roslynkit symbols --target <target> --query <text> [--max-results <n>] [--case-sensitive] [--exact] [--kind <kind>]"],
             [
                 OptionSpec.String('t', "target", "target", "solution or project file to load", required: true),
                 OptionSpec.String('q', "query", "text", "symbol name text to search for", required: true),
                 OptionSpec.Integer(null, "max-results", "n", "maximum symbols to return"),
                 OptionSpec.Flag(null, "case-sensitive", "match query text case-sensitively"),
+                OptionSpec.Flag(null, "exact", "match the declaration name exactly"),
+                OptionSpec.String(null, "kind", "kind", "filter declarations by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate"),
             ]),
         new BuiltinCommand(
             "document-symbols",

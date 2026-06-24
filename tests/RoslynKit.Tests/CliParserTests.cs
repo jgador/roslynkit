@@ -27,12 +27,14 @@ public sealed class CliParserTests
     [Fact]
     public void Parse_CollectsLongOptionsWithInlineValues()
     {
-        var command = CliParser.Parse(["symbols", "--target=repo.slnx", "--query=CliApplication", "--max=5"]);
+        var command = CliParser.Parse(["symbols", "--target=repo.slnx", "--query=CliApplication", "--max=5", "--exact", "--kind=method"]);
 
         Assert.Equal("symbols", command.Name);
         Assert.Equal("repo.slnx", command.Required("target"));
         Assert.Equal("CliApplication", command.Required("query"));
         Assert.Equal(5, command.OptionalInt("max-results", 1, 1));
+        Assert.True(command.Flag("exact"));
+        Assert.Equal("method", command.Required("kind"));
     }
 
     [Fact]
