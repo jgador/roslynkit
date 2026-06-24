@@ -39,6 +39,8 @@ dotnet run --project .\src\RoslynKit -- references --target .\RoslynKit.slnx --f
 
 Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-based.
 
+See `docs/roslyn-lsp-commands.md` for the exhaustive Roslyn language-server method inventory used to compare RoslynKit's current command set with Roslyn's broader code intelligence surface.
+
 ## CLI Architecture
 
 RoslynKit follows Git's simple CLI shape:
