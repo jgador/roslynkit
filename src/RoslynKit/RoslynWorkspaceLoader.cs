@@ -13,7 +13,7 @@ public sealed class RoslynWorkspaceLoader : IDisposable
         Solution solution,
         string targetPath,
         string targetKind,
-        IReadOnlyList<WorkspaceDiagnosticDto> workspaceDiagnostics)
+        IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
     {
         Workspace = workspace;
         Solution = solution;
@@ -30,7 +30,7 @@ public sealed class RoslynWorkspaceLoader : IDisposable
 
     public string TargetKind { get; }
 
-    public IReadOnlyList<WorkspaceDiagnosticDto> WorkspaceDiagnostics { get; }
+    public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 
     public static async Task<RoslynWorkspaceLoader> LoadAsync(string targetPath, CancellationToken cancellationToken)
     {
@@ -42,7 +42,7 @@ public sealed class RoslynWorkspaceLoader : IDisposable
             throw new CliUsageException("unknown", $"Target file '{fullTargetPath}' does not exist.");
         }
 
-        var diagnostics = new List<WorkspaceDiagnosticDto>();
+        var diagnostics = new List<WorkspaceLoadDiagnostic>();
         var workspace = MSBuildWorkspace.Create(new Dictionary<string, string>
         {
             ["DesignTimeBuild"] = "true",
@@ -52,7 +52,7 @@ public sealed class RoslynWorkspaceLoader : IDisposable
 
         workspace.RegisterWorkspaceFailedHandler(args =>
         {
-            diagnostics.Add(new WorkspaceDiagnosticDto(args.Diagnostic.Kind.ToString(), args.Diagnostic.Message));
+            diagnostics.Add(new WorkspaceLoadDiagnostic(args.Diagnostic.Kind.ToString(), args.Diagnostic.Message));
         });
 
         var extension = Path.GetExtension(fullTargetPath);

@@ -42,7 +42,7 @@ public static class RoslynCommandExecutor
 
         var projects = loaded.Solution.Projects
             .OrderBy(project => project.Name, StringComparer.Ordinal)
-            .Select(project => new ProjectInfoDto(
+            .Select(project => new WorkspaceProject(
                 project.Name,
                 project.FilePath,
                 project.Language,
@@ -58,7 +58,7 @@ public static class RoslynCommandExecutor
             .OrderBy(project => project.Name, StringComparer.Ordinal)
             .SelectMany(project => project.Documents
                 .Where(document => includeGenerated || !RoslynDocumentFilters.IsGenerated(document))
-                .Select(document => new DocumentInfoDto(project.Name, document.Name, document.FilePath)))
+                .Select(document => new WorkspaceDocument(project.Name, document.Name, document.FilePath)))
             .OrderBy(document => document.ProjectName, StringComparer.Ordinal)
             .ThenBy(document => document.Path, StringComparer.Ordinal)
             .ToArray();
@@ -72,7 +72,7 @@ public static class RoslynCommandExecutor
         var includeGenerated = command.Flag("include-generated");
         var includeHidden = command.Flag("include-hidden");
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
-        var diagnostics = new List<DiagnosticDto>();
+        var diagnostics = new List<DiagnosticItem>();
 
         foreach (var project in loaded.Solution.Projects.OrderBy(project => project.Name, StringComparer.Ordinal))
         {
@@ -95,7 +95,7 @@ public static class RoslynCommandExecutor
                     continue;
                 }
 
-                diagnostics.Add(DiagnosticDto.FromDiagnostic(project.Name, diagnostic));
+                diagnostics.Add(DiagnosticItem.FromDiagnostic(project.Name, diagnostic));
             }
         }
 
@@ -125,12 +125,13 @@ public static class RoslynCommandExecutor
             ? await SymbolFinder.FindSourceDeclarationsAsync(loaded.Solution, query, ignoreCase: !caseSensitive, symbolFilter, cancellationToken).ConfigureAwait(false)
             : await SymbolFinder.FindSourceDeclarationsWithPatternAsync(loaded.Solution, query, symbolFilter, cancellationToken).ConfigureAwait(false);
 
+        // Normalize exact or pattern matches through RoslynKit-specific kind, source, and duplicate filters before ordering and truncation.
         var symbols = foundSymbols
             .Where(symbol => RoslynSymbolSearch.IsCodeSymbol(symbol))
             .Where(symbol => IsSpecificSymbolKindMatch(symbol, kind))
             .Where(symbol => RoslynDocumentFilters.IsDeclaredInProject(symbol, sourcePaths))
             .Where(symbol => exact || !caseSensitive || SymbolMatches(symbol, query, comparison))
-            .Select(symbol => SymbolDto.FromSymbol(symbol, GetProjectName(symbol, loaded.Solution), sourcePaths))
+            .Select(symbol => SymbolItem.FromSymbol(symbol, GetProjectName(symbol, loaded.Solution), sourcePaths))
             .Where(symbol => symbol.Declarations.Count > 0)
             .DistinctBy(symbol => string.Concat(symbol.ProjectName, "|", symbol.Kind, "|", symbol.DisplayName, "|", symbol.PrimaryLocation?.Path, "|", symbol.PrimaryLocation?.Line, "|", symbol.PrimaryLocation?.Column))
             .ToArray();
@@ -158,7 +159,7 @@ public static class RoslynCommandExecutor
         var symbols = root.DescendantNodesAndSelf()
             .Select(node => model.GetDeclaredSymbol(node, cancellationToken))
             .Where(symbol => symbol is not null && RoslynSymbolSearch.IsDocumentSymbol(symbol) && RoslynDocumentFilters.IsDeclaredInDocument(symbol, document.FilePath))
-            .Select(symbol => SymbolDto.FromSymbol(symbol!, document.Project.Name, document.FilePath))
+            .Select(symbol => SymbolItem.FromSymbol(symbol!, document.Project.Name, document.FilePath))
             .Where(symbol => symbol.Declarations.Count > 0)
             .DistinctBy(symbol => string.Concat(symbol.Kind, "|", symbol.DisplayName, "|", symbol.PrimaryLocation?.Path, "|", symbol.PrimaryLocation?.Line, "|", symbol.PrimaryLocation?.Column))
             .OrderBy(symbol => symbol.PrimaryLocation?.Line)
@@ -180,7 +181,7 @@ public static class RoslynCommandExecutor
             Path.GetFullPath(command.Required("file")),
             command.OptionalInt("line", 1, 1),
             command.OptionalInt("column", 1, 1),
-            SymbolDto.FromSymbol(sourceSymbol, document.Project.Name),
+            SymbolItem.FromSymbol(sourceSymbol, document.Project.Name),
             loaded.WorkspaceDiagnostics);
     }
 
@@ -194,7 +195,7 @@ public static class RoslynCommandExecutor
         var references = await SymbolFinder.FindReferencesAsync(sourceSymbol, loaded.Solution, cancellationToken).ConfigureAwait(false);
 
         var locations = references
-            .SelectMany(reference => reference.Locations.Select(location => ReferenceLocationDto.FromReferenceLocation(reference.Definition, location)))
+            .SelectMany(reference => reference.Locations.Select(location => ReferenceItem.FromReferenceLocation(reference.Definition, location)))
             .OrderBy(location => location.Path, StringComparer.Ordinal)
             .ThenBy(location => location.Line)
             .ThenBy(location => location.Column)
@@ -207,7 +208,7 @@ public static class RoslynCommandExecutor
             Path.GetFullPath(command.Required("file")),
             command.OptionalInt("line", 1, 1),
             command.OptionalInt("column", 1, 1),
-            SymbolDto.FromSymbol(sourceSymbol, document.Project.Name),
+            SymbolItem.FromSymbol(sourceSymbol, document.Project.Name),
             totalCount,
             locations.Length,
             totalCount > locations.Length,

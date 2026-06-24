@@ -1,6 +1,7 @@
 bin/
 obj/
 .vs/
+Visual Studio 18/
 .vscode/
 .idea/
 TestResults/

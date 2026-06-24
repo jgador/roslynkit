@@ -77,6 +77,13 @@ Follow the existing style in touched files. Keep comments sparse; prefer clear n
 - Pass `CancellationToken` through async Roslyn operations when available.
 - If a public CLI option, command, JSON shape, package surface, or documented workflow changes, update `README.md` or the relevant docs in the same change.
 
+## Post-Change Formatting
+
+After C# coding work, run these commands before final build/test verification:
+
+- `dotnet format whitespace .\RoslynKit.slnx --no-restore --verbosity minimal`
+- `dotnet format style .\RoslynKit.slnx --no-restore --severity warn --verbosity minimal`
+
 ## Testing Guidelines
 
 Tests use xUnit through Microsoft Testing Platform in `tests/RoslynKit.Tests`. Name test methods as behavior statements, for example `Parse_RejectsDuplicateOption`. Add parser/envelope tests for CLI contract changes and focused Roslyn execution tests when command behavior changes. Run `dotnet test .\RoslynKit.slnx` before publishing changes.
