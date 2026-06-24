@@ -1,7 +1,13 @@
 namespace RoslynKit;
 
+/// <summary>
+/// Parses RoslynKit command-line arguments into built-in command metadata and option values.
+/// </summary>
 public static class CliParser
 {
+    /// <summary>
+    /// Converts raw command-line tokens into a parsed RoslynKit command or help request.
+    /// </summary>
     public static ParsedCommand Parse(IReadOnlyList<string> args)
     {
         if (args.Count == 0 || IsHelpToken(args[0]))
@@ -206,6 +212,9 @@ public static class CliParser
     }
 }
 
+/// <summary>
+/// Represents a parsed RoslynKit command with resolved built-in metadata and option values.
+/// </summary>
 public sealed record ParsedCommand(
     string Name,
     BuiltinCommand? Builtin,
@@ -255,6 +264,9 @@ public sealed record ParsedCommand(
     }
 }
 
+/// <summary>
+/// Represents a command-line usage error that should be returned as a usage envelope.
+/// </summary>
 public sealed class CliUsageException : Exception
 {
     public CliUsageException(string commandName, string message)

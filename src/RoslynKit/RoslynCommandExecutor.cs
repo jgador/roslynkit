@@ -3,6 +3,9 @@ using Microsoft.CodeAnalysis.FindSymbols;
 
 namespace RoslynKit;
 
+/// <summary>
+/// Executes parsed RoslynKit commands against Roslyn workspaces and documents.
+/// </summary>
 public static class RoslynCommandExecutor
 {
     private static readonly string[] SupportedSymbolKinds =
@@ -21,6 +24,9 @@ public static class RoslynCommandExecutor
         "delegate",
     ];
 
+    /// <summary>
+    /// Dispatches a parsed command to the corresponding RoslynKit command handler.
+    /// </summary>
     public static async Task<object> ExecuteAsync(ParsedCommand command, CancellationToken cancellationToken)
     {
         return command.Name switch

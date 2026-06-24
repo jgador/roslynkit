@@ -3,6 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace RoslynKit.Tests;
 
+/// <summary>
+/// Verifies JSON envelope and help payload contracts emitted by the CLI.
+/// </summary>
 public sealed class EnvelopeTests
 {
     [Fact]

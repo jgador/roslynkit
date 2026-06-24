@@ -1,5 +1,8 @@
 namespace RoslynKit.Tests;
 
+/// <summary>
+/// Verifies symbol search behavior for the symbols command.
+/// </summary>
 public sealed class SymbolsCommandTests
 {
     [Fact]

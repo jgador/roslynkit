@@ -3,8 +3,14 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace RoslynKit;
 
+/// <summary>
+/// Resolves one-based line and column inputs into Roslyn source positions.
+/// </summary>
 public static class PositionResolver
 {
+    /// <summary>
+    /// Validates one-based source coordinates and converts them into a document position.
+    /// </summary>
     public static async Task<int> GetPositionAsync(Document document, int oneBasedLine, int oneBasedColumn, string commandName, CancellationToken cancellationToken)
     {
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);

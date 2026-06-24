@@ -1,5 +1,8 @@
 namespace RoslynKit.Tests;
 
+/// <summary>
+/// Verifies RoslynKit command-line parsing and usage validation behavior.
+/// </summary>
 public sealed class CliParserTests
 {
     [Fact]

@@ -4,6 +4,9 @@ using Microsoft.CodeAnalysis.MSBuild;
 
 namespace RoslynKit;
 
+/// <summary>
+/// Loads Roslyn workspaces from solution or project targets and exposes the resolved workspace state.
+/// </summary>
 public sealed class RoslynWorkspaceLoader : IDisposable
 {
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
@@ -32,6 +35,9 @@ public sealed class RoslynWorkspaceLoader : IDisposable
 
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 
+    /// <summary>
+    /// Opens a solution or project target with MSBuildWorkspace and captures any workspace load diagnostics.
+    /// </summary>
     public static async Task<RoslynWorkspaceLoader> LoadAsync(string targetPath, CancellationToken cancellationToken)
     {
         RegisterMSBuild();

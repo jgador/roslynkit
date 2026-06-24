@@ -1,5 +1,8 @@
 namespace RoslynKit;
 
+/// <summary>
+/// Stores the built-in RoslynKit command table and lookup helpers.
+/// </summary>
 public static class BuiltinCommandRegistry
 {
     private static readonly BuiltinCommand[] Builtins =

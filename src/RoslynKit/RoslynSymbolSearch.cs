@@ -2,8 +2,14 @@ using Microsoft.CodeAnalysis;
 
 namespace RoslynKit;
 
+/// <summary>
+/// Enumerates and classifies Roslyn source symbols for search and document-symbol commands.
+/// </summary>
 public static class RoslynSymbolSearch
 {
+    /// <summary>
+    /// Recursively walks namespace and type members to yield source-declared symbols in deterministic order.
+    /// </summary>
     public static IEnumerable<ISymbol> EnumerateSourceSymbols(INamespaceOrTypeSymbol root, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

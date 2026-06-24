@@ -66,7 +66,7 @@ Follow `.editorconfig`: UTF-8, spaces, final newline, 4-space indentation for C#
 
 ## C# Working Rules
 
-Follow the existing style in touched files. Keep comments sparse; prefer clear names and add comments only for non-obvious behavior.
+Follow the existing style in touched files. Prefer clear names and structure over commentary. Use sparse XML documentation comments in C#: add a brief `summary` comment to each class, do not add comments or XML docs to constructors, add a brief `summary` comment to a public method only when its behavior is complex or non-obvious, and do not add parameter documentation comments.
 
 - Preserve the CLI-first architecture: no MCP server, no LSP client, no background daemon, and no editor-specific protocol coupling.
 - Prefer direct Roslyn/MSBuild APIs over shelling out to editors, language servers, or IDEs.

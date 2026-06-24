@@ -1,11 +1,17 @@
 namespace RoslynKit;
 
+/// <summary>
+/// Describes one built-in RoslynKit command and its usage metadata.
+/// </summary>
 public sealed record BuiltinCommand(
     string Name,
     string Description,
     IReadOnlyList<string> Usage,
     IReadOnlyList<OptionSpec> Options);
 
+/// <summary>
+/// Describes one command-line option supported by a built-in command.
+/// </summary>
 public sealed record OptionSpec(
     char? ShortName,
     string LongName,

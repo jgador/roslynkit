@@ -3,6 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace RoslynKit;
 
+/// <summary>
+/// Runs parsed RoslynKit commands and writes JSON envelopes to stdout.
+/// </summary>
 public sealed class CliApplication
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -19,6 +22,9 @@ public sealed class CliApplication
         _stdout = stdout;
     }
 
+    /// <summary>
+    /// Parses command-line arguments, executes the requested command, and emits the resulting JSON envelope.
+    /// </summary>
     public async Task<int> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken = default)
     {
         JsonEnvelope envelope;

@@ -2,6 +2,9 @@ using Microsoft.CodeAnalysis;
 
 namespace RoslynKit;
 
+/// <summary>
+/// Filters Roslyn documents and symbol locations to the source files RoslynKit should report.
+/// </summary>
 public static class RoslynDocumentFilters
 {
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;

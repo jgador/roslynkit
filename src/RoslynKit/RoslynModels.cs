@@ -595,6 +595,9 @@ public sealed class ReferenceItem
     }
 }
 
+/// <summary>
+/// Provides shared symbol display formats for deterministic RoslynKit output.
+/// </summary>
 public static class SymbolDisplayFormats
 {
     public static readonly SymbolDisplayFormat Qualified = SymbolDisplayFormat.FullyQualifiedFormat
