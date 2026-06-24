@@ -5,6 +5,9 @@ obj/
 .idea/
 TestResults/
 artifacts/
+.synapse/*
+!.synapse/
+!.synapse/ignored.json
 *.user
 *.suo
 *.nupkg
