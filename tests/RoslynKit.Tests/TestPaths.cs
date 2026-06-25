@@ -31,7 +31,7 @@ internal static class TestPaths
 
     public static string WrapperScriptPath()
     {
-        return Path.Combine(RepositoryRoot(), ".agents", "skills", "roslynkit-csharp", "scripts", "invoke-roslynkit-csharp.ps1");
+        return Path.Combine(RepositoryRoot(), ".agents", "skills", "roslynkit-csharp", "scripts", "roslynkit.ps1");
     }
 
     public static string RepoFile(params string[] relativeSegments)

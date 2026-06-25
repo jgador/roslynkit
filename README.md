@@ -63,9 +63,9 @@ RoslynKit includes a repo-local skill at `.agents\skills\roslynkit-csharp\`.
 Use the wrapper directly:
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 -Operation workspace
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 -Operation body-read -Path .\src\RoslynKit\RoslynCommandExecutor.cs -StartLine 31 -EndLine 46
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 -Operation quick-info -Path .\src\RoslynKit\Program.cs -Line 10 -Column 20
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 -Operation workspace
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 -Operation body-read -Path .\src\RoslynKit\RoslynCommandExecutor.cs -StartLine 31 -EndLine 46
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 -Operation quick-info -Path .\src\RoslynKit\Program.cs -Line 10 -Column 20
 ```
 
 The wrapper resolves the nearest `.slnx`, then `.sln`, then `.csproj`, and always passes `--target` explicitly. Use `-Path` for file-backed operations; the wrapper translates that to RoslynKit's `--file` option. It routes ordinary C# semantic inspection to RoslynKit first and leaves literal text search, prose inspection, non-C# files, and workspace-load fallbacks to Codex CLI, which selects the terminal-native tool for the current platform.
@@ -90,13 +90,27 @@ dotnet run --project .\src\RoslynKit -- symbols --help
 
 ## Tool Packaging
 
-The project is configured as a .NET tool:
+RoslynKit ships as a .NET tool package with package ID `roslynkit`.
 
 ```powershell
-dotnet pack .\src\RoslynKit\RoslynKit.csproj
-dotnet tool install --global --add-source .\src\RoslynKit\bin\Release RoslynKit
+dotnet pack .\src\RoslynKit\RoslynKit.csproj -c Release -o .\artifacts\packages\roslynkit
+dotnet tool install --global roslynkit --add-source .\artifacts\packages\roslynkit --version 0.1.0 --ignore-failed-sources
 roslynkit help
 ```
+
+If `roslynkit` is already installed globally:
+
+```powershell
+dotnet tool update --global roslynkit --add-source .\artifacts\packages\roslynkit --version 0.1.0 --ignore-failed-sources
+```
+
+For a repeatable local folder-feed setup, use the helper script:
+
+```powershell
+pwsh .\scripts\prepare-roslynkit-package.ps1
+```
+
+That script recreates `.\artifacts\packages\roslynkit`, packs `roslynkit.0.1.0.nupkg` into the folder feed, and prints the exact `dotnet tool install` and `dotnet tool update` commands for dogfooding the current checkout. See `docs/dotnet-tool-release.md` for the maintainer packaging and publish workflow.
 
 ## Development
 

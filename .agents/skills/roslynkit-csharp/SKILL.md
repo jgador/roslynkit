@@ -19,7 +19,7 @@ Do not default to `Get-Content`, `Select-String`, or grep-style file reads for q
 Use the repo-local wrapper:
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 <args>
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 <args>
 ```
 
 When the skill lives inside the RoslynKit repo, the wrapper runs the local `src\RoslynKit\RoslynKit.csproj` so the skill follows the current checkout. In repos that only carry the skill files, it falls back to an installed `roslynkit` command.
@@ -45,7 +45,7 @@ Run `workspace` first when any of these are true:
 Example:
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 `
   -Operation workspace `
   -IncludeGenerated `
   -IncludeAdditional `
@@ -57,7 +57,7 @@ pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
 ### Declaration lookup
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 `
   -Operation declaration-lookup `
   -Query CliApplication `
   -Exact `
@@ -67,7 +67,7 @@ pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
 ### File structure
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 `
   -Operation file-structure `
   -Path .\src\RoslynKit\CliApplication.cs
 ```
@@ -75,7 +75,7 @@ pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
 ### Method or class body reads
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 `
   -Operation body-read `
   -Path .\src\RoslynKit\RoslynCommandExecutor.cs `
   -StartLine 26 `
@@ -85,7 +85,7 @@ pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
 ### Definition
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 `
   -Operation definition `
   -Path .\src\RoslynKit\Program.cs `
   -Line 9 `
@@ -95,7 +95,7 @@ pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
 ### References
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 `
   -Operation references `
   -Path .\src\RoslynKit\Program.cs `
   -Line 9 `
@@ -106,7 +106,7 @@ pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
 ### Implementations
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 `
   -Operation implementations `
   -Path .\SomeFile.cs `
   -Line 12 `
@@ -117,7 +117,7 @@ pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
 ### Quick info
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 `
   -Operation quick-info `
   -Path .\src\RoslynKit\Program.cs `
   -Line 9 `
@@ -127,7 +127,7 @@ pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
 ### Type definition
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 `
   -Operation type-definition `
   -Path .\SomeFile.cs `
   -Line 18 `
@@ -137,7 +137,7 @@ pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
 ### Signature help
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 `
   -Operation signature-help `
   -Path .\SomeFile.cs `
   -Line 24 `
@@ -151,7 +151,7 @@ pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
 3. Read it with `generated-document-read`.
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\invoke-roslynkit-csharp.ps1 `
+pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 `
   -Operation generated-document-read `
   -DocumentKey doc_ABC123
 ```
