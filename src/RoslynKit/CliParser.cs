@@ -33,6 +33,7 @@ public static class CliParser
 
         var options = ParseOptions(builtin, args, firstOptionIndex: 1);
         ValidateRequiredOptions(builtin, options);
+        ValidateCommandOptions(builtin.Name, options);
 
         return new ParsedCommand(builtin.Name, builtin, options, HelpSubject: null);
     }
@@ -173,7 +174,7 @@ public static class CliParser
             }
         }
 
-        throw new CliUsageException(builtin.Name, $"Unknown option '-{shortName}' for command '{builtin.Name}'.");
+        throw new CliUsageException(builtin.Name, $"Unknown short option '-{shortName}' for command '{builtin.Name}'.");
     }
 
     private static void ValidateOptionValue(BuiltinCommand builtin, OptionSpec option, string value)
@@ -203,6 +204,51 @@ public static class CliParser
             {
                 throw new CliUsageException(builtin.Name, $"Missing required option '--{option.LongName}'.");
             }
+        }
+    }
+
+    private static void ValidateCommandOptions(string commandName, IReadOnlyDictionary<string, string> options)
+    {
+        switch (commandName)
+        {
+            case "document-text":
+                ValidateDocumentSelector(commandName, options);
+                ValidateDocumentTextRangeOptions(commandName, options);
+                break;
+
+            case "document-symbols":
+            case "definition":
+            case "type-definition":
+            case "references":
+            case "implementations":
+            case "quick-info":
+            case "signature-help":
+                ValidateDocumentSelector(commandName, options);
+                break;
+        }
+    }
+
+    private static void ValidateDocumentSelector(string commandName, IReadOnlyDictionary<string, string> options)
+    {
+        var hasFile = options.ContainsKey("file");
+        var hasDocumentKey = options.ContainsKey("document-key");
+
+        if (hasFile == hasDocumentKey)
+        {
+            throw new CliUsageException(commandName, "Exactly one of '--file' or '--document-key' is required.");
+        }
+    }
+
+    private static void ValidateDocumentTextRangeOptions(string commandName, IReadOnlyDictionary<string, string> options)
+    {
+        if (options.ContainsKey("start-column") && !options.ContainsKey("start-line"))
+        {
+            throw new CliUsageException(commandName, "Option '--start-column' requires '--start-line'.");
+        }
+
+        if (options.ContainsKey("end-column") && !options.ContainsKey("end-line"))
+        {
+            throw new CliUsageException(commandName, "Option '--end-column' requires '--end-line'.");
         }
     }
 
@@ -248,11 +294,11 @@ public sealed record ParsedCommand(
         return Options.TryGetValue(name, out var value) && bool.TryParse(value, out var parsed) && parsed;
     }
 
-    public int OptionalInt(string name, int defaultValue, int minimumValue)
+    public int? OptionalInt(string name, int minimumValue)
     {
         if (!Options.TryGetValue(name, out var value))
         {
-            return defaultValue;
+            return null;
         }
 
         if (!int.TryParse(value, out var parsed) || parsed < minimumValue)
@@ -261,6 +307,11 @@ public sealed record ParsedCommand(
         }
 
         return parsed;
+    }
+
+    public int OptionalInt(string name, int defaultValue, int minimumValue)
+    {
+        return OptionalInt(name, minimumValue) ?? defaultValue;
     }
 }
 

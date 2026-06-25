@@ -6,6 +6,17 @@ using Microsoft.CodeAnalysis.FindSymbols;
 namespace RoslynKit;
 
 /// <summary>
+/// Names the RoslynKit document kinds surfaced in JSON payloads.
+/// </summary>
+public static class DocumentKindNames
+{
+    public const string Source = "source";
+    public const string SourceGenerated = "sourceGenerated";
+    public const string Additional = "additional";
+    public const string AnalyzerConfig = "analyzerConfig";
+}
+
+/// <summary>
 /// Workspace command payload.
 /// </summary>
 public sealed class WorkspaceResult
@@ -14,7 +25,7 @@ public sealed class WorkspaceResult
         string targetPath,
         string targetKind,
         IReadOnlyList<WorkspaceProject> projects,
-        IReadOnlyList<WorkspaceDocument> documents,
+        IReadOnlyList<DocumentDescriptor> documents,
         IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
     {
         TargetPath = targetPath;
@@ -34,7 +45,7 @@ public sealed class WorkspaceResult
     public IReadOnlyList<WorkspaceProject> Projects { get; }
 
     [JsonPropertyName("documents")]
-    public IReadOnlyList<WorkspaceDocument> Documents { get; }
+    public IReadOnlyList<DocumentDescriptor> Documents { get; }
 
     [JsonPropertyName("workspaceDiagnostics")]
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
@@ -126,22 +137,57 @@ public sealed class SymbolsResult
 }
 
 /// <summary>
+/// Document text command payload.
+/// </summary>
+public sealed class DocumentTextResult
+{
+    public DocumentTextResult(
+        DocumentDescriptor document,
+        DocumentRange resolvedRange,
+        string text,
+        bool truncated,
+        IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
+    {
+        Document = document;
+        ResolvedRange = resolvedRange;
+        Text = text;
+        Truncated = truncated;
+        WorkspaceDiagnostics = workspaceDiagnostics;
+    }
+
+    [JsonPropertyName("document")]
+    public DocumentDescriptor Document { get; }
+
+    [JsonPropertyName("resolvedRange")]
+    public DocumentRange ResolvedRange { get; }
+
+    [JsonPropertyName("text")]
+    public string Text { get; }
+
+    [JsonPropertyName("truncated")]
+    public bool Truncated { get; }
+
+    [JsonPropertyName("workspaceDiagnostics")]
+    public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
+}
+
+/// <summary>
 /// Document symbols command payload.
 /// </summary>
 public sealed class DocumentSymbolsResult
 {
     public DocumentSymbolsResult(
-        string filePath,
+        DocumentDescriptor document,
         IReadOnlyList<SymbolItem> symbols,
         IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
     {
-        FilePath = filePath;
+        Document = document;
         Symbols = symbols;
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
-    [JsonPropertyName("filePath")]
-    public string FilePath { get; }
+    [JsonPropertyName("document")]
+    public DocumentDescriptor Document { get; }
 
     [JsonPropertyName("symbols")]
     public IReadOnlyList<SymbolItem> Symbols { get; }
@@ -156,21 +202,21 @@ public sealed class DocumentSymbolsResult
 public sealed class DefinitionResult
 {
     public DefinitionResult(
-        string filePath,
+        DocumentDescriptor document,
         int line,
         int column,
         SymbolItem symbol,
         IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
     {
-        FilePath = filePath;
+        Document = document;
         Line = line;
         Column = column;
         Symbol = symbol;
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
-    [JsonPropertyName("filePath")]
-    public string FilePath { get; }
+    [JsonPropertyName("document")]
+    public DocumentDescriptor Document { get; }
 
     [JsonPropertyName("line")]
     public int Line { get; }
@@ -186,12 +232,92 @@ public sealed class DefinitionResult
 }
 
 /// <summary>
+/// Type definition command payload.
+/// </summary>
+public sealed class TypeDefinitionResult
+{
+    public TypeDefinitionResult(
+        DocumentDescriptor document,
+        int line,
+        int column,
+        SymbolItem symbol,
+        IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
+    {
+        Document = document;
+        Line = line;
+        Column = column;
+        Symbol = symbol;
+        WorkspaceDiagnostics = workspaceDiagnostics;
+    }
+
+    [JsonPropertyName("document")]
+    public DocumentDescriptor Document { get; }
+
+    [JsonPropertyName("line")]
+    public int Line { get; }
+
+    [JsonPropertyName("column")]
+    public int Column { get; }
+
+    [JsonPropertyName("symbol")]
+    public SymbolItem Symbol { get; }
+
+    [JsonPropertyName("workspaceDiagnostics")]
+    public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
+}
+
+/// <summary>
+/// Quick info command payload.
+/// </summary>
+public sealed class QuickInfoResult
+{
+    public QuickInfoResult(
+        DocumentDescriptor document,
+        int line,
+        int column,
+        DocumentRange resolvedRange,
+        IReadOnlyList<string> tags,
+        IReadOnlyList<QuickInfoSectionItem> sections,
+        IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
+    {
+        Document = document;
+        Line = line;
+        Column = column;
+        ResolvedRange = resolvedRange;
+        Tags = tags;
+        Sections = sections;
+        WorkspaceDiagnostics = workspaceDiagnostics;
+    }
+
+    [JsonPropertyName("document")]
+    public DocumentDescriptor Document { get; }
+
+    [JsonPropertyName("line")]
+    public int Line { get; }
+
+    [JsonPropertyName("column")]
+    public int Column { get; }
+
+    [JsonPropertyName("resolvedRange")]
+    public DocumentRange ResolvedRange { get; }
+
+    [JsonPropertyName("tags")]
+    public IReadOnlyList<string> Tags { get; }
+
+    [JsonPropertyName("sections")]
+    public IReadOnlyList<QuickInfoSectionItem> Sections { get; }
+
+    [JsonPropertyName("workspaceDiagnostics")]
+    public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
+}
+
+/// <summary>
 /// References command payload.
 /// </summary>
 public sealed class ReferencesResult
 {
     public ReferencesResult(
-        string filePath,
+        DocumentDescriptor document,
         int line,
         int column,
         SymbolItem symbol,
@@ -201,7 +327,7 @@ public sealed class ReferencesResult
         IReadOnlyList<ReferenceItem> locations,
         IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
     {
-        FilePath = filePath;
+        Document = document;
         Line = line;
         Column = column;
         Symbol = symbol;
@@ -212,8 +338,8 @@ public sealed class ReferencesResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
-    [JsonPropertyName("filePath")]
-    public string FilePath { get; }
+    [JsonPropertyName("document")]
+    public DocumentDescriptor Document { get; }
 
     [JsonPropertyName("line")]
     public int Line { get; }
@@ -241,6 +367,182 @@ public sealed class ReferencesResult
 }
 
 /// <summary>
+/// Implementations command payload.
+/// </summary>
+public sealed class ImplementationsResult
+{
+    public ImplementationsResult(
+        DocumentDescriptor document,
+        int line,
+        int column,
+        SymbolItem symbol,
+        int totalCount,
+        int returnedCount,
+        bool truncated,
+        IReadOnlyList<SymbolItem> symbols,
+        IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
+    {
+        Document = document;
+        Line = line;
+        Column = column;
+        Symbol = symbol;
+        TotalCount = totalCount;
+        ReturnedCount = returnedCount;
+        Truncated = truncated;
+        Symbols = symbols;
+        WorkspaceDiagnostics = workspaceDiagnostics;
+    }
+
+    [JsonPropertyName("document")]
+    public DocumentDescriptor Document { get; }
+
+    [JsonPropertyName("line")]
+    public int Line { get; }
+
+    [JsonPropertyName("column")]
+    public int Column { get; }
+
+    [JsonPropertyName("symbol")]
+    public SymbolItem Symbol { get; }
+
+    [JsonPropertyName("totalCount")]
+    public int TotalCount { get; }
+
+    [JsonPropertyName("returnedCount")]
+    public int ReturnedCount { get; }
+
+    [JsonPropertyName("truncated")]
+    public bool Truncated { get; }
+
+    [JsonPropertyName("symbols")]
+    public IReadOnlyList<SymbolItem> Symbols { get; }
+
+    [JsonPropertyName("workspaceDiagnostics")]
+    public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
+}
+
+/// <summary>
+/// Signature help command payload.
+/// </summary>
+public sealed class SignatureHelpResult
+{
+    public SignatureHelpResult(
+        DocumentDescriptor document,
+        int line,
+        int column,
+        DocumentRange resolvedRange,
+        int activeSignature,
+        int activeParameter,
+        IReadOnlyList<SignatureHelpSignatureItem> signatures,
+        IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
+    {
+        Document = document;
+        Line = line;
+        Column = column;
+        ResolvedRange = resolvedRange;
+        ActiveSignature = activeSignature;
+        ActiveParameter = activeParameter;
+        Signatures = signatures;
+        WorkspaceDiagnostics = workspaceDiagnostics;
+    }
+
+    [JsonPropertyName("document")]
+    public DocumentDescriptor Document { get; }
+
+    [JsonPropertyName("line")]
+    public int Line { get; }
+
+    [JsonPropertyName("column")]
+    public int Column { get; }
+
+    [JsonPropertyName("resolvedRange")]
+    public DocumentRange ResolvedRange { get; }
+
+    [JsonPropertyName("activeSignature")]
+    public int ActiveSignature { get; }
+
+    [JsonPropertyName("activeParameter")]
+    public int ActiveParameter { get; }
+
+    [JsonPropertyName("signatures")]
+    public IReadOnlyList<SignatureHelpSignatureItem> Signatures { get; }
+
+    [JsonPropertyName("workspaceDiagnostics")]
+    public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
+}
+
+/// <summary>
+/// Shared descriptor for a document resolved inside a target workspace.
+/// </summary>
+public sealed class DocumentDescriptor
+{
+    public DocumentDescriptor(
+        string documentKey,
+        string projectName,
+        string? projectPath,
+        string? targetFramework,
+        string documentKind,
+        string name,
+        string? path)
+    {
+        DocumentKey = documentKey;
+        ProjectName = projectName;
+        ProjectPath = projectPath;
+        TargetFramework = targetFramework;
+        DocumentKind = documentKind;
+        Name = name;
+        Path = path;
+    }
+
+    [JsonPropertyName("documentKey")]
+    public string DocumentKey { get; }
+
+    [JsonPropertyName("projectName")]
+    public string ProjectName { get; }
+
+    [JsonPropertyName("projectPath")]
+    public string? ProjectPath { get; }
+
+    [JsonPropertyName("targetFramework")]
+    public string? TargetFramework { get; }
+
+    [JsonPropertyName("documentKind")]
+    public string DocumentKind { get; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; }
+
+    [JsonPropertyName("path")]
+    public string? Path { get; }
+}
+
+/// <summary>
+/// One-based range inside a specific document.
+/// </summary>
+public sealed class DocumentRange
+{
+    public DocumentRange(int line, int column, int endLine, int endColumn)
+    {
+        Line = line;
+        Column = column;
+        EndLine = endLine;
+        EndColumn = endColumn;
+    }
+
+    [JsonPropertyName("line")]
+    public int Line { get; }
+
+    [JsonPropertyName("column")]
+    public int Column { get; }
+
+    [JsonPropertyName("endLine")]
+    public int EndLine { get; }
+
+    [JsonPropertyName("endColumn")]
+    public int EndColumn { get; }
+}
+
+/// <summary>
 /// Workspace project metadata.
 /// </summary>
 public sealed class WorkspaceProject
@@ -248,12 +550,14 @@ public sealed class WorkspaceProject
     public WorkspaceProject(
         string name,
         string? path,
+        string? targetFramework,
         string language,
         int documentCount,
         IReadOnlyList<string> projectReferences)
     {
         Name = name;
         Path = path;
+        TargetFramework = targetFramework;
         Language = language;
         DocumentCount = documentCount;
         ProjectReferences = projectReferences;
@@ -265,6 +569,9 @@ public sealed class WorkspaceProject
     [JsonPropertyName("path")]
     public string? Path { get; }
 
+    [JsonPropertyName("targetFramework")]
+    public string? TargetFramework { get; }
+
     [JsonPropertyName("language")]
     public string Language { get; }
 
@@ -273,28 +580,6 @@ public sealed class WorkspaceProject
 
     [JsonPropertyName("projectReferences")]
     public IReadOnlyList<string> ProjectReferences { get; }
-}
-
-/// <summary>
-/// Workspace document metadata.
-/// </summary>
-public sealed class WorkspaceDocument
-{
-    public WorkspaceDocument(string projectName, string name, string? path)
-    {
-        ProjectName = projectName;
-        Name = name;
-        Path = path;
-    }
-
-    [JsonPropertyName("projectName")]
-    public string ProjectName { get; }
-
-    [JsonPropertyName("name")]
-    public string Name { get; }
-
-    [JsonPropertyName("path")]
-    public string? Path { get; }
 }
 
 /// <summary>
@@ -377,11 +662,16 @@ public sealed class DiagnosticItem
             diagnostic.Id,
             diagnostic.Severity.ToString(),
             diagnostic.GetMessage(),
-            diagnostic.Location.IsInSource ? global::System.IO.Path.GetFullPath(span.Path) : null,
+            diagnostic.Location.IsInSource ? NormalizePath(span.Path) : null,
             diagnostic.Location.IsInSource ? span.StartLinePosition.Line + 1 : null,
             diagnostic.Location.IsInSource ? span.StartLinePosition.Character + 1 : null,
             diagnostic.Location.IsInSource ? span.EndLinePosition.Line + 1 : null,
             diagnostic.Location.IsInSource ? span.EndLinePosition.Character + 1 : null);
+    }
+
+    private static string? NormalizePath(string? path)
+    {
+        return string.IsNullOrWhiteSpace(path) ? null : global::System.IO.Path.GetFullPath(path);
     }
 }
 
@@ -451,7 +741,7 @@ public sealed class SymbolItem
 
     public static SymbolItem FromSymbol(ISymbol symbol, string projectName)
     {
-        return FromSymbol(symbol, projectName, restrictDeclarationsToPath: null);
+        return FromSymbol(symbol, projectName, includeDeclaration: static location => location.IsInSource);
     }
 
     public static SymbolItem FromSymbol(ISymbol symbol, string projectName, string? restrictDeclarationsToPath)
@@ -468,6 +758,14 @@ public sealed class SymbolItem
             symbol,
             projectName,
             location => RoslynDocumentFilters.LocationMatchesAnyPath(location, restrictDeclarationsToPaths));
+    }
+
+    public static SymbolItem FromSymbol(ISymbol symbol, string projectName, SyntaxTree restrictDeclarationsToSyntaxTree)
+    {
+        return FromSymbol(
+            symbol,
+            projectName,
+            location => location.IsInSource && location.SourceTree == restrictDeclarationsToSyntaxTree);
     }
 
     private static SymbolItem FromSymbol(ISymbol symbol, string projectName, Func<Location, bool> includeDeclaration)
@@ -501,7 +799,7 @@ public sealed class SymbolItem
 /// </summary>
 public sealed class SourceRange
 {
-    public SourceRange(string path, int line, int column, int endLine, int endColumn)
+    public SourceRange(string? path, int line, int column, int endLine, int endColumn)
     {
         Path = path;
         Line = line;
@@ -511,7 +809,7 @@ public sealed class SourceRange
     }
 
     [JsonPropertyName("path")]
-    public string Path { get; }
+    public string? Path { get; }
 
     [JsonPropertyName("line")]
     public int Line { get; }
@@ -529,11 +827,22 @@ public sealed class SourceRange
     {
         var span = location.GetLineSpan();
         return new SourceRange(
-            global::System.IO.Path.GetFullPath(span.Path),
+            NormalizePath(span.Path, location.SourceTree?.FilePath),
             span.StartLinePosition.Line + 1,
             span.StartLinePosition.Character + 1,
             span.EndLinePosition.Line + 1,
             span.EndLinePosition.Character + 1);
+    }
+
+    private static string? NormalizePath(string? path, string? fallbackPath)
+    {
+        var resolvedPath = !string.IsNullOrWhiteSpace(path)
+            ? path
+            : fallbackPath;
+
+        return string.IsNullOrWhiteSpace(resolvedPath)
+            ? null
+            : global::System.IO.Path.GetFullPath(resolvedPath);
     }
 }
 
@@ -543,7 +852,7 @@ public sealed class SourceRange
 public sealed class ReferenceItem
 {
     public ReferenceItem(
-        string path,
+        string? path,
         int line,
         int column,
         int endLine,
@@ -561,7 +870,7 @@ public sealed class ReferenceItem
     }
 
     [JsonPropertyName("path")]
-    public string Path { get; }
+    public string? Path { get; }
 
     [JsonPropertyName("line")]
     public int Line { get; }
@@ -593,6 +902,84 @@ public sealed class ReferenceItem
             referenceLocation.IsImplicit,
             definition.ToDisplayString(SymbolDisplayFormats.Qualified));
     }
+}
+
+/// <summary>
+/// Quick info section payload.
+/// </summary>
+public sealed class QuickInfoSectionItem
+{
+    public QuickInfoSectionItem(string kind, string text)
+    {
+        Kind = kind;
+        Text = text;
+    }
+
+    [JsonPropertyName("kind")]
+    public string Kind { get; }
+
+    [JsonPropertyName("text")]
+    public string Text { get; }
+}
+
+/// <summary>
+/// Signature help signature payload.
+/// </summary>
+public sealed class SignatureHelpSignatureItem
+{
+    public SignatureHelpSignatureItem(
+        string label,
+        string documentation,
+        bool isVariadic,
+        IReadOnlyList<SignatureHelpParameterItem> parameters)
+    {
+        Label = label;
+        Documentation = documentation;
+        IsVariadic = isVariadic;
+        Parameters = parameters;
+    }
+
+    [JsonPropertyName("label")]
+    public string Label { get; }
+
+    [JsonPropertyName("documentation")]
+    public string Documentation { get; }
+
+    [JsonPropertyName("isVariadic")]
+    public bool IsVariadic { get; }
+
+    [JsonPropertyName("parameters")]
+    public IReadOnlyList<SignatureHelpParameterItem> Parameters { get; }
+}
+
+/// <summary>
+/// Signature help parameter payload.
+/// </summary>
+public sealed class SignatureHelpParameterItem
+{
+    public SignatureHelpParameterItem(
+        string name,
+        string label,
+        string documentation,
+        bool isOptional)
+    {
+        Name = name;
+        Label = label;
+        Documentation = documentation;
+        IsOptional = isOptional;
+    }
+
+    [JsonPropertyName("name")]
+    public string Name { get; }
+
+    [JsonPropertyName("label")]
+    public string Label { get; }
+
+    [JsonPropertyName("documentation")]
+    public string Documentation { get; }
+
+    [JsonPropertyName("isOptional")]
+    public bool IsOptional { get; }
 }
 
 /// <summary>

@@ -41,6 +41,45 @@ public sealed class CliParserTests
     }
 
     [Fact]
+    public void Parse_AcceptsDocumentKeySelector()
+    {
+        var command = CliParser.Parse(["quick-info", "--target", "repo.slnx", "--document-key", "doc_123", "--line", "7", "--column", "15"]);
+
+        Assert.Equal("quick-info", command.Name);
+        Assert.Equal("doc_123", command.Required("document-key"));
+        Assert.Null(command.Optional("file"));
+    }
+
+    [Fact]
+    public void Parse_CollectsDocumentTextRangeOptions()
+    {
+        var command = CliParser.Parse([
+            "document-text",
+            "--target", "repo.slnx",
+            "--file", "Program.cs",
+            "--start-line", "5",
+            "--start-column", "2",
+            "--end-line", "8",
+            "--end-column", "11",
+        ]);
+
+        Assert.Equal("document-text", command.Name);
+        Assert.Equal(5, command.OptionalInt("start-line", 1));
+        Assert.Equal(2, command.OptionalInt("start-column", 1));
+        Assert.Equal(8, command.OptionalInt("end-line", 1));
+        Assert.Equal(11, command.OptionalInt("end-column", 1));
+    }
+
+    [Fact]
+    public void Parse_ParsesImplementationsMaxResults()
+    {
+        var command = CliParser.Parse(["implementations", "--target", "repo.slnx", "--file", "Program.cs", "--line", "8", "--column", "6", "--max-results", "3"]);
+
+        Assert.Equal("implementations", command.Name);
+        Assert.Equal(3, command.OptionalInt("max-results", 1, 1));
+    }
+
+    [Fact]
     public void Parse_ReturnsCommandHelp_WhenCommandAsksForHelp()
     {
         var command = CliParser.Parse(["symbols", "--help"]);
@@ -56,6 +95,45 @@ public sealed class CliParserTests
 
         Assert.Equal("definition", exception.CommandName);
         Assert.Contains("Missing required option '--line'", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_RejectsMissingDocumentSelector()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(["document-text", "--target", "repo.slnx"]));
+
+        Assert.Equal("document-text", exception.CommandName);
+        Assert.Contains("Exactly one of '--file' or '--document-key' is required.", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_RejectsMultipleDocumentSelectors()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
+            "definition",
+            "--target", "repo.slnx",
+            "--file", "Program.cs",
+            "--document-key", "doc_123",
+            "--line", "10",
+            "--column", "4",
+        ]));
+
+        Assert.Equal("definition", exception.CommandName);
+        Assert.Contains("Exactly one of '--file' or '--document-key' is required.", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_RejectsRangeColumnWithoutLine()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
+            "document-text",
+            "--target", "repo.slnx",
+            "--file", "Program.cs",
+            "--start-column", "3",
+        ]));
+
+        Assert.Equal("document-text", exception.CommandName);
+        Assert.Contains("requires '--start-line'", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

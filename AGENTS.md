@@ -50,7 +50,7 @@ Every scout prompt must include `assigned_scope`, `search_goal`, known keywords 
 
 Git read commands such as `git status`, `git log`, `git diff`, `git show`, and `git branch --show-current` are allowed for inspection.
 
-Do not run state-changing Git commands unless the user explicitly asks for that exact action in the current task, or unless you ask for permission in chat and receive approval first. State-changing Git commands include `git commit`, `git push`, `git merge`, `git rebase`, `git cherry-pick`, `git checkout -b`, `git switch -c`, `git tag`, `git reset`, `git revert`, `git stash`, branch deletion, and any command that changes refs, the index, or the working tree.
+Do not run state-changing Git commands unless the user explicitly asks for that exact action in the current task, or unless permission is requested in chat and approval is received first. State-changing Git commands include `git commit`, `git push`, `git merge`, `git rebase`, `git cherry-pick`, `git checkout -b`, `git switch -c`, `git tag`, `git reset`, `git revert`, `git stash`, branch deletion, and any command that changes refs, the index, or the working tree.
 
 Before any commit or push:
 
@@ -102,4 +102,4 @@ Recent history uses short imperative subjects and conventional prefixes such as 
 
 Do not commit secrets, local credentials, generated caches, package outputs, or accidental binaries. Keep only `.synapse/ignored.json` tracked under `.synapse/`; generated Synapse files such as `graph.json`, `memories.md`, and `synapse-memory.json` must remain local-only.
 
-Treat local reference repositories in `docs/local-repository-reference.md` as read-only references. Do not edit `C:\repo\GitHub\efcore`, `C:\repo\GitHub\git`, `C:\repo\GitHub\roslyn`, or `C:\repo\GitHub\vscode-csharp` while working in RoslynKit unless the user explicitly asks for changes in those repos.
+Treat every repository listed in `docs/local-repository-reference.md` as a strict read-only reference while working in RoslynKit. Never suggest making changes in any of those reference repositories as part of a RoslynKit task, even when issues, gaps, or possible improvements are noticed there. Keep all recommended changes scoped to RoslynKit unless the user explicitly changes the task to one of those repositories.

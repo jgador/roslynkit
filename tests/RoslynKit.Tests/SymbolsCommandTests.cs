@@ -56,24 +56,7 @@ public sealed class SymbolsCommandTests
 
     private static async Task<SymbolsResult> RunSymbolsAsync(params string[] args)
     {
-        var commandArgs = new[] { "symbols", "--target", SolutionPath() }.Concat(args).ToArray();
-        var command = CliParser.Parse(commandArgs);
-        var result = await RoslynCommandExecutor.ExecuteAsync(command, TestContext.Current.CancellationToken);
-
-        return Assert.IsType<SymbolsResult>(result);
-    }
-
-    private static string SolutionPath()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            var solutionPath = Path.Combine(directory.FullName, "RoslynKit.slnx");
-            if (File.Exists(solutionPath))
-            {
-                return solutionPath;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate RoslynKit.slnx from the test output directory.");
+        var commandArgs = new[] { "symbols", "--target", TestPaths.SolutionPath() }.Concat(args).ToArray();
+        return await TestPaths.ExecuteCommandAsync<SymbolsResult>(commandArgs);
     }
 }

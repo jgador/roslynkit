@@ -4,16 +4,70 @@ using Microsoft.CodeAnalysis.Text;
 namespace RoslynKit;
 
 /// <summary>
-/// Resolves one-based line and column inputs into Roslyn source positions.
+/// Resolves one-based line and column inputs into Roslyn source positions and ranges.
 /// </summary>
 public static class PositionResolver
 {
     /// <summary>
     /// Validates one-based source coordinates and converts them into a document position.
     /// </summary>
-    public static async Task<int> GetPositionAsync(Document document, int oneBasedLine, int oneBasedColumn, string commandName, CancellationToken cancellationToken)
+    public static async Task<int> GetPositionAsync(TextDocument document, int oneBasedLine, int oneBasedColumn, string commandName, CancellationToken cancellationToken)
     {
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
+        return GetPosition(text, oneBasedLine, oneBasedColumn, commandName);
+    }
+
+    /// <summary>
+    /// Resolves an optional one-based range inside a text document.
+    /// </summary>
+    public static async Task<ResolvedTextSpan> ResolveRangeAsync(
+        TextDocument document,
+        int? startLine,
+        int? startColumn,
+        int? endLine,
+        int? endColumn,
+        string commandName,
+        CancellationToken cancellationToken)
+    {
+        if (startColumn.HasValue && !startLine.HasValue)
+        {
+            throw new CliUsageException(commandName, "Option '--start-column' requires '--start-line'.");
+        }
+
+        if (endColumn.HasValue && !endLine.HasValue)
+        {
+            throw new CliUsageException(commandName, "Option '--end-column' requires '--end-line'.");
+        }
+
+        var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
+        var resolvedStartLine = startLine ?? 1;
+        var resolvedStartColumn = startColumn ?? 1;
+        var resolvedEndLine = endLine ?? text.Lines.Count;
+        var resolvedEndColumn = endColumn ?? text.Lines[resolvedEndLine - 1].Span.Length + 1;
+
+        var start = GetPosition(text, resolvedStartLine, resolvedStartColumn, commandName);
+        var end = GetPosition(text, resolvedEndLine, resolvedEndColumn, commandName);
+        if (end < start)
+        {
+            throw new CliUsageException(commandName, "The requested range end precedes the range start.");
+        }
+
+        var span = TextSpan.FromBounds(start, end);
+        return new ResolvedTextSpan(text, span, ToDocumentRange(text, span));
+    }
+
+    public static DocumentRange ToDocumentRange(SourceText text, TextSpan span)
+    {
+        var lineSpan = text.Lines.GetLinePositionSpan(span);
+        return new DocumentRange(
+            lineSpan.Start.Line + 1,
+            lineSpan.Start.Character + 1,
+            lineSpan.End.Line + 1,
+            lineSpan.End.Character + 1);
+    }
+
+    private static int GetPosition(SourceText text, int oneBasedLine, int oneBasedColumn, string commandName)
+    {
         var zeroBasedLine = oneBasedLine - 1;
         var zeroBasedColumn = oneBasedColumn - 1;
 
@@ -31,3 +85,8 @@ public static class PositionResolver
         return text.Lines.GetPosition(new LinePosition(zeroBasedLine, zeroBasedColumn));
     }
 }
+
+/// <summary>
+/// Captures a resolved text span and the corresponding document text.
+/// </summary>
+public readonly record struct ResolvedTextSpan(SourceText Text, TextSpan Span, DocumentRange Range);

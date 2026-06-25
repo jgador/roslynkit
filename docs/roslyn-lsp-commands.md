@@ -22,22 +22,22 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 
 | Priority | RoslynKit command family | Roslyn method or API source | Why it matters for agents |
 | --- | --- | --- | --- |
-| P0 | `workspace` | `MSBuildWorkspace`, `Project`, `Document`, source-generated, additional, and analyzer-config document APIs | Registered, but incomplete. It loads targets and lists baseline projects/documents, but agents cannot fully trust workspace context until it has focused execution tests, stronger generated-document filtering, source-generated document support, additional/analyzer-config document reporting, target-framework context, references, and option metadata. |
+| Implemented | `workspace` | `MSBuildWorkspace`, `Project`, `Document`, source-generated, additional, and analyzer-config document APIs | Default output is now repo-relevant source documents. Generated, additional, and analyzer-config documents are opt-in, and distinct project or target-framework contexts remain separate through `documentKey`. |
 | Implemented | `diagnostics` | compiler diagnostics, `textDocument/diagnostic`, `workspace/diagnostic` | Lets agents verify build/compiler issues before and after edits. |
 | Implemented | `symbols` | `workspace/symbol`, `SymbolFinder`, declarations | Lets agents locate named C# declarations without text-only search. |
 | Implemented | `document-symbols` | `textDocument/documentSymbol` | Gives compact structure for one file. |
+| Implemented | `document-text` | `workspace/textDocumentContent`, source-generated, additional, and analyzer-config document APIs | Lets agents read exact source or virtual document spans once the workspace has resolved the right document context. |
 | Implemented | `definition` | `textDocument/definition`, `FindSourceDefinitionAsync` | Essential go-to-definition behavior. |
 | Implemented | `references` | `textDocument/references`, `FindReferencesAsync` | Essential impact analysis before changing a symbol. |
-| P0 | `type-definition` | `textDocument/typeDefinition` | Useful when the symbol usage points at a variable, property, or interface abstraction. |
-| P0 | `implementations` | `textDocument/implementation`, `FindImplementationsAsync` | Critical for interface, abstract member, and override navigation. |
-| P0 | `quick-info` | `textDocument/hover`, QuickInfo services | Gives agents exact type, signature, and documentation context at a position. |
-| P0 | `signature-help` | `textDocument/signatureHelp` | Helps agents call overloaded C# APIs correctly. |
+| Implemented | `type-definition` | `textDocument/typeDefinition` | Useful when the symbol usage points at a variable, property, or interface abstraction. |
+| Implemented | `implementations` | `textDocument/implementation`, `FindImplementationsAsync` | Critical for interface, abstract member, and override navigation. |
+| Implemented | `quick-info` | `textDocument/hover`, QuickInfo services | Gives agents exact type, signature, and documentation context at a position. |
+| Implemented | `signature-help` | `textDocument/signatureHelp` | Helps agents call overloaded C# APIs correctly. |
 | P1 | `completion` | `textDocument/completion`, `completionItem/resolve` | Useful for member discovery, importable symbols, and API exploration. |
 | P1 | `document-highlights` | `textDocument/documentHighlight` | Helps agents understand local symbol usage inside a file. |
 | P1 | `call-hierarchy` | `textDocument/prepareCallHierarchy`, `callHierarchy/incomingCalls`, `callHierarchy/outgoingCalls` | Useful for tracing call flow and impact in service-style C# code. |
 | P1 | `type-hierarchy` | `textDocument/prepareTypeHierarchy`, `typeHierarchy/supertypes`, `typeHierarchy/subtypes` | Useful for inheritance, interface, and framework-extension analysis. |
 | P1 | `source-generators` | `workspace/_roslyn_refreshSourceGenerators`, source generated document APIs | Important for modern C# projects where generated code affects symbols and diagnostics. |
-| P1 | `generated-documents` | `workspace/textDocumentContent`, source generated document APIs | Gives agents access to generated or virtual source when needed for accurate reasoning. |
 | P2 | `code-actions` | `textDocument/codeAction`, `codeAction/resolve`, `codeAction/resolveFixAll` | Useful for structured fix planning, but edit-producing behavior must be preview-first and is lower priority than read-only intelligence. |
 | P2 | `format` | `textDocument/formatting`, `textDocument/rangeFormatting` | Useful for proposed formatting edits, but should not apply source changes by default. |
 | P2 | `rename` | `textDocument/prepareRename`, `textDocument/rename`, `Renamer` | Useful for safe symbol rename planning, but should return proposed edits before any apply mode exists. |
@@ -56,12 +56,17 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 
 RoslynKit currently registers these commands:
 
-- `workspace` - registered, but incomplete; treat as P0 work
+- `workspace`
 - `diagnostics`
 - `symbols`
 - `document-symbols`
+- `document-text`
 - `definition`
 - `references`
+- `implementations`
+- `quick-info`
+- `type-definition`
+- `signature-help`
 
 ## Implemented Roslyn LSP Methods
 
@@ -196,13 +201,7 @@ These are `Command.CommandIdentifier` values emitted by the Roslyn language serv
 
 These Roslyn command families are not currently exposed by RoslynKit and are plausible future CLI commands.
 
-### P0 Gaps
-
-- workspace
-- type definition
-- implementation search
-- hover or quick info
-- signature help
+The initial read-only inspection surface is now in place. Remaining gaps are follow-on improvements rather than blockers for an agent-facing skill.
 
 ### P1 Gaps
 
@@ -211,7 +210,6 @@ These Roslyn command families are not currently exposed by RoslynKit and are pla
 - call hierarchy
 - type hierarchy
 - source generators
-- generated or virtual document content
 
 ### P2 Gaps
 

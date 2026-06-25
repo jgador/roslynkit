@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
+using Microsoft.CodeAnalysis.QuickInfo;
 
 namespace RoslynKit;
 
@@ -34,8 +35,13 @@ public static class RoslynCommandExecutor
             "diagnostics" => await DiagnosticsAsync(command, cancellationToken).ConfigureAwait(false),
             "definition" => await DefinitionAsync(command, cancellationToken).ConfigureAwait(false),
             "document-symbols" => await DocumentSymbolsAsync(command, cancellationToken).ConfigureAwait(false),
+            "document-text" => await DocumentTextAsync(command, cancellationToken).ConfigureAwait(false),
+            "implementations" => await ImplementationsAsync(command, cancellationToken).ConfigureAwait(false),
+            "quick-info" => await QuickInfoAsync(command, cancellationToken).ConfigureAwait(false),
             "references" => await ReferencesAsync(command, cancellationToken).ConfigureAwait(false),
+            "signature-help" => await SignatureHelpAsync(command, cancellationToken).ConfigureAwait(false),
             "symbols" => await SymbolsAsync(command, cancellationToken).ConfigureAwait(false),
+            "type-definition" => await TypeDefinitionAsync(command, cancellationToken).ConfigureAwait(false),
             "workspace" => await WorkspaceAsync(command, cancellationToken).ConfigureAwait(false),
             _ => throw new CliUsageException(command.Name, $"Unknown command '{command.Name}'."),
         };
@@ -44,15 +50,26 @@ public static class RoslynCommandExecutor
     private static async Task<object> WorkspaceAsync(ParsedCommand command, CancellationToken cancellationToken)
     {
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
-        var includeGenerated = command.Flag("include-generated");
+        var documents = await loaded.EnumerateDocumentsAsync(
+            new DocumentEnumerationOptions(
+                IncludeGenerated: command.Flag("include-generated"),
+                IncludeAdditional: command.Flag("include-additional"),
+                IncludeAnalyzerConfig: command.Flag("include-analyzer-config"),
+                RepositoryRelevantOnly: true),
+            cancellationToken).ConfigureAwait(false);
+        var documentCounts = documents
+            .GroupBy(document => document.Project.Id)
+            .ToDictionary(group => group.Key, group => group.Count());
 
         var projects = loaded.Solution.Projects
             .OrderBy(project => project.Name, StringComparer.Ordinal)
+            .ThenBy(project => project.FilePath, StringComparer.Ordinal)
             .Select(project => new WorkspaceProject(
                 project.Name,
-                project.FilePath,
+                RoslynDocumentFilters.NormalizePath(project.FilePath),
+                loaded.GetTargetFramework(project),
                 project.Language,
-                project.Documents.Count(document => includeGenerated || !RoslynDocumentFilters.IsGenerated(document)),
+                documentCounts.TryGetValue(project.Id, out var count) ? count : 0,
                 project.ProjectReferences
                     .Select(reference => project.Solution.GetProject(reference.ProjectId)?.Name)
                     .Where(referenceName => !string.IsNullOrWhiteSpace(referenceName))
@@ -60,16 +77,12 @@ public static class RoslynCommandExecutor
                     .ToArray()!))
             .ToArray();
 
-        var documents = loaded.Solution.Projects
-            .OrderBy(project => project.Name, StringComparer.Ordinal)
-            .SelectMany(project => project.Documents
-                .Where(document => includeGenerated || !RoslynDocumentFilters.IsGenerated(document))
-                .Select(document => new WorkspaceDocument(project.Name, document.Name, document.FilePath)))
-            .OrderBy(document => document.ProjectName, StringComparer.Ordinal)
-            .ThenBy(document => document.Path, StringComparer.Ordinal)
-            .ToArray();
-
-        return new WorkspaceResult(loaded.TargetPath, loaded.TargetKind, projects, documents, loaded.WorkspaceDiagnostics);
+        return new WorkspaceResult(
+            loaded.TargetPath,
+            loaded.TargetKind,
+            projects,
+            documents.Select(document => document.Descriptor).ToArray(),
+            loaded.WorkspaceDiagnostics);
     }
 
     private static async Task<object> DiagnosticsAsync(ParsedCommand command, CancellationToken cancellationToken)
@@ -131,9 +144,8 @@ public static class RoslynCommandExecutor
             ? await SymbolFinder.FindSourceDeclarationsAsync(loaded.Solution, query, ignoreCase: !caseSensitive, symbolFilter, cancellationToken).ConfigureAwait(false)
             : await SymbolFinder.FindSourceDeclarationsWithPatternAsync(loaded.Solution, query, symbolFilter, cancellationToken).ConfigureAwait(false);
 
-        // Normalize exact or pattern matches through RoslynKit-specific kind, source, and duplicate filters before ordering and truncation.
         var symbols = foundSymbols
-            .Where(symbol => RoslynSymbolSearch.IsCodeSymbol(symbol))
+            .Where(RoslynSymbolSearch.IsCodeSymbol)
             .Where(symbol => IsSpecificSymbolKindMatch(symbol, kind))
             .Where(symbol => RoslynDocumentFilters.IsDeclaredInProject(symbol, sourcePaths))
             .Where(symbol => exact || !caseSensitive || SymbolMatches(symbol, query, comparison))
@@ -153,19 +165,41 @@ public static class RoslynCommandExecutor
         return new SymbolsResult(loaded.TargetPath, query, symbols.Length, ordered.Length, symbols.Length > ordered.Length, ordered, loaded.WorkspaceDiagnostics);
     }
 
+    private static async Task<object> DocumentTextAsync(ParsedCommand command, CancellationToken cancellationToken)
+    {
+        using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
+        var context = await loaded.FindTextDocumentAsync(command.Optional("file"), command.Optional("document-key"), command.Name, cancellationToken).ConfigureAwait(false);
+        var resolvedSpan = await PositionResolver.ResolveRangeAsync(
+            context.TextDocument,
+            command.OptionalInt("start-line", 1),
+            command.OptionalInt("start-column", 1),
+            command.OptionalInt("end-line", 1),
+            command.OptionalInt("end-column", 1),
+            command.Name,
+            cancellationToken).ConfigureAwait(false);
+
+        return new DocumentTextResult(
+            context.Descriptor,
+            resolvedSpan.Range,
+            resolvedSpan.Text.ToString(resolvedSpan.Span),
+            truncated: false,
+            loaded.WorkspaceDiagnostics);
+    }
+
     private static async Task<object> DocumentSymbolsAsync(ParsedCommand command, CancellationToken cancellationToken)
     {
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
-        var document = loaded.FindDocument(command.Required("file"));
+        var context = await ResolveSemanticDocumentAsync(command, loaded, cancellationToken).ConfigureAwait(false);
+        var document = context.Document!;
         var model = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false)
-            ?? throw new CliUsageException(command.Name, $"Could not create semantic model for '{document.FilePath}'.");
+            ?? throw new CliUsageException(command.Name, $"Could not create semantic model for '{context.Descriptor.Name}'.");
         var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false)
-            ?? throw new CliUsageException(command.Name, $"Could not parse '{document.FilePath}'.");
+            ?? throw new CliUsageException(command.Name, $"Could not parse '{context.Descriptor.Name}'.");
 
         var symbols = root.DescendantNodesAndSelf()
             .Select(node => model.GetDeclaredSymbol(node, cancellationToken))
-            .Where(symbol => symbol is not null && RoslynSymbolSearch.IsDocumentSymbol(symbol) && RoslynDocumentFilters.IsDeclaredInDocument(symbol, document.FilePath))
-            .Select(symbol => SymbolItem.FromSymbol(symbol!, document.Project.Name, document.FilePath))
+            .Where(symbol => symbol is not null && RoslynSymbolSearch.IsDocumentSymbol(symbol) && symbol.Locations.Any(location => location.IsInSource && location.SourceTree == root.SyntaxTree))
+            .Select(symbol => SymbolItem.FromSymbol(symbol!, GetProjectName(symbol!, loaded.Solution), root.SyntaxTree))
             .Where(symbol => symbol.Declarations.Count > 0)
             .DistinctBy(symbol => string.Concat(symbol.Kind, "|", symbol.DisplayName, "|", symbol.PrimaryLocation?.Path, "|", symbol.PrimaryLocation?.Line, "|", symbol.PrimaryLocation?.Column))
             .OrderBy(symbol => symbol.PrimaryLocation?.Line)
@@ -173,21 +207,41 @@ public static class RoslynCommandExecutor
             .ThenBy(symbol => symbol.DisplayName, StringComparer.Ordinal)
             .ToArray();
 
-        return new DocumentSymbolsResult(Path.GetFullPath(command.Required("file")), symbols, loaded.WorkspaceDiagnostics);
+        return new DocumentSymbolsResult(context.Descriptor, symbols, loaded.WorkspaceDiagnostics);
     }
 
     private static async Task<object> DefinitionAsync(ParsedCommand command, CancellationToken cancellationToken)
     {
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
-        var document = loaded.FindDocument(command.Required("file"));
-        var symbol = await SymbolAtPositionAsync(command, document, cancellationToken).ConfigureAwait(false);
+        var context = await ResolveSemanticDocumentAsync(command, loaded, cancellationToken).ConfigureAwait(false);
+        var symbol = await SymbolAtPositionAsync(command, context.Document!, cancellationToken).ConfigureAwait(false);
         var sourceSymbol = await SymbolFinder.FindSourceDefinitionAsync(symbol, loaded.Solution, cancellationToken).ConfigureAwait(false) ?? symbol;
 
         return new DefinitionResult(
-            Path.GetFullPath(command.Required("file")),
+            context.Descriptor,
             command.OptionalInt("line", 1, 1),
             command.OptionalInt("column", 1, 1),
-            SymbolItem.FromSymbol(sourceSymbol, document.Project.Name),
+            SymbolItem.FromSymbol(sourceSymbol, GetProjectName(sourceSymbol, loaded.Solution)),
+            loaded.WorkspaceDiagnostics);
+    }
+
+    private static async Task<object> TypeDefinitionAsync(ParsedCommand command, CancellationToken cancellationToken)
+    {
+        using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
+        var context = await ResolveSemanticDocumentAsync(command, loaded, cancellationToken).ConfigureAwait(false);
+        var symbol = await SymbolAtPositionAsync(command, context.Document!, cancellationToken).ConfigureAwait(false);
+        var typeSymbol = GetTypeDefinitionSymbol(symbol);
+        if (typeSymbol is null)
+        {
+            throw new CliUsageException(command.Name, $"No type definition found at line {command.OptionalInt("line", 1, 1)}, column {command.OptionalInt("column", 1, 1)} in '{context.Descriptor.Name}'.");
+        }
+
+        var sourceSymbol = await SymbolFinder.FindSourceDefinitionAsync(typeSymbol, loaded.Solution, cancellationToken).ConfigureAwait(false) ?? typeSymbol;
+        return new TypeDefinitionResult(
+            context.Descriptor,
+            command.OptionalInt("line", 1, 1),
+            command.OptionalInt("column", 1, 1),
+            SymbolItem.FromSymbol(sourceSymbol, GetProjectName(sourceSymbol, loaded.Solution)),
             loaded.WorkspaceDiagnostics);
     }
 
@@ -195,8 +249,8 @@ public static class RoslynCommandExecutor
     {
         var maxResults = command.OptionalInt("max-results", 200, 1);
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
-        var document = loaded.FindDocument(command.Required("file"));
-        var symbol = await SymbolAtPositionAsync(command, document, cancellationToken).ConfigureAwait(false);
+        var context = await ResolveSemanticDocumentAsync(command, loaded, cancellationToken).ConfigureAwait(false);
+        var symbol = await SymbolAtPositionAsync(command, context.Document!, cancellationToken).ConfigureAwait(false);
         var sourceSymbol = await SymbolFinder.FindSourceDefinitionAsync(symbol, loaded.Solution, cancellationToken).ConfigureAwait(false) ?? symbol;
         var references = await SymbolFinder.FindReferencesAsync(sourceSymbol, loaded.Solution, cancellationToken).ConfigureAwait(false);
 
@@ -211,10 +265,10 @@ public static class RoslynCommandExecutor
         var totalCount = references.Sum(reference => reference.Locations.Count());
 
         return new ReferencesResult(
-            Path.GetFullPath(command.Required("file")),
+            context.Descriptor,
             command.OptionalInt("line", 1, 1),
             command.OptionalInt("column", 1, 1),
-            SymbolItem.FromSymbol(sourceSymbol, document.Project.Name),
+            SymbolItem.FromSymbol(sourceSymbol, GetProjectName(sourceSymbol, loaded.Solution)),
             totalCount,
             locations.Length,
             totalCount > locations.Length,
@@ -222,27 +276,139 @@ public static class RoslynCommandExecutor
             loaded.WorkspaceDiagnostics);
     }
 
+    private static async Task<object> ImplementationsAsync(ParsedCommand command, CancellationToken cancellationToken)
+    {
+        var maxResults = command.OptionalInt("max-results", 200, 1);
+        using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
+        var context = await ResolveSemanticDocumentAsync(command, loaded, cancellationToken).ConfigureAwait(false);
+        var symbol = await SymbolAtPositionAsync(command, context.Document!, cancellationToken).ConfigureAwait(false);
+        var sourceSymbol = await SymbolFinder.FindSourceDefinitionAsync(symbol, loaded.Solution, cancellationToken).ConfigureAwait(false) ?? symbol;
+        var implementations = await SymbolFinder.FindImplementationsAsync(sourceSymbol, loaded.Solution, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        var resolvedSymbols = new List<ISymbol>();
+        foreach (var implementation in implementations)
+        {
+            resolvedSymbols.Add(await SymbolFinder.FindSourceDefinitionAsync(implementation, loaded.Solution, cancellationToken).ConfigureAwait(false) ?? implementation);
+        }
+
+        var symbols = resolvedSymbols
+            .Where(RoslynSymbolSearch.IsCodeSymbol)
+            .Select(implementation => SymbolItem.FromSymbol(implementation, GetProjectName(implementation, loaded.Solution)))
+            .Where(symbolItem => symbolItem.Declarations.Count > 0)
+            .DistinctBy(symbolItem => string.Concat(symbolItem.ProjectName, "|", symbolItem.Kind, "|", symbolItem.DisplayName, "|", symbolItem.PrimaryLocation?.Path, "|", symbolItem.PrimaryLocation?.Line, "|", symbolItem.PrimaryLocation?.Column))
+            .ToArray();
+
+        var ordered = symbols
+            .OrderBy(symbolItem => symbolItem.DisplayName, StringComparer.Ordinal)
+            .ThenBy(symbolItem => symbolItem.Kind, StringComparer.Ordinal)
+            .ThenBy(symbolItem => symbolItem.PrimaryLocation?.Path, StringComparer.Ordinal)
+            .ThenBy(symbolItem => symbolItem.PrimaryLocation?.Line)
+            .Take(maxResults)
+            .ToArray();
+
+        return new ImplementationsResult(
+            context.Descriptor,
+            command.OptionalInt("line", 1, 1),
+            command.OptionalInt("column", 1, 1),
+            SymbolItem.FromSymbol(sourceSymbol, GetProjectName(sourceSymbol, loaded.Solution)),
+            symbols.Length,
+            ordered.Length,
+            symbols.Length > ordered.Length,
+            ordered,
+            loaded.WorkspaceDiagnostics);
+    }
+
+    private static async Task<object> QuickInfoAsync(ParsedCommand command, CancellationToken cancellationToken)
+    {
+        using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
+        var context = await ResolveSemanticDocumentAsync(command, loaded, cancellationToken).ConfigureAwait(false);
+        var document = context.Document!;
+        var line = command.OptionalInt("line", 1, 1);
+        var column = command.OptionalInt("column", 1, 1);
+        var position = await PositionResolver.GetPositionAsync(document, line, column, command.Name, cancellationToken).ConfigureAwait(false);
+        var quickInfoService = QuickInfoService.GetService(document)
+            ?? throw new InvalidOperationException("The Roslyn quick info service is unavailable for this document.");
+        var quickInfo = await quickInfoService.GetQuickInfoAsync(document, position, cancellationToken).ConfigureAwait(false);
+        if (quickInfo is null)
+        {
+            throw new CliUsageException(command.Name, $"No quick info found at line {line}, column {column} in '{context.Descriptor.Name}'.");
+        }
+
+        var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
+        return new QuickInfoResult(
+            context.Descriptor,
+            line,
+            column,
+            PositionResolver.ToDocumentRange(text, quickInfo.Span),
+            quickInfo.Tags.ToArray(),
+            quickInfo.Sections.Select(section => new QuickInfoSectionItem(section.Kind, section.Text)).ToArray(),
+            loaded.WorkspaceDiagnostics);
+    }
+
+    private static async Task<object> SignatureHelpAsync(ParsedCommand command, CancellationToken cancellationToken)
+    {
+        using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
+        var context = await ResolveSemanticDocumentAsync(command, loaded, cancellationToken).ConfigureAwait(false);
+        var document = context.Document!;
+        var line = command.OptionalInt("line", 1, 1);
+        var column = command.OptionalInt("column", 1, 1);
+        var position = await PositionResolver.GetPositionAsync(document, line, column, command.Name, cancellationToken).ConfigureAwait(false);
+        var signatureHelp = await RoslynSignatureHelpService.GetSignatureHelpAsync(document, position, cancellationToken).ConfigureAwait(false);
+        if (signatureHelp is null)
+        {
+            throw new CliUsageException(command.Name, $"No signature help found at line {line}, column {column} in '{context.Descriptor.Name}'.");
+        }
+
+        var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
+        return new SignatureHelpResult(
+            context.Descriptor,
+            line,
+            column,
+            PositionResolver.ToDocumentRange(text, signatureHelp.ApplicableSpan),
+            signatureHelp.ActiveSignature,
+            signatureHelp.ActiveParameter,
+            signatureHelp.Signatures,
+            loaded.WorkspaceDiagnostics);
+    }
+
+    private static async Task<WorkspaceDocumentContext> ResolveSemanticDocumentAsync(ParsedCommand command, RoslynWorkspaceLoader loaded, CancellationToken cancellationToken)
+    {
+        var context = await loaded.FindTextDocumentAsync(command.Optional("file"), command.Optional("document-key"), command.Name, cancellationToken).ConfigureAwait(false);
+        if (context.Document is null || !RoslynDocumentFilters.IsSemanticDocument(context.Document, context.DocumentKind))
+        {
+            throw new CliUsageException(command.Name, $"Command '{command.Name}' only supports C# source and source-generated documents.");
+        }
+
+        return context;
+    }
+
     private static async Task<ISymbol> SymbolAtPositionAsync(ParsedCommand command, Document document, CancellationToken cancellationToken)
     {
         var line = command.OptionalInt("line", 1, 1);
         var column = command.OptionalInt("column", 1, 1);
         var position = await PositionResolver.GetPositionAsync(document, line, column, command.Name, cancellationToken).ConfigureAwait(false);
+        var symbol = await SymbolFinder.FindSymbolAtPositionAsync(document, position, cancellationToken).ConfigureAwait(false);
+        if (symbol is not null)
+        {
+            return symbol;
+        }
+
         var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false)
-            ?? throw new CliUsageException(command.Name, $"Could not parse '{document.FilePath}'.");
+            ?? throw new CliUsageException(command.Name, $"Could not parse '{document.Name}'.");
         var model = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false)
-            ?? throw new CliUsageException(command.Name, $"Could not create semantic model for '{document.FilePath}'.");
+            ?? throw new CliUsageException(command.Name, $"Could not create semantic model for '{document.Name}'.");
         var token = root.FindToken(position, findInsideTrivia: true);
 
         for (var node = token.Parent; node is not null; node = node.Parent)
         {
-            var symbol = model.GetSymbolInfo(node, cancellationToken).Symbol ?? model.GetDeclaredSymbol(node, cancellationToken);
+            symbol = model.GetSymbolInfo(node, cancellationToken).Symbol ?? model.GetDeclaredSymbol(node, cancellationToken);
             if (symbol is not null)
             {
                 return symbol;
             }
         }
 
-        throw new CliUsageException(command.Name, $"No symbol found at line {line}, column {column} in '{document.FilePath}'.");
+        throw new CliUsageException(command.Name, $"No symbol found at line {line}, column {column} in '{document.Name}'.");
     }
 
     private static bool SymbolMatches(ISymbol symbol, string query, StringComparison comparison)
@@ -282,6 +448,20 @@ public static class RoslynCommandExecutor
             "enum" => symbol is INamedTypeSymbol { TypeKind: TypeKind.Enum },
             "delegate" => symbol is INamedTypeSymbol { TypeKind: TypeKind.Delegate },
             _ => false,
+        };
+    }
+
+    private static ITypeSymbol? GetTypeDefinitionSymbol(ISymbol? symbol)
+    {
+        return symbol switch
+        {
+            ILocalSymbol localSymbol => localSymbol.Type,
+            IFieldSymbol fieldSymbol => fieldSymbol.Type,
+            IPropertySymbol propertySymbol => propertySymbol.Type,
+            IParameterSymbol parameterSymbol => parameterSymbol.Type,
+            IAliasSymbol aliasSymbol => aliasSymbol.Target as ITypeSymbol,
+            ITypeSymbol typeSymbol => typeSymbol,
+            _ => null,
         };
     }
 

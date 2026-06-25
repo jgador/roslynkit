@@ -9,19 +9,21 @@ public static class BuiltinCommandRegistry
     [
         new BuiltinCommand(
             "workspace",
-            "List projects and source documents loaded from a solution or project.",
-            ["roslynkit workspace --target <solution.slnx|solution.sln|project.csproj> [--include-generated]"],
+            "List projects and repo-relevant documents loaded from a solution or project.",
+            ["roslynkit workspace --target <solution.slnx|solution.sln|project.csproj> [--include-generated] [--include-additional] [--include-analyzer-config]"],
             [
-                OptionSpec.String('t', "target", "target", "solution or project file to load", required: true),
-                OptionSpec.Flag(null, "include-generated", "include generated and obj documents"),
+                TargetOption(),
+                OptionSpec.Flag(null, "include-generated", "include source-generated and generated source documents"),
+                OptionSpec.Flag(null, "include-additional", "include additional files"),
+                OptionSpec.Flag(null, "include-analyzer-config", "include analyzer config documents such as .editorconfig"),
             ]),
         new BuiltinCommand(
             "diagnostics",
             "Return source compiler diagnostics for the loaded target.",
             ["roslynkit diagnostics --target <target> [--max-results <n>] [--include-hidden] [--include-generated]"],
             [
-                OptionSpec.String('t', "target", "target", "solution or project file to load", required: true),
-                OptionSpec.Integer(null, "max-results", "n", "maximum diagnostics to return"),
+                TargetOption(),
+                MaxResultsOption(),
                 OptionSpec.Flag(null, "include-hidden", "include hidden diagnostics"),
                 OptionSpec.Flag(null, "include-generated", "include diagnostics from generated and obj documents"),
             ]),
@@ -30,41 +32,102 @@ public static class BuiltinCommandRegistry
             "Search source declarations by symbol name.",
             ["roslynkit symbols --target <target> --query <text> [--max-results <n>] [--case-sensitive] [--exact] [--kind <kind>]"],
             [
-                OptionSpec.String('t', "target", "target", "solution or project file to load", required: true),
+                TargetOption(),
                 OptionSpec.String('q', "query", "text", "symbol name text to search for", required: true),
-                OptionSpec.Integer(null, "max-results", "n", "maximum symbols to return"),
+                MaxResultsOption(),
                 OptionSpec.Flag(null, "case-sensitive", "match query text case-sensitively"),
                 OptionSpec.Flag(null, "exact", "match the declaration name exactly"),
                 OptionSpec.String(null, "kind", "kind", "filter declarations by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate"),
             ]),
         new BuiltinCommand(
-            "document-symbols",
-            "List declared symbols in a single source document.",
-            ["roslynkit document-symbols --target <target> --file <path>"],
+            "document-text",
+            "Read the full text or a span from one resolved document.",
+            ["roslynkit document-text --target <target> (--file <path> | --document-key <id>) [--start-line <n>] [--start-column <n>] [--end-line <n>] [--end-column <n>]"],
             [
-                OptionSpec.String('t', "target", "target", "solution or project file to load", required: true),
-                OptionSpec.String('f', "file", "path", "source file in the loaded target", required: true),
+                TargetOption(),
+                FileOption(),
+                DocumentKeyOption(),
+                OptionSpec.Integer(null, "start-line", "n", "one-based start line"),
+                OptionSpec.Integer(null, "start-column", "n", "one-based start column"),
+                OptionSpec.Integer(null, "end-line", "n", "one-based end line"),
+                OptionSpec.Integer(null, "end-column", "n", "one-based end column"),
+            ]),
+        new BuiltinCommand(
+            "document-symbols",
+            "List declared symbols in one source or source-generated C# document.",
+            ["roslynkit document-symbols --target <target> (--file <path> | --document-key <id>)"],
+            [
+                TargetOption(),
+                FileOption(),
+                DocumentKeyOption(),
             ]),
         new BuiltinCommand(
             "definition",
             "Resolve the symbol at a one-based line and column to source definitions.",
-            ["roslynkit definition --target <target> --file <path> --line <n> --column <n>"],
+            ["roslynkit definition --target <target> (--file <path> | --document-key <id>) --line <n> --column <n>"],
             [
-                OptionSpec.String('t', "target", "target", "solution or project file to load", required: true),
-                OptionSpec.String('f', "file", "path", "source file in the loaded target", required: true),
-                OptionSpec.Integer(null, "line", "n", "one-based source line", required: true),
-                OptionSpec.Integer(null, "column", "n", "one-based source column", required: true),
+                TargetOption(),
+                FileOption(),
+                DocumentKeyOption(),
+                LineOption(),
+                ColumnOption(),
+            ]),
+        new BuiltinCommand(
+            "type-definition",
+            "Resolve the type of the symbol at a one-based line and column to source definitions.",
+            ["roslynkit type-definition --target <target> (--file <path> | --document-key <id>) --line <n> --column <n>"],
+            [
+                TargetOption(),
+                FileOption(),
+                DocumentKeyOption(),
+                LineOption(),
+                ColumnOption(),
             ]),
         new BuiltinCommand(
             "references",
             "Find source references for the symbol at a one-based line and column.",
-            ["roslynkit references --target <target> --file <path> --line <n> --column <n> [--max-results <n>]"],
+            ["roslynkit references --target <target> (--file <path> | --document-key <id>) --line <n> --column <n> [--max-results <n>]"],
             [
-                OptionSpec.String('t', "target", "target", "solution or project file to load", required: true),
-                OptionSpec.String('f', "file", "path", "source file in the loaded target", required: true),
-                OptionSpec.Integer(null, "line", "n", "one-based source line", required: true),
-                OptionSpec.Integer(null, "column", "n", "one-based source column", required: true),
-                OptionSpec.Integer(null, "max-results", "n", "maximum references to return"),
+                TargetOption(),
+                FileOption(),
+                DocumentKeyOption(),
+                LineOption(),
+                ColumnOption(),
+                MaxResultsOption(),
+            ]),
+        new BuiltinCommand(
+            "implementations",
+            "Find implementations for the symbol at a one-based line and column.",
+            ["roslynkit implementations --target <target> (--file <path> | --document-key <id>) --line <n> --column <n> [--max-results <n>]"],
+            [
+                TargetOption(),
+                FileOption(),
+                DocumentKeyOption(),
+                LineOption(),
+                ColumnOption(),
+                MaxResultsOption(),
+            ]),
+        new BuiltinCommand(
+            "quick-info",
+            "Return Roslyn quick info for the symbol at a one-based line and column.",
+            ["roslynkit quick-info --target <target> (--file <path> | --document-key <id>) --line <n> --column <n>"],
+            [
+                TargetOption(),
+                FileOption(),
+                DocumentKeyOption(),
+                LineOption(),
+                ColumnOption(),
+            ]),
+        new BuiltinCommand(
+            "signature-help",
+            "Return Roslyn signature help for the position at a one-based line and column.",
+            ["roslynkit signature-help --target <target> (--file <path> | --document-key <id>) --line <n> --column <n>"],
+            [
+                TargetOption(),
+                FileOption(),
+                DocumentKeyOption(),
+                LineOption(),
+                ColumnOption(),
             ]),
     ];
 
@@ -76,5 +139,35 @@ public static class BuiltinCommandRegistry
     public static BuiltinCommand? GetBuiltin(string name)
     {
         return Lookup.TryGetValue(name, out var command) ? command : null;
+    }
+
+    private static OptionSpec TargetOption()
+    {
+        return OptionSpec.String('t', "target", "target", "solution or project file to load", required: true);
+    }
+
+    private static OptionSpec FileOption()
+    {
+        return OptionSpec.String('f', "file", "path", "document file path in the loaded target");
+    }
+
+    private static OptionSpec DocumentKeyOption()
+    {
+        return OptionSpec.String(null, "document-key", "id", "opaque document key from the workspace command");
+    }
+
+    private static OptionSpec LineOption()
+    {
+        return OptionSpec.Integer(null, "line", "n", "one-based source line", required: true);
+    }
+
+    private static OptionSpec ColumnOption()
+    {
+        return OptionSpec.Integer(null, "column", "n", "one-based source column", required: true);
+    }
+
+    private static OptionSpec MaxResultsOption()
+    {
+        return OptionSpec.Integer(null, "max-results", "n", "maximum results to return");
     }
 }

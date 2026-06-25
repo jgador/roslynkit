@@ -14,7 +14,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Build.Framework" PrivateAssets="all" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.Build.Locator" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Features" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Features" />
     <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" PrivateAssets="all" />
     <PackageReference Include="Microsoft.NET.StringTools" PrivateAssets="all" ExcludeAssets="runtime" />
   </ItemGroup>
