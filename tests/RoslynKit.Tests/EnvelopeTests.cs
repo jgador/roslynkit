@@ -1,10 +1,11 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace RoslynKit.Tests;
 
 /// <summary>
-/// Verifies JSON envelope and help payload contracts emitted by the CLI.
+/// Verifies RoslynKit CLI envelope, help, and version output contracts.
 /// </summary>
 public sealed class EnvelopeTests
 {
@@ -16,12 +17,46 @@ public sealed class EnvelopeTests
 
         using var document = JsonDocument.Parse(writer.ToString());
         var root = document.RootElement;
+        var commandNames = root.GetProperty("data")
+            .GetProperty("commands")
+            .EnumerateArray()
+            .Select(command => command.GetProperty("name").GetString())
+            .ToArray();
 
         Assert.Equal(0, exitCode);
         Assert.Equal("roslynkit", root.GetProperty("tool").GetString());
         Assert.Equal("help", root.GetProperty("command").GetString());
         Assert.True(root.GetProperty("success").GetBoolean());
         Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
+        Assert.Contains("version", commandNames);
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesPlainText_ForVersionCommand()
+    {
+        await AssertVersionOutputAsync("version");
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesPlainText_ForTopLevelVersionFlag()
+    {
+        await AssertVersionOutputAsync("--version");
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesJsonEnvelope_ForTopLevelVersionHelp()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(["--version", "--help"], TestContext.Current.CancellationToken);
+
+        using var document = JsonDocument.Parse(writer.ToString());
+        var root = document.RootElement;
+        var command = root.GetProperty("data").GetProperty("commands")[0];
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal("help", root.GetProperty("command").GetString());
+        Assert.True(root.GetProperty("success").GetBoolean());
+        Assert.Equal("version", command.GetProperty("name").GetString());
     }
 
     [Fact]
@@ -37,6 +72,21 @@ public sealed class EnvelopeTests
         Assert.Equal("symbols", root.GetProperty("command").GetString());
         Assert.False(root.GetProperty("success").GetBoolean());
         Assert.Contains("Unknown symbol kind 'banana'", root.GetProperty("errors")[0].GetProperty("message").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_ReturnsUsageError_ForVersionCommandWithUnexpectedPositional()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(["version", "extra"], TestContext.Current.CancellationToken);
+
+        using var document = JsonDocument.Parse(writer.ToString());
+        var root = document.RootElement;
+
+        Assert.Equal(2, exitCode);
+        Assert.Equal("version", root.GetProperty("command").GetString());
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Contains("Unexpected positional argument 'extra'", root.GetProperty("errors")[0].GetProperty("message").GetString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -252,6 +302,25 @@ public sealed class EnvelopeTests
             containingNamespace: "RoslynKit",
             new SourceRange(@"C:\repo\GitHub\roslynkit\src\RoslynKit\CliApplication.cs", 8, 20, 8, 34),
             [new SourceRange(@"C:\repo\GitHub\roslynkit\src\RoslynKit\CliApplication.cs", 8, 20, 8, 34)]);
+    }
+
+    private static async Task AssertVersionOutputAsync(params string[] args)
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(args, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(GetExpectedVersionOutput() + Environment.NewLine, writer.ToString());
+    }
+
+    private static string GetExpectedVersionOutput()
+    {
+        var assembly = typeof(CliApplication).Assembly;
+        var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        var version = !string.IsNullOrWhiteSpace(informationalVersion)
+            ? informationalVersion
+            : assembly.GetName().Version?.ToString() ?? "unknown";
+        return $"roslynkit version {version}";
     }
 
     private static JsonSerializerOptions CreateContractOptions()

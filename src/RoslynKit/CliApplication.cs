@@ -1,10 +1,11 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace RoslynKit;
 
 /// <summary>
-/// Runs parsed RoslynKit commands and writes JSON envelopes to stdout.
+/// Runs parsed RoslynKit commands and writes command output to stdout.
 /// </summary>
 public sealed class CliApplication
 {
@@ -15,6 +16,8 @@ public sealed class CliApplication
         WriteIndented = true,
     };
 
+    private static readonly string VersionText = $"roslynkit version {ResolveDisplayVersion()}";
+
     private readonly TextWriter _stdout;
 
     public CliApplication(TextWriter stdout)
@@ -23,7 +26,7 @@ public sealed class CliApplication
     }
 
     /// <summary>
-    /// Parses command-line arguments, executes the requested command, and emits the resulting JSON envelope.
+    /// Parses command-line arguments, executes the requested command, and emits either a JSON envelope or plain-text version output.
     /// </summary>
     public async Task<int> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken = default)
     {
@@ -37,6 +40,10 @@ public sealed class CliApplication
             if (command.IsHelp)
             {
                 envelope = JsonEnvelope.ForSuccess("help", HelpResult.Create(command.HelpSubject));
+            }
+            else if (command.Name == "version")
+            {
+                return await WriteVersionAsync().ConfigureAwait(false);
             }
             else
             {
@@ -62,6 +69,24 @@ public sealed class CliApplication
 
         await _stdout.WriteLineAsync(JsonSerializer.Serialize(envelope, JsonOptions)).ConfigureAwait(false);
         return exitCode;
+    }
+
+    private async Task<int> WriteVersionAsync()
+    {
+        await _stdout.WriteLineAsync(VersionText).ConfigureAwait(false);
+        return 0;
+    }
+
+    private static string ResolveDisplayVersion()
+    {
+        var assembly = typeof(CliApplication).Assembly;
+        var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(informationalVersion))
+        {
+            return informationalVersion;
+        }
+
+        return assembly.GetName().Version?.ToString() ?? "unknown";
     }
 }
 

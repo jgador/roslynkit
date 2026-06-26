@@ -8,6 +8,11 @@ public static class BuiltinCommandRegistry
     private static readonly BuiltinCommand[] Builtins =
     [
         new BuiltinCommand(
+            "version",
+            "Print the installed RoslynKit version.",
+            ["roslynkit version", "roslynkit --version"],
+            []),
+        new BuiltinCommand(
             "workspace",
             "List projects and repo-relevant documents loaded from a solution or project.",
             ["roslynkit workspace --target <solution.slnx|solution.sln|project.csproj> [--include-generated] [--include-additional] [--include-analyzer-config]"],

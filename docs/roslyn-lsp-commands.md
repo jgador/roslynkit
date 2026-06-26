@@ -56,6 +56,7 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 
 RoslynKit currently registers these commands:
 
+- `version`
 - `workspace`
 - `diagnostics`
 - `symbols`
@@ -67,6 +68,8 @@ RoslynKit currently registers these commands:
 - `quick-info`
 - `type-definition`
 - `signature-help`
+
+`version` is a Git-style tool metadata command and does not correspond to a Roslyn LSP method.
 
 ## Implemented Roslyn LSP Methods
 

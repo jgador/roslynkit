@@ -55,14 +55,14 @@ Install from the local folder feed into the standard global tool location such a
 
 ```powershell
 dotnet tool install --global roslynkit --add-source .\artifacts\packages\roslynkit --version <version> --ignore-failed-sources
-roslynkit help
+roslynkit version
 ```
 
 If `roslynkit` is already installed globally, update it in place:
 
 ```powershell
 dotnet tool update --global roslynkit --add-source .\artifacts\packages\roslynkit --version <version> --ignore-failed-sources
-roslynkit help
+roslynkit version
 ```
 
 ## 5. Install or update the side-by-side prerelease dev tool

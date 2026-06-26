@@ -6,7 +6,7 @@
 
 ```powershell
 dotnet tool install --global roslynkit
-roslynkit help
+roslynkit version
 ```
 
 To update an existing install:
@@ -19,7 +19,7 @@ dotnet tool update --global roslynkit
 
 ```powershell
 dotnet tool install --global roslynkit --add-source <local-feed-path> --version <version> --ignore-failed-sources
-roslynkit help
+roslynkit version
 ```
 
 To update an existing local install:
@@ -30,6 +30,7 @@ dotnet tool update --global roslynkit --add-source <local-feed-path> --version <
 
 ## Main commands
 
+- `version`, `--version`: print the installed RoslynKit version
 - `workspace`: enumerate repo-relevant source documents and opt into generated, additional, or analyzer-config documents
 - `symbols`: search the target workspace for named types or members
 - `document-symbols`: inspect the structure of one document

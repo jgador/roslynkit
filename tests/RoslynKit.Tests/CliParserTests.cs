@@ -15,6 +15,15 @@ public sealed class CliParserTests
     }
 
     [Fact]
+    public void Parse_RewritesTopLevelVersionFlagToVersionCommand()
+    {
+        var command = CliParser.Parse(["--version"]);
+
+        Assert.Equal("version", command.Name);
+        Assert.Equal("version", command.Builtin?.Name);
+    }
+
+    [Fact]
     public void Parse_CollectsAliasesAndOptions()
     {
         var command = CliParser.Parse(["definition", "-t", "repo.slnx", "-f", "Program.cs", "--line", "10", "--column", "4"]);
@@ -89,12 +98,30 @@ public sealed class CliParserTests
     }
 
     [Fact]
+    public void Parse_ReturnsVersionHelp_WhenTopLevelVersionFlagAsksForHelp()
+    {
+        var command = CliParser.Parse(["--version", "--help"]);
+
+        Assert.True(command.IsHelp);
+        Assert.Equal("version", command.HelpSubject?.Name);
+    }
+
+    [Fact]
     public void Parse_RejectsMissingRequiredOption()
     {
         var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(["definition", "--target", "repo.slnx", "--file", "Program.cs"]));
 
         Assert.Equal("definition", exception.CommandName);
         Assert.Contains("Missing required option '--line'", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_RejectsUnexpectedPositional_ForVersionCommand()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(["version", "extra"]));
+
+        Assert.Equal("version", exception.CommandName);
+        Assert.Contains("Unexpected positional argument 'extra'", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

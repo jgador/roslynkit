@@ -2,7 +2,7 @@
 
 RoslynKit is an unofficial Roslyn-powered C# code intelligence CLI for coding agents and terminal workflows.
 
-It is deliberately not an MCP server and not an LSP client. The CLI loads C# solutions or projects through Roslyn/MSBuild APIs and returns deterministic JSON on stdout.
+It is deliberately not an MCP server and not an LSP client. The CLI exposes Git-style subcommands for Roslyn/MSBuild-backed C# inspection. Structured commands return deterministic JSON on stdout, while `version` and top-level `--version` print a plain-text version line.
 
 RoslynKit prioritizes read-only Roslyn intelligence: inspect, navigate, understand, and verify C# code without changing source files or project state.
 
@@ -11,12 +11,12 @@ RoslynKit prioritizes read-only Roslyn intelligence: inspect, navigate, understa
 - Use Roslyn APIs directly instead of shelling out to an editor, language server, or IDE.
 - Prioritize read-only code intelligence before edit-producing refactor or formatting features.
 - Keep commands deterministic and scriptable for agents and terminal workflows.
-- Emit one JSON envelope for every command, including usage and error responses.
+- Emit one JSON envelope for every structured command result, including usage and error responses. The Git-style `version` command prints plain text.
 - Support solution-level and project-level inspection with stable sorting and one-based source positions.
 
 ## Commands
 
-Every command writes a JSON envelope:
+Most commands write a JSON envelope:
 
 ```json
 {
@@ -29,9 +29,19 @@ Every command writes a JSON envelope:
 }
 ```
 
+`version` and top-level `--version` print a plain-text version line instead:
+
+```text
+roslynkit version <informational-version>
+```
+
+The printed value comes from the assembly informational version and may include build metadata after `+`.
+
 Available commands:
 
 ```powershell
+dotnet run --project .\src\RoslynKit -- version
+dotnet run --project .\src\RoslynKit -- --version
 dotnet run --project .\src\RoslynKit -- workspace --target .\RoslynKit.slnx
 dotnet run --project .\src\RoslynKit -- workspace --target .\RoslynKit.slnx --include-generated --include-additional --include-analyzer-config
 dotnet run --project .\src\RoslynKit -- diagnostics --target .\RoslynKit.slnx
@@ -48,7 +58,7 @@ dotnet run --project .\src\RoslynKit -- signature-help --target .\RoslynKit.slnx
 dotnet run --project .\src\RoslynKit -- document-text --target .\tests\FixtureWorkspace\App\App.csproj --document-key doc_ABC123
 ```
 
-Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-based.
+Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-based. `version` and top-level `--version` do not require `--target`.
 
 `workspace` defaults to repo-relevant source documents only. Add `--include-generated`, `--include-additional`, and `--include-analyzer-config` when you need source-generated files, `AdditionalFiles`, or analyzer config documents. Distinct project and target-framework contexts stay separate through `documentKey`.
 
@@ -81,13 +91,14 @@ $roslynkitDev = Join-Path $roslynkitDev ($(if ($IsWindows) { "roslynkit.exe" } e
 & $roslynkitDev quick-info --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 20
 ```
 
-`AGENTS.md` makes `.agents\skills\roslynkit-dev\` the default route for ordinary C# semantic inspection in this repo. Pass `--target` explicitly for every RoslynKit command. Use `workspace` first when you need a generated `documentKey`, multiple project contexts, or additional/analyzer-config documents. Use RoslynKit first for ordinary C# semantic inspection, then fall back to terminal-native literal search for prose, non-C# files, or RoslynKit workspace-load failures. See `docs/skill-maintenance.md` for the stable/dev update rules and `docs/dev-install.md` for the side-by-side dev install flow.
+`AGENTS.md` makes `.agents\skills\roslynkit-dev\` the default route for ordinary C# semantic inspection in this repo. Pass `--target` explicitly for RoslynKit's code-intelligence commands. `version` and top-level `--version` do not use a target. Use `workspace` first when you need a generated `documentKey`, multiple project contexts, or additional/analyzer-config documents. Use RoslynKit first for ordinary C# semantic inspection, then fall back to terminal-native literal search for prose, non-C# files, or RoslynKit workspace-load failures. See `docs/skill-maintenance.md` for the stable/dev update rules and `docs/dev-install.md` for the side-by-side dev install flow.
 
 ## CLI Architecture
 
 RoslynKit follows Git's simple CLI shape:
 
 - subcommands are registered in one builtin command table;
+- top-level `--version` is rewritten to the `version` subcommand;
 - each subcommand owns its usage strings and option descriptors;
 - one shared parser validates short options, long options, flags, required values, and command-specific help;
 - command execution stays separate from argument parsing.
@@ -110,7 +121,7 @@ Stable global install:
 ```powershell
 dotnet pack .\src\RoslynKit\RoslynKit.csproj -c Release -o .\artifacts\packages\roslynkit
 dotnet tool install --global roslynkit --add-source .\artifacts\packages\roslynkit --version 0.1.0 --ignore-failed-sources
-roslynkit help
+roslynkit version
 ```
 
 If `roslynkit` is already installed globally:

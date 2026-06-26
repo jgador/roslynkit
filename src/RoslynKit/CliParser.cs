@@ -15,6 +15,8 @@ public static class CliParser
             return ParsedCommand.Help();
         }
 
+        args = RewriteVersionCommand(args);
+
         if (args[0] == "help")
         {
             return ParseHelp(args);
@@ -36,6 +38,18 @@ public static class CliParser
         ValidateCommandOptions(builtin.Name, options);
 
         return new ParsedCommand(builtin.Name, builtin, options, HelpSubject: null);
+    }
+
+    private static IReadOnlyList<string> RewriteVersionCommand(IReadOnlyList<string> args)
+    {
+        if (args.Count == 0 || args[0] != "--version")
+        {
+            return args;
+        }
+
+        var rewritten = args.ToArray();
+        rewritten[0] = "version";
+        return rewritten;
     }
 
     private static ParsedCommand ParseHelp(IReadOnlyList<string> args)

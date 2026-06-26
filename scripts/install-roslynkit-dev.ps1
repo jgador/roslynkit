@@ -81,6 +81,9 @@ Invoke-DotNet -Context $context -Arguments @(
 Write-Host ""
 Write-Host "Dev tool command:"
 Write-Host $toolCommandPath
+Write-Host "This side-by-side --tool-path install is not added to PATH automatically."
+Write-Host "Invoke it with the full command path above, or prepend '$resolvedToolPath' to PATH in the current shell."
 Write-Host ""
 Write-Host "Smoke test:"
+Write-Host "& `"$toolCommandPath`" version"
 Write-Host "& `"$toolCommandPath`" help"

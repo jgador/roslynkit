@@ -77,8 +77,11 @@ After install or update, verify the side-by-side tool:
 ```powershell
 $roslynkitDev = Join-Path (Join-Path (Join-Path $HOME ".roslynkit") "tools") "roslynkit-dev"
 $roslynkitDev = Join-Path $roslynkitDev ($(if ($IsWindows) { "roslynkit.exe" } else { "roslynkit" }))
+& $roslynkitDev version
 & $roslynkitDev help
 ```
+
+The reported version should include the prerelease suffix, for example `0.1.1-dev.1` or `0.1.1-dev.1+<build-metadata>`.
 
 ## Relationship to the checked-in skills
 

@@ -305,7 +305,7 @@ function Show-RoslynKitDogfoodCommands
     Write-Host "Global install commands:"
     Write-Host "dotnet tool install --global $($Context.PackageId) --add-source `"$($Context.PackageFeedPath)`" --version $($Context.PackageVersion) --ignore-failed-sources"
     Write-Host "dotnet tool update --global $($Context.PackageId) --add-source `"$($Context.PackageFeedPath)`" --version $($Context.PackageVersion) --ignore-failed-sources"
-    Write-Host "roslynkit help"
+    Write-Host "roslynkit version"
 
     Write-Host ""
     Write-Host "Side-by-side dev install:"
@@ -320,5 +320,6 @@ function Show-RoslynKitDogfoodCommands
 
     Write-Host "pwsh .\scripts\install-roslynkit-dev.ps1 -Version $devVersionExample"
     Write-Host "The dev installer builds, packs, and installs the requested prerelease from the current checkout."
+    Write-Host "& `"$($Context.DevToolCommandPath)`" version"
     Write-Host "& `"$($Context.DevToolCommandPath)`" help"
 }
