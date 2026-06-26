@@ -4,5 +4,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/RoslynKit.Tests/RoslynKit.Tests.csproj" />
+    <Project Path="tests/RoslynKit.WorkspaceGraphDump/RoslynKit.WorkspaceGraphDump.csproj" />
   </Folder>
 </Solution>
