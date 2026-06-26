@@ -43,6 +43,6 @@ dotnet tool update --global roslynkit --add-source <local-feed-path> --version <
 roslynkit workspace --target .\MySolution.slnx
 ```
 
-See the repository README for the full command reference, stable/dev skill workflows, and maintainer packaging steps:
+See the repository README for the full command reference and usage guide. Side-by-side prerelease dev installs live in `docs/dev-install.md`, and maintainer packaging steps live in `docs/dotnet-tool-release.md` in the same repository:
 
 [RoslynKit on GitHub](https://github.com/jgador/roslynkit)

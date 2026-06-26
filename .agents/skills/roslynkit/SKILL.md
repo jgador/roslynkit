@@ -14,6 +14,16 @@ Use this skill for ordinary C# semantic inspection when the stable global `rosly
 
 Do not default to `Get-Content`, `Select-String`, or grep-style file reads for questions that are really about C# declarations, symbol structure, definitions, references, implementations, types, signatures, or generated documents.
 
+## Default File Scope
+
+RoslynKit is C#-only by default.
+
+- For any RoslynKit command that accepts `--file`, always pass a path that ends in `.cs`.
+- Treat `.cs` as the default and required file scope unless the user explicitly asks for generated-document inspection that uses `--document-key` instead of `--file`.
+- Do not run RoslynKit with `--file` values that point to `.md`, `.json`, `.xml`, `.yml`, `.yaml`, `.props`, `.targets`, `.editorconfig`, `.sln`, `.slnx`, `.csproj`, or other non-C# files.
+- If the task is prose inspection, comment wording, XML documentation wording, TODO scanning, or literal text matching, let Codex CLI choose the terminal-native fallback even when the text appears inside a `.cs` file.
+- A `.cs` file may still be inspected with RoslynKit when the primary task is semantic C# analysis or source-range inspection. Returned ranges may include comments, but comment text is not itself a RoslynKit search target.
+
 ## Command
 
 Use the stable global command:
@@ -23,6 +33,7 @@ roslynkit <command> --target <solution.slnx|solution.sln|project.csproj>
 ```
 
 Always pass `--target` explicitly. RoslynKit does not infer a solution or project path for you.
+When a command accepts `--file`, pass a `.cs` path by default.
 
 ## When To Start With `workspace`
 
@@ -95,6 +106,8 @@ roslynkit signature-help --target .\SomeProject.csproj --file .\SomeFile.cs --li
 ```
 
 ### Generated-document reads
+
+This is the routine exception to the `.cs` `--file` default.
 
 1. Run `workspace --include-generated`.
 2. Copy the `documentKey` for the source-generated document.
