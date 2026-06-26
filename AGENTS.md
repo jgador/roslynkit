@@ -5,7 +5,9 @@
 Use one source of truth per topic:
 
 - `README.md`: user-facing command list, JSON envelope shape, packaging, and quick-start commands.
+- `docs/dev-install.md`: semi-manual side-by-side prerelease installation for RoslynKit development.
 - `docs/local-repository-reference.md`: local reference repositories for Roslyn APIs, Git CLI style, EF Core tooling conventions, and VS Code C# language-server wiring.
+- `docs/skill-maintenance.md`: ownership and synchronization rules for the checked-in RoslynKit skill files.
 - `AGENTS.md`: agent-specific working rules, safety rules, and repo workflow expectations.
 
 Keep this file focused on contributor and agent workflow rules. Do not restate full command reference material here.
@@ -25,6 +27,14 @@ RoslynKit is a .NET 10 command-line tool. Production code lives under `src/Rosly
 ## Agent Workflow
 
 Use Repository Synapse first when available, then verify all conclusions against current files, tests, and command output. Treat Synapse as recall only, not source of truth.
+
+### RoslynKit Default Semantic Inspection
+
+When the task is ordinary C# semantic inspection inside this RoslynKit repo, use `.agents\skills\roslynkit-dev\SKILL.md` first. Treat that dev skill as the repo-default route for declarations, symbol structure, definitions, references, implementations, types, signatures, generated documents, and similar Roslyn-backed inspection work.
+
+Use `.agents\skills\roslynkit\SKILL.md` only when the task is explicitly about the stable global tool behavior or the released stable workflow.
+
+For literal search, prose inspection, non-C# files, or RoslynKit workspace-load failures, fall back to the terminal-native tool for the current platform instead of forcing RoslynKit.
 
 ### Scout-First Repo Search
 

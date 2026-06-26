@@ -56,19 +56,32 @@ For document-oriented commands such as `document-symbols`, `document-text`, `def
 
 See `docs/roslyn-lsp-commands.md` for the exhaustive Roslyn language-server method inventory used to compare RoslynKit's current command set with Roslyn's broader code intelligence surface.
 
-## Repo-Local Skill
+## Repo-Local Skills
 
-RoslynKit includes a repo-local skill at `.agents\skills\roslynkit-csharp\`.
+RoslynKit keeps two checked-in agent skills:
 
-Use the wrapper directly:
+- `.agents\skills\roslynkit\` for the stable global `roslynkit` command.
+- `.agents\skills\roslynkit-dev\` for the default RoslynKit development route in this repo.
+
+Stable skill example:
 
 ```powershell
-pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 -Operation workspace
-pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 -Operation body-read -Path .\src\RoslynKit\RoslynCommandExecutor.cs -StartLine 31 -EndLine 46
-pwsh .\.agents\skills\roslynkit-csharp\scripts\roslynkit.ps1 -Operation quick-info -Path .\src\RoslynKit\Program.cs -Line 10 -Column 20
+roslynkit workspace --target .\RoslynKit.slnx
+roslynkit document-text --target .\RoslynKit.slnx --file .\src\RoslynKit\RoslynCommandExecutor.cs --start-line 31 --end-line 46
+roslynkit quick-info --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 20
 ```
 
-The wrapper resolves the nearest `.slnx`, then `.sln`, then `.csproj`, and always passes `--target` explicitly. Use `-Path` for file-backed operations; the wrapper translates that to RoslynKit's `--file` option. It routes ordinary C# semantic inspection to RoslynKit first and leaves literal text search, prose inspection, non-C# files, and workspace-load fallbacks to Codex CLI, which selects the terminal-native tool for the current platform.
+Dev skill example:
+
+```powershell
+$roslynkitDev = Join-Path (Join-Path (Join-Path $HOME ".roslynkit") "tools") "roslynkit-dev"
+$roslynkitDev = Join-Path $roslynkitDev ($(if ($IsWindows) { "roslynkit.exe" } else { "roslynkit" }))
+& $roslynkitDev workspace --target .\RoslynKit.slnx
+& $roslynkitDev document-text --target .\RoslynKit.slnx --file .\src\RoslynKit\RoslynCommandExecutor.cs --start-line 31 --end-line 46
+& $roslynkitDev quick-info --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 20
+```
+
+`AGENTS.md` makes `.agents\skills\roslynkit-dev\` the default route for ordinary C# semantic inspection in this repo. Pass `--target` explicitly for every RoslynKit command. Use `workspace` first when you need a generated `documentKey`, multiple project contexts, or additional/analyzer-config documents. Use RoslynKit first for ordinary C# semantic inspection, then fall back to terminal-native literal search for prose, non-C# files, or RoslynKit workspace-load failures. See `docs/skill-maintenance.md` for the stable/dev update rules and `docs/dev-install.md` for the side-by-side dev install flow.
 
 ## CLI Architecture
 
@@ -92,6 +105,8 @@ dotnet run --project .\src\RoslynKit -- symbols --help
 
 RoslynKit ships as a .NET tool package with package ID `roslynkit`.
 
+Stable global install:
+
 ```powershell
 dotnet pack .\src\RoslynKit\RoslynKit.csproj -c Release -o .\artifacts\packages\roslynkit
 dotnet tool install --global roslynkit --add-source .\artifacts\packages\roslynkit --version 0.1.0 --ignore-failed-sources
@@ -104,13 +119,21 @@ If `roslynkit` is already installed globally:
 dotnet tool update --global roslynkit --add-source .\artifacts\packages\roslynkit --version 0.1.0 --ignore-failed-sources
 ```
 
+Side-by-side prerelease install:
+
+```powershell
+pwsh .\scripts\install-roslynkit-dev.ps1 -Version 0.1.1-dev.1
+```
+
+That installer builds the current checkout, packs `src\RoslynKit\RoslynKit.csproj` with `/p:Version=<prerelease>` into `.\artifacts\packages\roslynkit-dev` by default, and installs or updates the side-by-side dev tool without changing `Directory.Build.props`.
+
 For a repeatable local folder-feed setup, use the helper script:
 
 ```powershell
 pwsh .\scripts\prepare-roslynkit-package.ps1
 ```
 
-That script recreates `.\artifacts\packages\roslynkit`, packs `roslynkit.0.1.0.nupkg` into the folder feed, and prints the exact `dotnet tool install` and `dotnet tool update` commands for dogfooding the current checkout. See `docs/dotnet-tool-release.md` for the maintainer packaging and publish workflow.
+That script recreates `.\artifacts\packages\roslynkit`, packs the current `roslynkit.<version>.nupkg` into the stable folder feed, and prints the exact global install commands plus the self-packaging side-by-side dev install command. See `docs/dev-install.md` for the dev install flow, `docs/dotnet-tool-release.md` for the maintainer packaging workflow, and `docs/skill-maintenance.md` for the stable/dev skill split.
 
 ## Development
 
