@@ -1,7 +1,7 @@
 namespace RoslynKit;
 
 /// <summary>
-/// Describes one built-in RoslynKit command and its usage metadata.
+/// Describes one built-in command definition used for parser binding and help output.
 /// </summary>
 public sealed record BuiltinCommand(
     string Name,
@@ -10,7 +10,7 @@ public sealed record BuiltinCommand(
     IReadOnlyList<OptionSpec> Options);
 
 /// <summary>
-/// Describes one command-line option supported by a built-in command.
+/// Describes one built-in option definition used for parser binding and help output.
 /// </summary>
 public sealed record OptionSpec(
     char? ShortName,

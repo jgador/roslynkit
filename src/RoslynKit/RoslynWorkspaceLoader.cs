@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.MSBuild;
 namespace RoslynKit;
 
 /// <summary>
-/// Loads Roslyn workspaces from solution or project targets and exposes the resolved workspace state.
+/// Loads an MSBuild workspace from a solution or project target and exposes the resolved documents and diagnostics for commands.
 /// </summary>
 public sealed class RoslynWorkspaceLoader : IDisposable
 {
@@ -48,7 +48,7 @@ public sealed class RoslynWorkspaceLoader : IDisposable
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 
     /// <summary>
-    /// Opens a solution or project target with MSBuildWorkspace and captures any workspace load diagnostics.
+    /// Opens the requested solution or project target with <c>MSBuildWorkspace</c> and records workspace load diagnostics.
     /// </summary>
     public static async Task<RoslynWorkspaceLoader> LoadAsync(string targetPath, CancellationToken cancellationToken)
     {
@@ -189,6 +189,9 @@ public sealed class RoslynWorkspaceLoader : IDisposable
             .ToArray();
     }
 
+    /// <summary>
+    /// Resolves one text document from <c>--file</c> or <c>--document-key</c> for follow-on RoslynKit commands.
+    /// </summary>
     public async Task<WorkspaceDocumentContext> FindTextDocumentAsync(
         string? filePath,
         string? documentKey,
@@ -307,7 +310,7 @@ public sealed class RoslynWorkspaceLoader : IDisposable
 }
 
 /// <summary>
-/// Captures a resolved Roslyn text document together with its JSON descriptor.
+/// Pairs a resolved Roslyn text document with the JSON descriptor RoslynKit returns in command payloads.
 /// </summary>
 public sealed class WorkspaceDocumentContext
 {

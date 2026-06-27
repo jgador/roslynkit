@@ -17,7 +17,7 @@ public static class DocumentKindNames
 }
 
 /// <summary>
-/// Workspace command payload.
+/// Represents the <c>workspace</c> command payload with loaded projects, document descriptors, and workspace diagnostics.
 /// </summary>
 public sealed class WorkspaceResult
 {
@@ -52,7 +52,7 @@ public sealed class WorkspaceResult
 }
 
 /// <summary>
-/// Diagnostics command payload.
+/// Represents the <c>diagnostics</c> command payload with ordered source diagnostics from the loaded target.
 /// </summary>
 public sealed class DiagnosticsResult
 {
@@ -92,7 +92,7 @@ public sealed class DiagnosticsResult
 }
 
 /// <summary>
-/// Symbols command payload.
+/// Represents the <c>symbols</c> command payload with matching declarations from the loaded target.
 /// </summary>
 public sealed class SymbolsResult
 {
@@ -137,7 +137,7 @@ public sealed class SymbolsResult
 }
 
 /// <summary>
-/// Document text command payload.
+/// Represents the <c>document-text</c> command payload for one resolved document range.
 /// </summary>
 public sealed class DocumentTextResult
 {
@@ -172,7 +172,7 @@ public sealed class DocumentTextResult
 }
 
 /// <summary>
-/// Document symbols command payload.
+/// Represents the <c>document-symbols</c> command payload for declarations in one semantic document.
 /// </summary>
 public sealed class DocumentSymbolsResult
 {
@@ -197,7 +197,7 @@ public sealed class DocumentSymbolsResult
 }
 
 /// <summary>
-/// Definition command payload.
+/// Represents the <c>definition</c> command payload for the symbol resolved from one document position.
 /// </summary>
 public sealed class DefinitionResult
 {
@@ -232,7 +232,7 @@ public sealed class DefinitionResult
 }
 
 /// <summary>
-/// Type definition command payload.
+/// Represents the <c>type-definition</c> command payload for the type resolved from one document position.
 /// </summary>
 public sealed class TypeDefinitionResult
 {
@@ -267,7 +267,7 @@ public sealed class TypeDefinitionResult
 }
 
 /// <summary>
-/// Quick info command payload.
+/// Represents the <c>quick-info</c> command payload with the resolved span, tags, and formatted sections at one document position.
 /// </summary>
 public sealed class QuickInfoResult
 {
@@ -312,7 +312,7 @@ public sealed class QuickInfoResult
 }
 
 /// <summary>
-/// References command payload.
+/// Represents the <c>references</c> command payload for source references to the symbol at one document position.
 /// </summary>
 public sealed class ReferencesResult
 {
@@ -367,7 +367,7 @@ public sealed class ReferencesResult
 }
 
 /// <summary>
-/// Implementations command payload.
+/// Represents the <c>implementations</c> command payload for source implementations of the symbol at one document position.
 /// </summary>
 public sealed class ImplementationsResult
 {
@@ -422,7 +422,7 @@ public sealed class ImplementationsResult
 }
 
 /// <summary>
-/// Signature help command payload.
+/// Represents the <c>signature-help</c> command payload for the call site at one document position.
 /// </summary>
 public sealed class SignatureHelpResult
 {
@@ -472,7 +472,7 @@ public sealed class SignatureHelpResult
 }
 
 /// <summary>
-/// Shared descriptor for a document resolved inside a target workspace.
+/// Describes one document resolved from the loaded workspace, including project context and document key.
 /// </summary>
 public sealed class DocumentDescriptor
 {
@@ -517,7 +517,7 @@ public sealed class DocumentDescriptor
 }
 
 /// <summary>
-/// One-based range inside a specific document.
+/// Represents a one-based span inside a resolved document.
 /// </summary>
 public sealed class DocumentRange
 {
@@ -543,7 +543,7 @@ public sealed class DocumentRange
 }
 
 /// <summary>
-/// Workspace project metadata.
+/// Represents one loaded project entry in the <c>workspace</c> command payload.
 /// </summary>
 public sealed class WorkspaceProject
 {
@@ -583,7 +583,7 @@ public sealed class WorkspaceProject
 }
 
 /// <summary>
-/// Workspace load diagnostic emitted by MSBuildWorkspace.
+/// Represents one <c>MSBuildWorkspace</c> diagnostic captured while loading the target.
 /// </summary>
 public sealed class WorkspaceLoadDiagnostic
 {
@@ -601,7 +601,7 @@ public sealed class WorkspaceLoadDiagnostic
 }
 
 /// <summary>
-/// Diagnostic item emitted by the diagnostics command.
+/// Represents one compiler diagnostic surfaced by the <c>diagnostics</c> command.
 /// </summary>
 public sealed class DiagnosticItem
 {
@@ -676,7 +676,7 @@ public sealed class DiagnosticItem
 }
 
 /// <summary>
-/// Symbol item emitted by symbol-based commands.
+/// Represents one source-declared symbol surfaced by symbol-based RoslynKit commands.
 /// </summary>
 public sealed class SymbolItem
 {
@@ -795,7 +795,7 @@ public sealed class SymbolItem
 }
 
 /// <summary>
-/// One-based source span for a symbol or reference.
+/// Represents a one-based source span for a declaration, definition, or reference location.
 /// </summary>
 public sealed class SourceRange
 {
@@ -847,7 +847,7 @@ public sealed class SourceRange
 }
 
 /// <summary>
-/// Reference item emitted by the references command.
+/// Represents one source reference location returned by the <c>references</c> command.
 /// </summary>
 public sealed class ReferenceItem
 {
@@ -905,7 +905,7 @@ public sealed class ReferenceItem
 }
 
 /// <summary>
-/// Quick info section payload.
+/// Represents one formatted section returned in a <c>quick-info</c> result.
 /// </summary>
 public sealed class QuickInfoSectionItem
 {
@@ -923,7 +923,7 @@ public sealed class QuickInfoSectionItem
 }
 
 /// <summary>
-/// Signature help signature payload.
+/// Represents one callable signature returned by <c>signature-help</c>.
 /// </summary>
 public sealed class SignatureHelpSignatureItem
 {
@@ -953,7 +953,7 @@ public sealed class SignatureHelpSignatureItem
 }
 
 /// <summary>
-/// Signature help parameter payload.
+/// Represents one parameter entry inside a <c>signature-help</c> signature.
 /// </summary>
 public sealed class SignatureHelpParameterItem
 {

@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace RoslynKit;
 
 /// <summary>
-/// Runs parsed RoslynKit commands and writes command output to stdout.
+/// Owns the top-level CLI flow from argument parsing through command dispatch and stdout output.
 /// </summary>
 public sealed class CliApplication
 {
@@ -26,7 +26,7 @@ public sealed class CliApplication
     }
 
     /// <summary>
-    /// Parses command-line arguments, executes the requested command, and emits either a JSON envelope or plain-text version output.
+    /// Parses arguments, dispatches help or command execution, and writes either a JSON envelope or the plain-text version response.
     /// </summary>
     public async Task<int> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken = default)
     {
@@ -91,7 +91,7 @@ public sealed class CliApplication
 }
 
 /// <summary>
-/// Top-level stdout envelope for every command.
+/// Represents the top-level JSON stdout envelope for command results and failures.
 /// </summary>
 public sealed class JsonEnvelope
 {
@@ -135,7 +135,7 @@ public sealed class JsonEnvelope
 }
 
 /// <summary>
-/// Error item emitted in a failed envelope.
+/// Represents one error entry in a failed JSON envelope.
 /// </summary>
 public sealed class ErrorInfo
 {
@@ -172,7 +172,7 @@ public sealed class ErrorInfo
 }
 
 /// <summary>
-/// Help command payload.
+/// Represents the <c>help</c> command payload built from the built-in command table.
 /// </summary>
 public sealed class HelpResult
 {
@@ -206,7 +206,7 @@ public sealed class HelpResult
 }
 
 /// <summary>
-/// Help entry for one command.
+/// Represents one built-in command entry inside the <c>help</c> payload.
 /// </summary>
 public sealed class CommandHelp
 {
@@ -241,7 +241,7 @@ public sealed class CommandHelp
 }
 
 /// <summary>
-/// Help entry for one command-line option.
+/// Represents one built-in option entry inside the <c>help</c> payload.
 /// </summary>
 public sealed class OptionHelp
 {

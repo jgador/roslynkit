@@ -4,12 +4,12 @@ using Microsoft.CodeAnalysis.Text;
 namespace RoslynKit;
 
 /// <summary>
-/// Resolves one-based line and column inputs into Roslyn source positions and ranges.
+/// Converts one-based CLI coordinates and ranges into Roslyn positions and JSON document ranges.
 /// </summary>
 public static class PositionResolver
 {
     /// <summary>
-    /// Validates one-based source coordinates and converts them into a document position.
+    /// Validates one-based CLI coordinates and converts them into a Roslyn document position.
     /// </summary>
     public static async Task<int> GetPositionAsync(TextDocument document, int oneBasedLine, int oneBasedColumn, string commandName, CancellationToken cancellationToken)
     {
@@ -18,7 +18,7 @@ public static class PositionResolver
     }
 
     /// <summary>
-    /// Resolves an optional one-based range inside a text document.
+    /// Resolves and validates the optional one-based range requested for a text document read.
     /// </summary>
     public static async Task<ResolvedTextSpan> ResolveRangeAsync(
         TextDocument document,
@@ -87,6 +87,6 @@ public static class PositionResolver
 }
 
 /// <summary>
-/// Captures a resolved text span and the corresponding document text.
+/// Carries the loaded document text together with a validated span and JSON range.
 /// </summary>
 public readonly record struct ResolvedTextSpan(SourceText Text, TextSpan Span, DocumentRange Range);

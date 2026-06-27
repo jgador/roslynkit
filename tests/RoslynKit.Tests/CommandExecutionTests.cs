@@ -1,7 +1,7 @@
 namespace RoslynKit.Tests;
 
 /// <summary>
-/// Verifies RoslynKit command execution against the repository solution and the fixture workspace.
+/// Verifies workspace-backed command handlers such as definition, quick info, and document reads against the repo and fixture targets.
 /// </summary>
 public sealed class CommandExecutionTests
 {

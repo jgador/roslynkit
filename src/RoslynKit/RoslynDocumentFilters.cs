@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 namespace RoslynKit;
 
 /// <summary>
-/// Filters Roslyn documents and symbol locations to the source files RoslynKit should report.
+/// Classifies Roslyn documents and symbol locations so commands report only the intended semantic and workspace-visible files.
 /// </summary>
 public static class RoslynDocumentFilters
 {

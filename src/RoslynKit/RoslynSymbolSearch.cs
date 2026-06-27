@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 namespace RoslynKit;
 
 /// <summary>
-/// Enumerates and classifies Roslyn source symbols for search and document-symbol commands.
+/// Provides deterministic source symbol enumeration and filtering for the <c>symbols</c> and <c>document-symbols</c> commands.
 /// </summary>
 public static class RoslynSymbolSearch
 {

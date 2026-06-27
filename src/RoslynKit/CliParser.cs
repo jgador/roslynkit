@@ -1,7 +1,7 @@
 namespace RoslynKit;
 
 /// <summary>
-/// Parses RoslynKit command-line arguments into built-in command metadata and option values.
+/// Binds RoslynKit command-line tokens to built-in command metadata, option values, and command-specific usage validation.
 /// </summary>
 public static class CliParser
 {
@@ -273,7 +273,7 @@ public static class CliParser
 }
 
 /// <summary>
-/// Represents a parsed RoslynKit command with resolved built-in metadata and option values.
+/// Represents a parsed RoslynKit invocation with bound command metadata and validated option accessors.
 /// </summary>
 public sealed record ParsedCommand(
     string Name,
@@ -330,7 +330,7 @@ public sealed record ParsedCommand(
 }
 
 /// <summary>
-/// Represents a command-line usage error that should be returned as a usage envelope.
+/// Represents a user-facing CLI usage failure that should be returned as a usage envelope.
 /// </summary>
 public sealed class CliUsageException : Exception
 {

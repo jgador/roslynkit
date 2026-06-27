@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace RoslynKit.Tests;
 
 /// <summary>
-/// Verifies RoslynKit CLI envelope, help, and version output contracts.
+/// Verifies the top-level CLI envelope, help payload, and version output contracts.
 /// </summary>
 public sealed class EnvelopeTests
 {

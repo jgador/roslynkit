@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.QuickInfo;
 namespace RoslynKit;
 
 /// <summary>
-/// Executes parsed RoslynKit commands against Roslyn workspaces and documents.
+/// Executes parsed RoslynKit semantic commands by loading workspaces, resolving documents, and projecting JSON results.
 /// </summary>
 public static class RoslynCommandExecutor
 {
@@ -26,7 +26,7 @@ public static class RoslynCommandExecutor
     ];
 
     /// <summary>
-    /// Dispatches a parsed command to the corresponding RoslynKit command handler.
+    /// Dispatches a parsed command name to the corresponding Roslyn-backed command handler.
     /// </summary>
     public static async Task<object> ExecuteAsync(ParsedCommand command, CancellationToken cancellationToken)
     {
@@ -210,6 +210,9 @@ public static class RoslynCommandExecutor
         return new DocumentSymbolsResult(context.Descriptor, symbols, loaded.WorkspaceDiagnostics);
     }
 
+    /// <summary>
+    /// Resolves the symbol at the requested document position to its source definition payload.
+    /// </summary>
     private static async Task<object> DefinitionAsync(ParsedCommand command, CancellationToken cancellationToken)
     {
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
@@ -318,6 +321,9 @@ public static class RoslynCommandExecutor
             loaded.WorkspaceDiagnostics);
     }
 
+    /// <summary>
+    /// Returns quick-info tags, formatted sections, and the resolved span for the requested document position.
+    /// </summary>
     private static async Task<object> QuickInfoAsync(ParsedCommand command, CancellationToken cancellationToken)
     {
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
@@ -371,6 +377,9 @@ public static class RoslynCommandExecutor
             loaded.WorkspaceDiagnostics);
     }
 
+    /// <summary>
+    /// Resolves the requested document selector and rejects non-C# or non-semantic documents before symbol commands run.
+    /// </summary>
     private static async Task<WorkspaceDocumentContext> ResolveSemanticDocumentAsync(ParsedCommand command, RoslynWorkspaceLoader loaded, CancellationToken cancellationToken)
     {
         var context = await loaded.FindTextDocumentAsync(command.Optional("file"), command.Optional("document-key"), command.Name, cancellationToken).ConfigureAwait(false);
@@ -382,6 +391,9 @@ public static class RoslynCommandExecutor
         return context;
     }
 
+    /// <summary>
+    /// Resolves the symbol at the requested position, falling back to syntax and semantic-model lookup when direct lookup fails.
+    /// </summary>
     private static async Task<ISymbol> SymbolAtPositionAsync(ParsedCommand command, Document document, CancellationToken cancellationToken)
     {
         var line = command.OptionalInt("line", 1, 1);

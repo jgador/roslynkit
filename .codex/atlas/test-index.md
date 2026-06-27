@@ -16,12 +16,14 @@
 
 - Full suite: `dotnet test .\RoslynKit.slnx`
 - Main test project: `dotnet test .\tests\RoslynKit.Tests\RoslynKit.Tests.csproj`
+- Explicit live Codex token benchmark: `dotnet test .\tests\RoslynKit.Tests\RoslynKit.Tests.csproj -- --explicit only --filter-method RoslynKit.Tests.CodexExecTokenComparisonTests.RoslynkitDevPrompt_UsesFewerInputTokens_ThanShellOnlyCodexExec`
 - Workspace graph utility: `dotnet run --project .\tests\RoslynKit.WorkspaceGraphDump -- .\RoslynKit.slnx`
 
 ## Source To Test Map
 
 - command parsing and option validation -> `tests/RoslynKit.Tests/CliParserTests.cs`
 - command execution and navigation flows -> `tests/RoslynKit.Tests/CommandExecutionTests.cs`
+- live Codex shell-only versus RoslynKit-first token benchmark -> `tests/RoslynKit.Tests/CodexExecTokenComparisonTests.cs`
 - JSON envelopes, help, and version output -> `tests/RoslynKit.Tests/EnvelopeTests.cs`
 - symbol search behavior -> `tests/RoslynKit.Tests/SymbolsCommandTests.cs`
 - repo and fixture path helpers -> `tests/RoslynKit.Tests/TestPaths.cs`

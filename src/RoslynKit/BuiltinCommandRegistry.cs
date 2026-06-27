@@ -1,7 +1,7 @@
 namespace RoslynKit;
 
 /// <summary>
-/// Stores the built-in RoslynKit command table and lookup helpers.
+/// Owns the authoritative built-in command table used by parser binding and help output.
 /// </summary>
 public static class BuiltinCommandRegistry
 {

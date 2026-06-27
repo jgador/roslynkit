@@ -1,7 +1,7 @@
 namespace RoslynKit;
 
 /// <summary>
-/// Hosts the RoslynKit console entry point.
+/// Forwards the RoslynKit console entry point into <see cref="CliApplication.RunAsync(IReadOnlyList{string}, CancellationToken)"/>.
 /// </summary>
 internal static class Program
 {
