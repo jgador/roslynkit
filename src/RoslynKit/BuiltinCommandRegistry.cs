@@ -46,16 +46,12 @@ public static class BuiltinCommandRegistry
             ]),
         new BuiltinCommand(
             "document-text",
-            "Read the full text or a span from one resolved document.",
-            ["roslynkit document-text --target <target> (--file <path> | --document-key <id>) [--start-line <n>] [--start-column <n>] [--end-line <n>] [--end-column <n>]"],
+            "Read the full text of one resolved document.",
+            ["roslynkit document-text --target <target> (--file <path> | --document-key <id>)"],
             [
                 TargetOption(),
                 FileOption(),
                 DocumentKeyOption(),
-                OptionSpec.Integer(null, "start-line", "n", "one-based start line"),
-                OptionSpec.Integer(null, "start-column", "n", "one-based start column"),
-                OptionSpec.Integer(null, "end-line", "n", "one-based end line"),
-                OptionSpec.Integer(null, "end-column", "n", "one-based end column"),
             ]),
         new BuiltinCommand(
             "document-symbols",

@@ -136,9 +136,10 @@ Invoke the executable directly as a shell command, not through a skill wrapper o
 Start with the cheapest RoslynKit semantic workflow and stop as soon as you have enough evidence.
 Resolve exact declarations and positions first with `symbols`, `definition`, `references`, or `implementations`, not broad file reads.
 Use `quick-info` at the resolved symbol or position before any body read when you need type, signature, or documentation context.
-If source text is still necessary, read only the smallest declaration-sized `document-text` window first. That header window may include XML docs or top-of-declaration comment lines when they help decide whether deeper inspection is necessary.
-Read a method body or class body only if symbol locations, quick info, declaration headers, and targeted cross-references are still insufficient.
-Do not read an entire `.cs` file or a broad class body unless prior RoslynKit results prove it is necessary.
+If source text is still necessary, use `document-text` only when a full resolved document read is justified.
+Prefer `quick-info`, `document-symbols`, declaration locations, and targeted cross-references before any whole-document read.
+If only a small literal snippet or comment block is needed after semantic resolution, use shell and file-reading tools for that narrow read instead of pulling the whole document through RoslynKit.
+Do not read an entire `.cs` file or a broad class body through RoslynKit unless prior semantic results prove it is necessary.
 Avoid broad `document-symbols` dumps unless the file is already known and you need local structure to choose a member or range.
 Use shell and file-reading tools only for literal text, prose, non-C# files, or if RoslynKit fails to load the target.
 

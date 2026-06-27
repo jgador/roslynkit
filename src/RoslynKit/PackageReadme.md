@@ -34,7 +34,7 @@ dotnet tool update --global roslynkit --add-source <local-feed-path> --version <
 - `workspace`: enumerate repo-relevant source documents and opt into generated, additional, or analyzer-config documents
 - `symbols`: search the target workspace for named types or members
 - `document-symbols`: inspect the structure of one document
-- `document-text`: read a file-backed or generated-document span without shelling out to text tools
+- `document-text`: read a full file-backed or generated document without shelling out to text tools
 - `definition`, `references`, `implementations`, `quick-info`, `type-definition`, `signature-help`: C# semantic inspection commands for source and source-generated documents
 
 ## Example

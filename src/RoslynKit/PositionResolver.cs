@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.Text;
 namespace RoslynKit;
 
 /// <summary>
-/// Converts one-based CLI coordinates and ranges into Roslyn positions and JSON document ranges.
+/// Converts one-based CLI coordinates into Roslyn positions and projects Roslyn spans into JSON document ranges.
 /// </summary>
 public static class PositionResolver
 {
@@ -15,45 +15,6 @@ public static class PositionResolver
     {
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
         return GetPosition(text, oneBasedLine, oneBasedColumn, commandName);
-    }
-
-    /// <summary>
-    /// Resolves and validates the optional one-based range requested for a text document read.
-    /// </summary>
-    public static async Task<ResolvedTextSpan> ResolveRangeAsync(
-        TextDocument document,
-        int? startLine,
-        int? startColumn,
-        int? endLine,
-        int? endColumn,
-        string commandName,
-        CancellationToken cancellationToken)
-    {
-        if (startColumn.HasValue && !startLine.HasValue)
-        {
-            throw new CliUsageException(commandName, "Option '--start-column' requires '--start-line'.");
-        }
-
-        if (endColumn.HasValue && !endLine.HasValue)
-        {
-            throw new CliUsageException(commandName, "Option '--end-column' requires '--end-line'.");
-        }
-
-        var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
-        var resolvedStartLine = startLine ?? 1;
-        var resolvedStartColumn = startColumn ?? 1;
-        var resolvedEndLine = endLine ?? text.Lines.Count;
-        var resolvedEndColumn = endColumn ?? text.Lines[resolvedEndLine - 1].Span.Length + 1;
-
-        var start = GetPosition(text, resolvedStartLine, resolvedStartColumn, commandName);
-        var end = GetPosition(text, resolvedEndLine, resolvedEndColumn, commandName);
-        if (end < start)
-        {
-            throw new CliUsageException(commandName, "The requested range end precedes the range start.");
-        }
-
-        var span = TextSpan.FromBounds(start, end);
-        return new ResolvedTextSpan(text, span, ToDocumentRange(text, span));
     }
 
     public static DocumentRange ToDocumentRange(SourceText text, TextSpan span)
@@ -85,8 +46,3 @@ public static class PositionResolver
         return text.Lines.GetPosition(new LinePosition(zeroBasedLine, zeroBasedColumn));
     }
 }
-
-/// <summary>
-/// Carries the loaded document text together with a validated span and JSON range.
-/// </summary>
-public readonly record struct ResolvedTextSpan(SourceText Text, TextSpan Span, DocumentRange Range);

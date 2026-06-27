@@ -34,22 +34,19 @@ public sealed class CommandExecutionTests
     }
 
     [Fact]
-    public async Task DocumentText_ReadsMethodBodySlice_FromFileSelector()
+    public async Task DocumentText_ReadsFullSourceDocument_FromFileSelector()
     {
-        var executorPath = TestPaths.RepoFile("src", "RoslynKit", "RoslynCommandExecutor.cs");
-        var (startLine, _) = TestPaths.FindLineAndColumn(executorPath, "public static async Task<object> ExecuteAsync(");
-        var (nextMethodLine, _) = TestPaths.FindLineAndColumn(executorPath, "private static async Task<object> WorkspaceAsync(");
+        var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+        var expectedText = File.ReadAllText(programPath);
 
         var result = await TestPaths.ExecuteCommandAsync<DocumentTextResult>(
             "document-text",
             "--target", TestPaths.SolutionPath(),
-            "--file", executorPath,
-            "--start-line", startLine.ToString(),
-            "--end-line", (nextMethodLine - 1).ToString());
+            "--file", programPath);
 
-        Assert.Equal("RoslynCommandExecutor.cs", result.Document.Name);
-        Assert.Equal(startLine, result.ResolvedRange.Line);
-        Assert.Contains("return command.Name switch", result.Text, StringComparison.Ordinal);
+        Assert.Equal("Program.cs", result.Document.Name);
+        Assert.Equal(expectedText, result.Text);
+        AssertWholeDocumentRange(result.ResolvedRange, expectedText);
         Assert.False(result.Truncated);
     }
 
@@ -142,13 +139,16 @@ public sealed class CommandExecutionTests
     }
 
     [Fact]
-    public async Task DocumentText_DocumentKey_ReadsGeneratedDocument()
+    public async Task DocumentText_DocumentKey_ReadsFullGeneratedDocument()
     {
         var workspace = await TestPaths.ExecuteCommandAsync<WorkspaceResult>(
             "workspace",
             "--target", TestPaths.FixtureProjectPath(),
             "--include-generated");
         var generatedDocument = workspace.Documents.First(document => document.DocumentKind == DocumentKindNames.SourceGenerated);
+        using var loaded = await RoslynWorkspaceLoader.LoadAsync(TestPaths.FixtureProjectPath(), TestContext.Current.CancellationToken);
+        var context = await loaded.FindTextDocumentAsync(null, generatedDocument.DocumentKey, "document-text", TestContext.Current.CancellationToken);
+        var expectedText = (await context.TextDocument.GetTextAsync(TestContext.Current.CancellationToken)).ToString();
 
         var result = await TestPaths.ExecuteCommandAsync<DocumentTextResult>(
             "document-text",
@@ -156,6 +156,18 @@ public sealed class CommandExecutionTests
             "--document-key", generatedDocument.DocumentKey);
 
         Assert.Equal(DocumentKindNames.SourceGenerated, result.Document.DocumentKind);
-        Assert.Contains("HelloRegex", result.Text, StringComparison.Ordinal);
+        Assert.Equal(expectedText, result.Text);
+        AssertWholeDocumentRange(result.ResolvedRange, expectedText);
+        Assert.False(result.Truncated);
+    }
+
+    private static void AssertWholeDocumentRange(DocumentRange range, string text)
+    {
+        var lines = text.Split('\n');
+
+        Assert.Equal(1, range.Line);
+        Assert.Equal(1, range.Column);
+        Assert.Equal(lines.Length, range.EndLine);
+        Assert.Equal(lines[^1].TrimEnd('\r').Length + 1, range.EndColumn);
     }
 }

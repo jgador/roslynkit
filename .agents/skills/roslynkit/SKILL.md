@@ -22,7 +22,7 @@ RoslynKit is C#-only by default.
 - Treat `.cs` as the default and required file scope unless the user explicitly asks for generated-document inspection that uses `--document-key` instead of `--file`.
 - Do not run RoslynKit with `--file` values that point to `.md`, `.json`, `.xml`, `.yml`, `.yaml`, `.props`, `.targets`, `.editorconfig`, `.sln`, `.slnx`, `.csproj`, or other non-C# files.
 - If the task is prose inspection, comment wording, XML documentation wording, TODO scanning, or literal text matching, let Codex CLI choose the terminal-native fallback even when the text appears inside a `.cs` file.
-- A `.cs` file may still be inspected with RoslynKit when the primary task is semantic C# analysis or source-range inspection. Returned ranges may include comments, but comment text is not itself a RoslynKit search target. If XML docs or top-of-declaration comment lines help decide whether deeper inspection is necessary, read them only through a narrow declaration-sized `document-text` window after the symbol or file is already resolved.
+- A `.cs` file may still be inspected with RoslynKit when the primary task is semantic C# analysis or source inspection. Returned ranges may include comments, but comment text is not itself a RoslynKit search target. Because `document-text` now returns whole documents only, prefer `quick-info`, `document-symbols`, and targeted cross-references first. Use `document-text` only when a full document read is justified after the symbol or file is already resolved.
 
 ## Command
 
@@ -55,12 +55,13 @@ When the task is a semantic C# question, prefer this order and stop as soon as y
 
 1. Resolve the exact symbol or declaration first with `symbols`, `definition`, `references`, or `implementations`, depending on the question.
 2. Use `quick-info` at the resolved location before reading source text when you need signature, type, or documentation context.
-3. If source text is still necessary, read the smallest `document-text` window that covers the declaration header first. This may include XML docs or top-of-declaration comment lines when they help decide whether deeper member or body inspection is necessary.
-4. Read a method or class body only when symbol locations, quick info, declaration headers, and targeted cross-references are still insufficient.
+3. If source text is still necessary, use `document-text` only when a full document read is justified after the symbol or file is already resolved.
+4. If only a small literal snippet or comment block is needed after semantic resolution, let Codex CLI choose the terminal-native fallback instead of pulling the whole document through RoslynKit.
+5. Read a method or class body only when symbol locations, quick info, document structure, and targeted cross-references are still insufficient.
 
 ## Token Discipline
 
-- Do not read an entire `.cs` file by default.
+- Do not read an entire `.cs` file through `document-text` by default.
 - Do not read a whole class body by default.
 - Do not start with `document-symbols` unless you already know the file and need local structure to choose a member or range.
 - Prefer exact `symbols --exact --kind <kind>` or position-based commands over broad pattern searches when the likely symbol is already known.
@@ -80,10 +81,10 @@ roslynkit symbols --target .\RoslynKit.slnx --query CliApplication --exact --kin
 roslynkit document-symbols --target .\RoslynKit.slnx --file .\src\RoslynKit\CliApplication.cs
 ```
 
-### Declaration header reads
+### Whole-document reads
 
 ```powershell
-roslynkit document-text --target .\RoslynKit.slnx --file .\src\RoslynKit\CliApplication.cs --start-line 7 --end-line 10
+roslynkit document-text --target .\RoslynKit.slnx --file .\src\RoslynKit\CliApplication.cs
 ```
 
 ### Definition

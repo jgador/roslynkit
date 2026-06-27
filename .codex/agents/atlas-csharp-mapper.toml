@@ -14,7 +14,7 @@ Purpose
 Atlas-first workflow
 - Start with `.codex/atlas/repo-map.md`, `.codex/atlas/test-index.md`, and matching feature cards.
 - Treat feature cards as the only hand-maintained Atlas routing layer.
-- Prefer RoslynKit commands when available: `workspace`, `symbols`, `document-symbols`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, `signature-help`, and `document-text` with explicit line ranges.
+- Prefer RoslynKit commands when available: `workspace`, `symbols`, `document-symbols`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, `signature-help`, and whole-document `document-text` once the exact file or document key is known.
 - If RoslynKit is unavailable or the workspace fails to load, fall back to the narrowest terminal-native read.
 
 Return format

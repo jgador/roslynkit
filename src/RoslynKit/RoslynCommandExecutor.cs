@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.QuickInfo;
+using Microsoft.CodeAnalysis.Text;
 
 namespace RoslynKit;
 
@@ -169,19 +170,13 @@ public static class RoslynCommandExecutor
     {
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
         var context = await loaded.FindTextDocumentAsync(command.Optional("file"), command.Optional("document-key"), command.Name, cancellationToken).ConfigureAwait(false);
-        var resolvedSpan = await PositionResolver.ResolveRangeAsync(
-            context.TextDocument,
-            command.OptionalInt("start-line", 1),
-            command.OptionalInt("start-column", 1),
-            command.OptionalInt("end-line", 1),
-            command.OptionalInt("end-column", 1),
-            command.Name,
-            cancellationToken).ConfigureAwait(false);
+        var text = await context.TextDocument.GetTextAsync(cancellationToken).ConfigureAwait(false);
+        var resolvedRange = PositionResolver.ToDocumentRange(text, new TextSpan(0, text.Length));
 
         return new DocumentTextResult(
             context.Descriptor,
-            resolvedSpan.Range,
-            resolvedSpan.Text.ToString(resolvedSpan.Span),
+            resolvedRange,
+            text.ToString(),
             truncated: false,
             loaded.WorkspaceDiagnostics);
     }

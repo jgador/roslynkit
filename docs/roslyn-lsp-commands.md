@@ -26,7 +26,7 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 | Implemented | `diagnostics` | compiler diagnostics, `textDocument/diagnostic`, `workspace/diagnostic` | Lets agents verify build/compiler issues before and after edits. |
 | Implemented | `symbols` | `workspace/symbol`, `SymbolFinder`, declarations | Lets agents locate named C# declarations without text-only search. |
 | Implemented | `document-symbols` | `textDocument/documentSymbol` | Gives compact structure for one file. |
-| Implemented | `document-text` | `workspace/textDocumentContent`, source-generated, additional, and analyzer-config document APIs | Lets agents read exact source or virtual document spans once the workspace has resolved the right document context. |
+| Implemented | `document-text` | `workspace/textDocumentContent`, source-generated, additional, and analyzer-config document APIs | Lets agents read full source or virtual document contents once the workspace has resolved the right document context. |
 | Implemented | `definition` | `textDocument/definition`, `FindSourceDefinitionAsync` | Essential go-to-definition behavior. |
 | Implemented | `references` | `textDocument/references`, `FindReferencesAsync` | Essential impact analysis before changing a symbol. |
 | Implemented | `type-definition` | `textDocument/typeDefinition` | Useful when the symbol usage points at a variable, property, or interface abstraction. |
@@ -98,7 +98,7 @@ These method names have handlers in `C:\repo\GitHub\roslyn\src\LanguageServer\Pr
 - `workspace/didChangeConfiguration` - `Defer`
 - `workspace/executeCommand` - `Defer`
 - `workspace/symbol` - `Implemented`
-- `workspace/textDocumentContent` - `P1`
+- `workspace/textDocumentContent` - `Implemented`
 - `workspace/willRenameFiles` - `Defer`
 
 ### Navigation And Symbols

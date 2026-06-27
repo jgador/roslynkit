@@ -60,23 +60,23 @@ public sealed class CliParserTests
     }
 
     [Fact]
-    public void Parse_CollectsDocumentTextRangeOptions()
+    public void Parse_AcceptsWholeFileDocumentTextFileSelector()
     {
-        var command = CliParser.Parse([
-            "document-text",
-            "--target", "repo.slnx",
-            "--file", "Program.cs",
-            "--start-line", "5",
-            "--start-column", "2",
-            "--end-line", "8",
-            "--end-column", "11",
-        ]);
+        var command = CliParser.Parse(["document-text", "--target", "repo.slnx", "--file", "Program.cs"]);
 
         Assert.Equal("document-text", command.Name);
-        Assert.Equal(5, command.OptionalInt("start-line", 1));
-        Assert.Equal(2, command.OptionalInt("start-column", 1));
-        Assert.Equal(8, command.OptionalInt("end-line", 1));
-        Assert.Equal(11, command.OptionalInt("end-column", 1));
+        Assert.Equal("Program.cs", command.Required("file"));
+        Assert.Null(command.Optional("document-key"));
+    }
+
+    [Fact]
+    public void Parse_AcceptsWholeFileDocumentTextDocumentKeySelector()
+    {
+        var command = CliParser.Parse(["document-text", "--target", "repo.slnx", "--document-key", "doc_123"]);
+
+        Assert.Equal("document-text", command.Name);
+        Assert.Equal("doc_123", command.Required("document-key"));
+        Assert.Null(command.Optional("file"));
     }
 
     [Fact]
@@ -150,17 +150,29 @@ public sealed class CliParserTests
     }
 
     [Fact]
-    public void Parse_RejectsRangeColumnWithoutLine()
+    public void Parse_RejectsLegacyDocumentTextRangeOptions()
     {
-        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
-            "document-text",
-            "--target", "repo.slnx",
-            "--file", "Program.cs",
-            "--start-column", "3",
-        ]));
+        var legacyOptions = new[]
+        {
+            ("start-line", "5"),
+            ("start-column", "2"),
+            ("end-line", "8"),
+            ("end-column", "11"),
+        };
 
-        Assert.Equal("document-text", exception.CommandName);
-        Assert.Contains("requires '--start-line'", exception.Message, StringComparison.Ordinal);
+        foreach (var (option, value) in legacyOptions)
+        {
+            var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
+                "document-text",
+                "--target", "repo.slnx",
+                "--file", "Program.cs",
+                $"--{option}", value,
+            ]));
+
+            Assert.Equal("document-text", exception.CommandName);
+            Assert.Contains($"Option '--{option}' is no longer supported.", exception.Message, StringComparison.Ordinal);
+            Assert.Contains("reads the entire resolved document only", exception.Message, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

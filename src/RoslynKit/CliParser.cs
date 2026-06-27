@@ -5,6 +5,14 @@ namespace RoslynKit;
 /// </summary>
 public static class CliParser
 {
+    private static readonly string[] DocumentTextLegacyRangeOptions =
+    [
+        "start-line",
+        "start-column",
+        "end-line",
+        "end-column",
+    ];
+
     /// <summary>
     /// Converts raw command-line tokens into a parsed RoslynKit command or help request.
     /// </summary>
@@ -90,6 +98,7 @@ public static class CliParser
                 throw new CliUsageException(builtin.Name, $"Unexpected positional argument '{token}'. Options must use --name value syntax.");
             }
 
+            RejectDocumentTextLegacyRangeOption(builtin, token);
             var option = ParseOptionName(builtin, token, out var inlineValue, out var negated);
             if (parsed.ContainsKey(option.LongName))
             {
@@ -128,6 +137,44 @@ public static class CliParser
         }
 
         return parsed;
+    }
+
+    private static void RejectDocumentTextLegacyRangeOption(BuiltinCommand builtin, string token)
+    {
+        if (!string.Equals(builtin.Name, "document-text", StringComparison.Ordinal) || !token.StartsWith("--", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var optionText = token[2..];
+        var equalsIndex = optionText.IndexOf('=', StringComparison.Ordinal);
+        if (equalsIndex >= 0)
+        {
+            optionText = optionText[..equalsIndex];
+        }
+
+        if (optionText.StartsWith("no-", StringComparison.Ordinal))
+        {
+            optionText = optionText[3..];
+        }
+
+        if (string.IsNullOrWhiteSpace(optionText))
+        {
+            return;
+        }
+
+        var matches = DocumentTextLegacyRangeOptions
+            .Where(option => option.StartsWith(optionText, StringComparison.Ordinal))
+            .ToArray();
+        if (matches.Length == 0)
+        {
+            return;
+        }
+
+        var message = matches.Length == 1
+            ? $"Option '--{matches[0]}' is no longer supported. 'document-text' now reads the entire resolved document only."
+            : "Legacy range options are no longer supported for 'document-text'. The command now reads the entire resolved document only.";
+        throw new CliUsageException(builtin.Name, message);
     }
 
     private static OptionSpec ParseOptionName(BuiltinCommand builtin, string token, out string? inlineValue, out bool negated)
@@ -226,10 +273,6 @@ public static class CliParser
         switch (commandName)
         {
             case "document-text":
-                ValidateDocumentSelector(commandName, options);
-                ValidateDocumentTextRangeOptions(commandName, options);
-                break;
-
             case "document-symbols":
             case "definition":
             case "type-definition":
@@ -250,19 +293,6 @@ public static class CliParser
         if (hasFile == hasDocumentKey)
         {
             throw new CliUsageException(commandName, "Exactly one of '--file' or '--document-key' is required.");
-        }
-    }
-
-    private static void ValidateDocumentTextRangeOptions(string commandName, IReadOnlyDictionary<string, string> options)
-    {
-        if (options.ContainsKey("start-column") && !options.ContainsKey("start-line"))
-        {
-            throw new CliUsageException(commandName, "Option '--start-column' requires '--start-line'.");
-        }
-
-        if (options.ContainsKey("end-column") && !options.ContainsKey("end-line"))
-        {
-            throw new CliUsageException(commandName, "Option '--end-column' requires '--end-line'.");
         }
     }
 

@@ -137,7 +137,7 @@ public sealed class SymbolsResult
 }
 
 /// <summary>
-/// Represents the <c>document-text</c> command payload for one resolved document range.
+/// Represents the <c>document-text</c> command payload for one resolved document read.
 /// </summary>
 public sealed class DocumentTextResult
 {

@@ -50,7 +50,7 @@ roslynkit diagnostics --target .\MySolution.slnx
 roslynkit symbols --target .\MySolution.slnx --query MyType
 roslynkit symbols --target .\MySolution.slnx --query MyService --exact --kind class
 roslynkit document-symbols --target .\MySolution.slnx --file .\src\MyApp\Program.cs
-roslynkit document-text --target .\MySolution.slnx --file .\src\MyApp\Service.cs --start-line 31 --end-line 46
+roslynkit document-text --target .\MySolution.slnx --file .\src\MyApp\Service.cs
 roslynkit definition --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20
 roslynkit references --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20
 roslynkit implementations --target .\src\MyApp\MyApp.csproj --file .\src\MyApp\Service.cs --line 23 --column 23
@@ -64,7 +64,7 @@ Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-bas
 
 `workspace` defaults to repo-relevant source documents only. Add `--include-generated`, `--include-additional`, and `--include-analyzer-config` when you need source-generated files, `AdditionalFiles`, or analyzer config documents. Distinct project and target-framework contexts stay separate through `documentKey`.
 
-For document-oriented commands such as `document-symbols`, `document-text`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, and `signature-help`, pass `--target` plus exactly one of `--file <path>` or `--document-key <id>`. Use `workspace` first when the same file appears in multiple project contexts or when you need a generated document key. Semantic position commands operate on C# source or source-generated documents; `document-text` can read source, source-generated, additional, and analyzer-config documents.
+For document-oriented commands such as `document-symbols`, `document-text`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, and `signature-help`, pass `--target` plus exactly one of `--file <path>` or `--document-key <id>`. Use `workspace` first when the same file appears in multiple project contexts or when you need a generated document key. Semantic position commands operate on C# source or source-generated documents; `document-text` can read source, source-generated, additional, and analyzer-config documents. `document-text` always returns the entire resolved document, and `resolvedRange` covers that whole document.
 
 See `docs/roslyn-lsp-commands.md` for the exhaustive Roslyn language-server method inventory used to compare RoslynKit's current command set with Roslyn's broader code intelligence surface.
 

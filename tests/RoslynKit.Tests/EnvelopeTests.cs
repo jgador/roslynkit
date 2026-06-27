@@ -105,6 +105,23 @@ public sealed class EnvelopeTests
     }
 
     [Fact]
+    public async Task RunAsync_ReturnsUsageError_ForDocumentTextLegacyRangeOptionBeforeWorkspaceLoad()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(["document-text", "--target", "missing.slnx", "--file", "Program.cs", "--start-line", "999"], TestContext.Current.CancellationToken);
+
+        using var document = JsonDocument.Parse(writer.ToString());
+        var root = document.RootElement;
+        var message = root.GetProperty("errors")[0].GetProperty("message").GetString();
+
+        Assert.Equal(2, exitCode);
+        Assert.Equal("document-text", root.GetProperty("command").GetString());
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Contains("Option '--start-line' is no longer supported.", message, StringComparison.Ordinal);
+        Assert.Contains("reads the entire resolved document only", message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void JsonEnvelope_UsesExplicitPropertyNames_ForWorkspaceContracts()
     {
         var envelope = JsonEnvelope.ForSuccess(
