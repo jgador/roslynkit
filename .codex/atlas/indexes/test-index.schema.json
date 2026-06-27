@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Repository Atlas Test Index",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "generatedAtUtc",
+    "testProjects",
+    "testFiles",
+    "supportFiles"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "generatedAtUtc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "testProjects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "path",
+          "category"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "testFiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "category"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "supportFiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "category"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

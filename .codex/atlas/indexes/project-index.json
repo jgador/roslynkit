@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-06-27T02:36:11.7997657Z",
+  "solutionPath": "RoslynKit.slnx",
+  "projects": [
+    {
+      "name": "RoslynKit",
+      "path": "src/RoslynKit/RoslynKit.csproj",
+      "category": "source",
+      "isTestProject": false,
+      "includedInSolution": true
+    },
+    {
+      "name": "App",
+      "path": "tests/FixtureWorkspace/App/App.csproj",
+      "category": "fixture",
+      "isTestProject": false,
+      "includedInSolution": false
+    },
+    {
+      "name": "RoslynKit.Tests",
+      "path": "tests/RoslynKit.Tests/RoslynKit.Tests.csproj",
+      "category": "test",
+      "isTestProject": true,
+      "includedInSolution": true
+    },
+    {
+      "name": "RoslynKit.WorkspaceGraphDump",
+      "path": "tests/RoslynKit.WorkspaceGraphDump/RoslynKit.WorkspaceGraphDump.csproj",
+      "category": "test-support",
+      "isTestProject": false,
+      "includedInSolution": true
+    }
+  ]
+}

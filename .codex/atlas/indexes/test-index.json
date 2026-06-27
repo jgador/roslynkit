@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-06-27T02:36:11.7997657Z",
+  "testProjects": [
+    {
+      "name": "RoslynKit.Tests",
+      "path": "tests/RoslynKit.Tests/RoslynKit.Tests.csproj",
+      "category": "test"
+    },
+    {
+      "name": "RoslynKit.WorkspaceGraphDump",
+      "path": "tests/RoslynKit.WorkspaceGraphDump/RoslynKit.WorkspaceGraphDump.csproj",
+      "category": "test-support"
+    }
+  ],
+  "testFiles": [
+    {
+      "path": "tests/RoslynKit.Tests/CliParserTests.cs",
+      "category": "parser"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/CommandExecutionTests.cs",
+      "category": "execution"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/EnvelopeTests.cs",
+      "category": "envelope"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/SymbolsCommandTests.cs",
+      "category": "symbols"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/TestPaths.cs",
+      "category": "support"
+    }
+  ],
+  "supportFiles": [
+    {
+      "path": "tests/FixtureWorkspace/App/.editorconfig",
+      "category": "fixture"
+    },
+    {
+      "path": "tests/FixtureWorkspace/App/App.csproj",
+      "category": "fixture"
+    },
+    {
+      "path": "tests/FixtureWorkspace/App/notes.txt",
+      "category": "fixture"
+    },
+    {
+      "path": "tests/FixtureWorkspace/App/Source.cs",
+      "category": "fixture"
+    },
+    {
+      "path": "tests/RoslynKit.WorkspaceGraphDump/Program.cs",
+      "category": "workspace-utility"
+    },
+    {
+      "path": "tests/RoslynKit.WorkspaceGraphDump/RoslynKit.WorkspaceGraphDump.csproj",
+      "category": "workspace-utility"
+    }
+  ]
+}

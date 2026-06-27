@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Repository Atlas File Index",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "generatedAtUtc",
+    "repoRoot",
+    "files"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "generatedAtUtc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "repoRoot": {
+      "type": "string"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "extension",
+          "area",
+          "category"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "extension": {
+            "type": "string"
+          },
+          "area": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

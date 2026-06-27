@@ -56,6 +56,21 @@ When using `scout`:
 
 Every scout prompt must include `assigned_scope`, `search_goal`, known keywords or filenames, and the required response format. Every scout must return `assigned_scope`, `files_examined`, `likely_relevant_files`, `evidence`, `handoff_paths`, `short_summary`, and `confidence`. After scouts return, inspect `likely_relevant_files` locally before deeper tracing.
 
+## Repository Atlas Reading Policy
+
+- Use `.codex/atlas/` before broad source reading.
+- Use `atlas-router` when the target area is unclear.
+- For C# semantic inspection, prefer RoslynKit or `atlas-csharp-mapper`.
+- Read tests before implementation when available.
+- Prefer symbol and line-range reads over full-file reads.
+- Stop after five source files and state a hypothesis before reading more.
+- Feature cards are the only hand-maintained Atlas routing layer.
+- Update feature cards only with durable discoveries.
+- When a task changes durable Atlas facts for a covered feature or domain, update the matching feature card and refresh `Last verified` before finishing.
+- When durable repo shape or source-to-test mapping facts change, update `.codex/atlas/repo-map.md` or `.codex/atlas/test-index.md` in the same change.
+- When Atlas workflow, routing scripts, feature-card schema, or generated index expectations change, update `.codex/atlas/README.md`, `.codex/atlas/USAGE.md`, `.codex/atlas/feature-cards/README.md`, or `.codex/atlas/indexes/README.md` in the same change.
+- Use PowerShell scripts under `.codex/atlas/scripts/` for Atlas routing and rebuilding.
+
 ## State-Changing Git Command Safety
 
 Git read commands such as `git status`, `git log`, `git diff`, `git show`, and `git branch --show-current` are allowed for inspection.
