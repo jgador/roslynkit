@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-06-27T02:36:11.7997657Z",
+  "generatedAtUtc": "2026-06-28T03:04:19.1670431Z",
   "repoRoot": "C:\\repo\\GitHub\\roslynkit",
   "files": [
     {
@@ -44,6 +44,12 @@
       "extension": ".toml",
       "area": "codex",
       "category": "agent"
+    },
+    {
+      "path": ".codex/atlas/feature-cards/atlas-prompt-caching.md",
+      "extension": ".md",
+      "area": "atlas",
+      "category": "atlas"
     },
     {
       "path": ".codex/atlas/feature-cards/cli-routing.md",
@@ -352,7 +358,37 @@
       "category": "fixture"
     },
     {
+      "path": "tests/RoslynKit.AtlasPromptCacheProbe/AtlasPromptProbe.cs",
+      "extension": ".cs",
+      "area": "tests",
+      "category": "other"
+    },
+    {
+      "path": "tests/RoslynKit.AtlasPromptCacheProbe/Program.cs",
+      "extension": ".cs",
+      "area": "tests",
+      "category": "other"
+    },
+    {
+      "path": "tests/RoslynKit.AtlasPromptCacheProbe/RoslynKit.AtlasPromptCacheProbe.csproj",
+      "extension": ".csproj",
+      "area": "tests",
+      "category": "config"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/AtlasPromptCacheProbeTests.cs",
+      "extension": ".cs",
+      "area": "tests",
+      "category": "test"
+    },
+    {
       "path": "tests/RoslynKit.Tests/CliParserTests.cs",
+      "extension": ".cs",
+      "area": "tests",
+      "category": "test"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/CodexExecTokenComparisonTests.cs",
       "extension": ".cs",
       "area": "tests",
       "category": "test"
@@ -382,7 +418,25 @@
       "category": "test"
     },
     {
+      "path": "tests/RoslynKit.Tests/testconfig.json",
+      "extension": ".json",
+      "area": "tests",
+      "category": "config"
+    },
+    {
       "path": "tests/RoslynKit.Tests/TestPaths.cs",
+      "extension": ".cs",
+      "area": "tests",
+      "category": "test"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/xunit.runner.json",
+      "extension": ".json",
+      "area": "tests",
+      "category": "config"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/XunitOutputProbeTests.cs",
       "extension": ".cs",
       "area": "tests",
       "category": "test"

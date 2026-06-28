@@ -2,7 +2,7 @@
 
 Use one card per durable feature or domain. Feature cards are the only hand-maintained Atlas routing layer.
 
-Keep `## Task keywords`, `## Important files`, and `## Nearest tests` concise. `route.ps1` reads those sections deterministically.
+Keep `## Task keywords`, `## Important files`, and `## Nearest tests` concise. `route.ps1` reads those sections deterministically, and repeated prompt-cached Atlas prefixes may reuse the cards verbatim.
 
 ```markdown
 # <Feature or Domain>

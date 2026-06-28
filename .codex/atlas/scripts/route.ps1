@@ -173,39 +173,41 @@ try {
     )
 
     $cardMatches = @(
-        foreach ($card in $featureCards) {
-            $score = 0
-            $matched = New-Object System.Collections.Generic.List[string]
+        @(
+            foreach ($card in $featureCards) {
+                $score = 0
+                $matched = New-Object System.Collections.Generic.List[string]
 
-            foreach ($phrase in @($card.Title) + $card.TaskKeywords) {
-                $normalizedPhrase = Normalize-Text $phrase
-                if (-not $normalizedPhrase) {
-                    continue
+                foreach ($phrase in @($card.Title) + $card.TaskKeywords) {
+                    $normalizedPhrase = Normalize-Text $phrase
+                    if (-not $normalizedPhrase) {
+                        continue
+                    }
+
+                    $phraseTokens = Get-SearchTokens $phrase
+                    if ($taskNormalized.Contains($normalizedPhrase)) {
+                        $score += 5 + [Math]::Min($phraseTokens.Count, 2)
+                        Add-Unique -List $matched -Value $phrase
+                        continue
+                    }
+
+                    $overlap = @($phraseTokens | Where-Object { $taskTokens -contains $_ })
+                    if ($overlap.Count -gt 0) {
+                        $score += $overlap.Count
+                        Add-Unique -List $matched -Value $phrase
+                    }
                 }
 
-                $phraseTokens = Get-SearchTokens $phrase
-                if ($taskNormalized.Contains($normalizedPhrase)) {
-                    $score += 5 + [Math]::Min($phraseTokens.Count, 2)
-                    Add-Unique -List $matched -Value $phrase
-                    continue
-                }
-
-                $overlap = @($phraseTokens | Where-Object { $taskTokens -contains $_ })
-                if ($overlap.Count -gt 0) {
-                    $score += $overlap.Count
-                    Add-Unique -List $matched -Value $phrase
+                if ($score -gt 0) {
+                    [PSCustomObject]@{
+                        Score = $score
+                        Matched = @($matched)
+                        Card = $card
+                    }
                 }
             }
-
-            if ($score -gt 0) {
-                [PSCustomObject]@{
-                    Score = $score
-                    Matched = @($matched)
-                    Card = $card
-                }
-            }
-        }
-    ) | Sort-Object -Property @{ Expression = 'Score'; Descending = $true }, @{ Expression = { $_.Card.Title }; Descending = $false }
+        ) | Sort-Object -Property @{ Expression = 'Score'; Descending = $true }, @{ Expression = { $_.Card.Title }; Descending = $false }
+    )
 
     $gitFiles = @(
         & git ls-files --cached --others --exclude-standard 2>$null |
@@ -215,24 +217,26 @@ try {
     )
 
     $fileMatches = @(
-        foreach ($path in $gitFiles) {
-            $score = 0
-            $normalizedPath = $path.ToLowerInvariant()
+        @(
+            foreach ($path in $gitFiles) {
+                $score = 0
+                $normalizedPath = $path.ToLowerInvariant()
 
-            foreach ($token in $taskTokens) {
-                if ($normalizedPath.Contains($token)) {
-                    $score++
+                foreach ($token in $taskTokens) {
+                    if ($normalizedPath.Contains($token)) {
+                        $score++
+                    }
+                }
+
+                if ($score -gt 0) {
+                    [PSCustomObject]@{
+                        Path = $path
+                        Score = $score
+                    }
                 }
             }
-
-            if ($score -gt 0) {
-                [PSCustomObject]@{
-                    Path = $path
-                    Score = $score
-                }
-            }
-        }
-    ) | Sort-Object -Property @{ Expression = 'Score'; Descending = $true }, @{ Expression = 'Path'; Descending = $false }
+        ) | Sort-Object -Property @{ Expression = 'Score'; Descending = $true }, @{ Expression = 'Path'; Descending = $false }
+    )
 
     $matchedTests = New-Object System.Collections.Generic.List[string]
     foreach ($match in ($cardMatches | Select-Object -First 3)) {

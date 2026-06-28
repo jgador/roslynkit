@@ -1,6 +1,6 @@
 name = "atlas-doc-mapper"
 description = "Read-only mapper for docs, config, build scripts, packaging metadata, CI-adjacent files, and non-C# navigation facts."
-model = "gpt-5.4-mini"
+model = "gpt-5.4"
 model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
 

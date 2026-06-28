@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-06-27T02:36:11.7997657Z",
+  "generatedAtUtc": "2026-06-28T03:04:19.1670431Z",
   "targetPath": "RoslynKit.slnx",
   "toolName": "roslynkit",
   "toolPath": "C:\\Users\\jesse\\.roslynkit\\tools\\roslynkit-dev\\roslynkit.exe",
@@ -122,7 +122,7 @@
           "name": "Lookup",
           "kind": "Field",
           "displayName": "Lookup",
-          "line": 139,
+          "line": 135,
           "column": 73,
           "containingType": "RoslynKit.BuiltinCommandRegistry",
           "containingNamespace": "RoslynKit"
@@ -131,7 +131,7 @@
           "name": "Commands",
           "kind": "Property",
           "displayName": "Commands",
-          "line": 142,
+          "line": 138,
           "column": 49,
           "containingType": "RoslynKit.BuiltinCommandRegistry",
           "containingNamespace": "RoslynKit"
@@ -140,7 +140,7 @@
           "name": "GetBuiltin",
           "kind": "Method",
           "displayName": "GetBuiltin",
-          "line": 144,
+          "line": 140,
           "column": 35,
           "containingType": "RoslynKit.BuiltinCommandRegistry",
           "containingNamespace": "RoslynKit"
@@ -149,7 +149,7 @@
           "name": "TargetOption",
           "kind": "Method",
           "displayName": "TargetOption",
-          "line": 149,
+          "line": 145,
           "column": 31,
           "containingType": "RoslynKit.BuiltinCommandRegistry",
           "containingNamespace": "RoslynKit"
@@ -158,7 +158,7 @@
           "name": "FileOption",
           "kind": "Method",
           "displayName": "FileOption",
-          "line": 154,
+          "line": 150,
           "column": 31,
           "containingType": "RoslynKit.BuiltinCommandRegistry",
           "containingNamespace": "RoslynKit"
@@ -167,7 +167,7 @@
           "name": "DocumentKeyOption",
           "kind": "Method",
           "displayName": "DocumentKeyOption",
-          "line": 159,
+          "line": 155,
           "column": 31,
           "containingType": "RoslynKit.BuiltinCommandRegistry",
           "containingNamespace": "RoslynKit"
@@ -176,7 +176,7 @@
           "name": "LineOption",
           "kind": "Method",
           "displayName": "LineOption",
-          "line": 164,
+          "line": 160,
           "column": 31,
           "containingType": "RoslynKit.BuiltinCommandRegistry",
           "containingNamespace": "RoslynKit"
@@ -185,7 +185,7 @@
           "name": "ColumnOption",
           "kind": "Method",
           "displayName": "ColumnOption",
-          "line": 169,
+          "line": 165,
           "column": 31,
           "containingType": "RoslynKit.BuiltinCommandRegistry",
           "containingNamespace": "RoslynKit"
@@ -194,7 +194,7 @@
           "name": "MaxResultsOption",
           "kind": "Method",
           "displayName": "MaxResultsOption",
-          "line": 174,
+          "line": 170,
           "column": 31,
           "containingType": "RoslynKit.BuiltinCommandRegistry",
           "containingNamespace": "RoslynKit"
@@ -591,7 +591,7 @@
       "path": "src/RoslynKit/CliParser.cs",
       "projectName": "RoslynKit",
       "documentKind": "source",
-      "symbolCount": 24,
+      "symbolCount": 25,
       "symbols": [
         {
           "name": "CliParser",
@@ -603,10 +603,19 @@
           "containingNamespace": "RoslynKit"
         },
         {
+          "name": "DocumentTextLegacyRangeOptions",
+          "kind": "Field",
+          "displayName": "DocumentTextLegacyRangeOptions",
+          "line": 8,
+          "column": 38,
+          "containingType": "RoslynKit.CliParser",
+          "containingNamespace": "RoslynKit"
+        },
+        {
           "name": "Parse",
           "kind": "Method",
           "displayName": "Parse",
-          "line": 11,
+          "line": 19,
           "column": 33,
           "containingType": "RoslynKit.CliParser",
           "containingNamespace": "RoslynKit"
@@ -615,7 +624,7 @@
           "name": "RewriteVersionCommand",
           "kind": "Method",
           "displayName": "RewriteVersionCommand",
-          "line": 43,
+          "line": 51,
           "column": 42,
           "containingType": "RoslynKit.CliParser",
           "containingNamespace": "RoslynKit"
@@ -624,7 +633,7 @@
           "name": "ParseHelp",
           "kind": "Method",
           "displayName": "ParseHelp",
-          "line": 55,
+          "line": 63,
           "column": 34,
           "containingType": "RoslynKit.CliParser",
           "containingNamespace": "RoslynKit"
@@ -633,8 +642,17 @@
           "name": "ParseOptions",
           "kind": "Method",
           "displayName": "ParseOptions",
-          "line": 71,
+          "line": 79,
           "column": 47,
+          "containingType": "RoslynKit.CliParser",
+          "containingNamespace": "RoslynKit"
+        },
+        {
+          "name": "RejectDocumentTextLegacyRangeOption",
+          "kind": "Method",
+          "displayName": "RejectDocumentTextLegacyRangeOption",
+          "line": 142,
+          "column": 25,
           "containingType": "RoslynKit.CliParser",
           "containingNamespace": "RoslynKit"
         },
@@ -642,7 +660,7 @@
           "name": "ParseOptionName",
           "kind": "Method",
           "displayName": "ParseOptionName",
-          "line": 133,
+          "line": 180,
           "column": 31,
           "containingType": "RoslynKit.CliParser",
           "containingNamespace": "RoslynKit"
@@ -651,7 +669,7 @@
           "name": "FindLongOption",
           "kind": "Method",
           "displayName": "FindLongOption",
-          "line": 170,
+          "line": 217,
           "column": 31,
           "containingType": "RoslynKit.CliParser",
           "containingNamespace": "RoslynKit"
@@ -660,7 +678,7 @@
           "name": "FindShortOption",
           "kind": "Method",
           "displayName": "FindShortOption",
-          "line": 181,
+          "line": 228,
           "column": 31,
           "containingType": "RoslynKit.CliParser",
           "containingNamespace": "RoslynKit"
@@ -669,7 +687,7 @@
           "name": "ValidateOptionValue",
           "kind": "Method",
           "displayName": "ValidateOptionValue",
-          "line": 194,
+          "line": 241,
           "column": 25,
           "containingType": "RoslynKit.CliParser",
           "containingNamespace": "RoslynKit"
@@ -678,7 +696,7 @@
           "name": "ValidateRequiredOptions",
           "kind": "Method",
           "displayName": "ValidateRequiredOptions",
-          "line": 213,
+          "line": 260,
           "column": 25,
           "containingType": "RoslynKit.CliParser",
           "containingNamespace": "RoslynKit"
@@ -687,7 +705,7 @@
           "name": "ValidateCommandOptions",
           "kind": "Method",
           "displayName": "ValidateCommandOptions",
-          "line": 224,
+          "line": 271,
           "column": 25,
           "containingType": "RoslynKit.CliParser",
           "containingNamespace": "RoslynKit"
@@ -696,16 +714,7 @@
           "name": "ValidateDocumentSelector",
           "kind": "Method",
           "displayName": "ValidateDocumentSelector",
-          "line": 245,
-          "column": 25,
-          "containingType": "RoslynKit.CliParser",
-          "containingNamespace": "RoslynKit"
-        },
-        {
-          "name": "ValidateDocumentTextRangeOptions",
-          "kind": "Method",
-          "displayName": "ValidateDocumentTextRangeOptions",
-          "line": 256,
+          "line": 288,
           "column": 25,
           "containingType": "RoslynKit.CliParser",
           "containingNamespace": "RoslynKit"
@@ -714,7 +723,7 @@
           "name": "IsHelpToken",
           "kind": "Method",
           "displayName": "IsHelpToken",
-          "line": 269,
+          "line": 299,
           "column": 25,
           "containingType": "RoslynKit.CliParser",
           "containingNamespace": "RoslynKit"
@@ -723,7 +732,7 @@
           "name": "ParsedCommand",
           "kind": "NamedType",
           "displayName": "RoslynKit.ParsedCommand",
-          "line": 278,
+          "line": 308,
           "column": 22,
           "containingType": null,
           "containingNamespace": "RoslynKit"
@@ -732,7 +741,7 @@
           "name": "IsHelp",
           "kind": "Property",
           "displayName": "IsHelp",
-          "line": 284,
+          "line": 314,
           "column": 17,
           "containingType": "RoslynKit.ParsedCommand",
           "containingNamespace": "RoslynKit"
@@ -741,7 +750,7 @@
           "name": "Help",
           "kind": "Method",
           "displayName": "Help",
-          "line": 286,
+          "line": 316,
           "column": 33,
           "containingType": "RoslynKit.ParsedCommand",
           "containingNamespace": "RoslynKit"
@@ -750,7 +759,7 @@
           "name": "Required",
           "kind": "Method",
           "displayName": "Required",
-          "line": 291,
+          "line": 321,
           "column": 19,
           "containingType": "RoslynKit.ParsedCommand",
           "containingNamespace": "RoslynKit"
@@ -759,7 +768,7 @@
           "name": "Optional",
           "kind": "Method",
           "displayName": "Optional",
-          "line": 301,
+          "line": 331,
           "column": 20,
           "containingType": "RoslynKit.ParsedCommand",
           "containingNamespace": "RoslynKit"
@@ -768,7 +777,7 @@
           "name": "Flag",
           "kind": "Method",
           "displayName": "Flag",
-          "line": 306,
+          "line": 336,
           "column": 17,
           "containingType": "RoslynKit.ParsedCommand",
           "containingNamespace": "RoslynKit"
@@ -777,7 +786,7 @@
           "name": "OptionalInt",
           "kind": "Method",
           "displayName": "OptionalInt",
-          "line": 311,
+          "line": 341,
           "column": 17,
           "containingType": "RoslynKit.ParsedCommand",
           "containingNamespace": "RoslynKit"
@@ -786,7 +795,7 @@
           "name": "OptionalInt",
           "kind": "Method",
           "displayName": "OptionalInt",
-          "line": 326,
+          "line": 356,
           "column": 16,
           "containingType": "RoslynKit.ParsedCommand",
           "containingNamespace": "RoslynKit"
@@ -795,7 +804,7 @@
           "name": "CliUsageException",
           "kind": "NamedType",
           "displayName": "RoslynKit.CliUsageException",
-          "line": 335,
+          "line": 365,
           "column": 21,
           "containingType": null,
           "containingNamespace": "RoslynKit"
@@ -804,7 +813,7 @@
           "name": "CommandName",
           "kind": "Property",
           "displayName": "CommandName",
-          "line": 343,
+          "line": 373,
           "column": 19,
           "containingType": "RoslynKit.CliUsageException",
           "containingNamespace": "RoslynKit"
@@ -815,7 +824,7 @@
       "path": "src/RoslynKit/PositionResolver.cs",
       "projectName": "RoslynKit",
       "documentKind": "source",
-      "symbolCount": 6,
+      "symbolCount": 4,
       "symbols": [
         {
           "name": "PositionResolver",
@@ -836,19 +845,10 @@
           "containingNamespace": "RoslynKit"
         },
         {
-          "name": "ResolveRangeAsync",
-          "kind": "Method",
-          "displayName": "ResolveRangeAsync",
-          "line": 23,
-          "column": 48,
-          "containingType": "RoslynKit.PositionResolver",
-          "containingNamespace": "RoslynKit"
-        },
-        {
           "name": "ToDocumentRange",
           "kind": "Method",
           "displayName": "ToDocumentRange",
-          "line": 59,
+          "line": 20,
           "column": 33,
           "containingType": "RoslynKit.PositionResolver",
           "containingNamespace": "RoslynKit"
@@ -857,18 +857,9 @@
           "name": "GetPosition",
           "kind": "Method",
           "displayName": "GetPosition",
-          "line": 69,
+          "line": 30,
           "column": 24,
           "containingType": "RoslynKit.PositionResolver",
-          "containingNamespace": "RoslynKit"
-        },
-        {
-          "name": "ResolvedTextSpan",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.ResolvedTextSpan",
-          "line": 92,
-          "column": 31,
-          "containingType": null,
           "containingNamespace": "RoslynKit"
         }
       ]
@@ -909,7 +900,7 @@
           "name": "RoslynCommandExecutor",
           "kind": "NamedType",
           "displayName": "RoslynKit.RoslynCommandExecutor",
-          "line": 10,
+          "line": 11,
           "column": 21,
           "containingType": null,
           "containingNamespace": "RoslynKit"
@@ -918,7 +909,7 @@
           "name": "SupportedSymbolKinds",
           "kind": "Field",
           "displayName": "SupportedSymbolKinds",
-          "line": 12,
+          "line": 13,
           "column": 38,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -927,7 +918,7 @@
           "name": "ExecuteAsync",
           "kind": "Method",
           "displayName": "ExecuteAsync",
-          "line": 31,
+          "line": 32,
           "column": 38,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -936,7 +927,7 @@
           "name": "WorkspaceAsync",
           "kind": "Method",
           "displayName": "WorkspaceAsync",
-          "line": 50,
+          "line": 51,
           "column": 39,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -945,7 +936,7 @@
           "name": "DiagnosticsAsync",
           "kind": "Method",
           "displayName": "DiagnosticsAsync",
-          "line": 88,
+          "line": 89,
           "column": 39,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -954,7 +945,7 @@
           "name": "SymbolsAsync",
           "kind": "Method",
           "displayName": "SymbolsAsync",
-          "line": 132,
+          "line": 133,
           "column": 39,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -963,7 +954,7 @@
           "name": "DocumentTextAsync",
           "kind": "Method",
           "displayName": "DocumentTextAsync",
-          "line": 168,
+          "line": 169,
           "column": 39,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -972,7 +963,7 @@
           "name": "DocumentSymbolsAsync",
           "kind": "Method",
           "displayName": "DocumentSymbolsAsync",
-          "line": 189,
+          "line": 184,
           "column": 39,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -981,7 +972,7 @@
           "name": "DefinitionAsync",
           "kind": "Method",
           "displayName": "DefinitionAsync",
-          "line": 213,
+          "line": 211,
           "column": 39,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -990,7 +981,7 @@
           "name": "TypeDefinitionAsync",
           "kind": "Method",
           "displayName": "TypeDefinitionAsync",
-          "line": 228,
+          "line": 226,
           "column": 39,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -999,7 +990,7 @@
           "name": "ReferencesAsync",
           "kind": "Method",
           "displayName": "ReferencesAsync",
-          "line": 248,
+          "line": 246,
           "column": 39,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -1008,7 +999,7 @@
           "name": "ImplementationsAsync",
           "kind": "Method",
           "displayName": "ImplementationsAsync",
-          "line": 279,
+          "line": 277,
           "column": 39,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -1017,7 +1008,7 @@
           "name": "QuickInfoAsync",
           "kind": "Method",
           "displayName": "QuickInfoAsync",
-          "line": 321,
+          "line": 322,
           "column": 39,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -1026,7 +1017,7 @@
           "name": "SignatureHelpAsync",
           "kind": "Method",
           "displayName": "SignatureHelpAsync",
-          "line": 348,
+          "line": 349,
           "column": 39,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -1035,7 +1026,7 @@
           "name": "ResolveSemanticDocumentAsync",
           "kind": "Method",
           "displayName": "ResolveSemanticDocumentAsync",
-          "line": 374,
+          "line": 378,
           "column": 57,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -1044,7 +1035,7 @@
           "name": "SymbolAtPositionAsync",
           "kind": "Method",
           "displayName": "SymbolAtPositionAsync",
-          "line": 385,
+          "line": 392,
           "column": 40,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -1053,7 +1044,7 @@
           "name": "SymbolMatches",
           "kind": "Method",
           "displayName": "SymbolMatches",
-          "line": 414,
+          "line": 421,
           "column": 25,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -1062,7 +1053,7 @@
           "name": "GetSymbolFilter",
           "kind": "Method",
           "displayName": "GetSymbolFilter",
-          "line": 421,
+          "line": 428,
           "column": 33,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -1071,7 +1062,7 @@
           "name": "IsSpecificSymbolKindMatch",
           "kind": "Method",
           "displayName": "IsSpecificSymbolKindMatch",
-          "line": 433,
+          "line": 440,
           "column": 25,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -1080,7 +1071,7 @@
           "name": "GetTypeDefinitionSymbol",
           "kind": "Method",
           "displayName": "GetTypeDefinitionSymbol",
-          "line": 454,
+          "line": 461,
           "column": 33,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -1089,7 +1080,7 @@
           "name": "GetProjectName",
           "kind": "Method",
           "displayName": "GetProjectName",
-          "line": 468,
+          "line": 475,
           "column": 27,
           "containingType": "RoslynKit.RoslynCommandExecutor",
           "containingNamespace": "RoslynKit"
@@ -3244,7 +3235,7 @@
           "name": "FindTextDocumentAsync",
           "kind": "Method",
           "displayName": "FindTextDocumentAsync",
-          "line": 192,
+          "line": 195,
           "column": 49,
           "containingType": "RoslynKit.RoslynWorkspaceLoader",
           "containingNamespace": "RoslynKit"
@@ -3253,7 +3244,7 @@
           "name": "Dispose",
           "kind": "Method",
           "displayName": "Dispose",
-          "line": 231,
+          "line": 234,
           "column": 17,
           "containingType": "RoslynKit.RoslynWorkspaceLoader",
           "containingNamespace": "RoslynKit"
@@ -3262,7 +3253,7 @@
           "name": "ResolveProjectTargetFrameworks",
           "kind": "Method",
           "displayName": "ResolveProjectTargetFrameworks",
-          "line": 236,
+          "line": 239,
           "column": 60,
           "containingType": "RoslynKit.RoslynWorkspaceLoader",
           "containingNamespace": "RoslynKit"
@@ -3271,7 +3262,7 @@
           "name": "ResolveRootPath",
           "kind": "Method",
           "displayName": "ResolveRootPath",
-          "line": 282,
+          "line": 285,
           "column": 27,
           "containingType": "RoslynKit.RoslynWorkspaceLoader",
           "containingNamespace": "RoslynKit"
@@ -3280,7 +3271,7 @@
           "name": "RegisterMSBuild",
           "kind": "Method",
           "displayName": "RegisterMSBuild",
-          "line": 298,
+          "line": 301,
           "column": 25,
           "containingType": "RoslynKit.RoslynWorkspaceLoader",
           "containingNamespace": "RoslynKit"
@@ -3289,7 +3280,7 @@
           "name": "WorkspaceDocumentContext",
           "kind": "NamedType",
           "displayName": "RoslynKit.WorkspaceDocumentContext",
-          "line": 312,
+          "line": 315,
           "column": 21,
           "containingType": null,
           "containingNamespace": "RoslynKit"
@@ -3298,7 +3289,7 @@
           "name": "TextDocument",
           "kind": "Property",
           "displayName": "TextDocument",
-          "line": 320,
+          "line": 323,
           "column": 25,
           "containingType": "RoslynKit.WorkspaceDocumentContext",
           "containingNamespace": "RoslynKit"
@@ -3307,7 +3298,7 @@
           "name": "Descriptor",
           "kind": "Property",
           "displayName": "Descriptor",
-          "line": 322,
+          "line": 325,
           "column": 31,
           "containingType": "RoslynKit.WorkspaceDocumentContext",
           "containingNamespace": "RoslynKit"
@@ -3316,7 +3307,7 @@
           "name": "Project",
           "kind": "Property",
           "displayName": "Project",
-          "line": 324,
+          "line": 327,
           "column": 20,
           "containingType": "RoslynKit.WorkspaceDocumentContext",
           "containingNamespace": "RoslynKit"
@@ -3325,7 +3316,7 @@
           "name": "Document",
           "kind": "Property",
           "displayName": "Document",
-          "line": 326,
+          "line": 329,
           "column": 22,
           "containingType": "RoslynKit.WorkspaceDocumentContext",
           "containingNamespace": "RoslynKit"
@@ -3334,7 +3325,7 @@
           "name": "DocumentKind",
           "kind": "Property",
           "displayName": "DocumentKind",
-          "line": 328,
+          "line": 331,
           "column": 19,
           "containingType": "RoslynKit.WorkspaceDocumentContext",
           "containingNamespace": "RoslynKit"
@@ -3343,7 +3334,7 @@
           "name": "CreateAsync",
           "kind": "Method",
           "displayName": "CreateAsync",
-          "line": 330,
+          "line": 333,
           "column": 56,
           "containingType": "RoslynKit.WorkspaceDocumentContext",
           "containingNamespace": "RoslynKit"
@@ -3352,7 +3343,7 @@
           "name": "CreateDocumentKeyAsync",
           "kind": "Method",
           "displayName": "CreateDocumentKeyAsync",
-          "line": 351,
+          "line": 354,
           "column": 39,
           "containingType": "RoslynKit.WorkspaceDocumentContext",
           "containingNamespace": "RoslynKit"
@@ -3360,10 +3351,1537 @@
       ]
     },
     {
+      "path": "tests/RoslynKit.AtlasPromptCacheProbe/AtlasPromptProbe.cs",
+      "projectName": "RoslynKit.AtlasPromptCacheProbe",
+      "documentKind": "source",
+      "symbolCount": 158,
+      "symbols": [
+        {
+          "name": "AtlasPromptProbeLane",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLane",
+          "line": 12,
+          "column": 13,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Router",
+          "kind": "Field",
+          "displayName": "Router",
+          "line": 14,
+          "column": 5,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLane",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "CSharpMapper",
+          "kind": "Field",
+          "displayName": "CSharpMapper",
+          "line": 15,
+          "column": 5,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLane",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "DocMapper",
+          "kind": "Field",
+          "displayName": "DocMapper",
+          "line": 16,
+          "column": 5,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLane",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "TestMapper",
+          "kind": "Field",
+          "displayName": "TestMapper",
+          "line": 17,
+          "column": 5,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLane",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeOptions",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeOptions",
+          "line": 23,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Task",
+          "kind": "Property",
+          "displayName": "Task",
+          "line": 39,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeOptions",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Lane",
+          "kind": "Property",
+          "displayName": "Lane",
+          "line": 41,
+          "column": 33,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeOptions",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Model",
+          "kind": "Property",
+          "displayName": "Model",
+          "line": 43,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeOptions",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "PromptCacheKey",
+          "kind": "Property",
+          "displayName": "PromptCacheKey",
+          "line": 45,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeOptions",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "PromptCacheRetention",
+          "kind": "Property",
+          "displayName": "PromptCacheRetention",
+          "line": 47,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeOptions",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Parse",
+          "kind": "Method",
+          "displayName": "Parse",
+          "line": 49,
+          "column": 43,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeOptions",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ReadSingleValue",
+          "kind": "Method",
+          "displayName": "ReadSingleValue",
+          "line": 104,
+          "column": 27,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeOptions",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeDefaults",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeDefaults",
+          "line": 123,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "DefaultModel",
+          "kind": "Field",
+          "displayName": "DefaultModel",
+          "line": 125,
+          "column": 25,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeDefaults",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "DefaultPromptCacheRetention",
+          "kind": "Field",
+          "displayName": "DefaultPromptCacheRetention",
+          "line": 126,
+          "column": 25,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeDefaults",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "GetPromptCacheKey",
+          "kind": "Method",
+          "displayName": "GetPromptCacheKey",
+          "line": 128,
+          "column": 26,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeDefaults",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeRunner",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "line": 137,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "OpenAiResponsesEndpoint",
+          "kind": "Field",
+          "displayName": "OpenAiResponsesEndpoint",
+          "line": 139,
+          "column": 26,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "PromptJsonOptions",
+          "kind": "Field",
+          "displayName": "PromptJsonOptions",
+          "line": 141,
+          "column": 51,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "RunAsync",
+          "kind": "Method",
+          "displayName": "RunAsync",
+          "line": 148,
+          "column": 54,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "BuildStablePrefix",
+          "kind": "Method",
+          "displayName": "BuildStablePrefix",
+          "line": 193,
+          "column": 26,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "BuildDynamicSuffix",
+          "kind": "Method",
+          "displayName": "BuildDynamicSuffix",
+          "line": 225,
+          "column": 26,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "LoadSelectedIndexes",
+          "kind": "Method",
+          "displayName": "LoadSelectedIndexes",
+          "line": 266,
+          "column": 51,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ReadUsage",
+          "kind": "Method",
+          "displayName": "ReadUsage",
+          "line": 337,
+          "column": 41,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "CreateResponseAsync",
+          "kind": "Method",
+          "displayName": "CreateResponseAsync",
+          "line": 356,
+          "column": 45,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "",
+          "kind": "NamedType",
+          "displayName": "<anonymous type: System.String model, System.String prompt_cache_key, System.String prompt_cache_retention, System.String instructions, System.String input>",
+          "line": 363,
+          "column": 23,
+          "containingType": null,
+          "containingNamespace": null
+        },
+        {
+          "name": "model",
+          "kind": "Property",
+          "displayName": "model",
+          "line": 365,
+          "column": 13,
+          "containingType": "<anonymous type: System.String model, System.String prompt_cache_key, System.String prompt_cache_retention, System.String instructions, System.String input>",
+          "containingNamespace": null
+        },
+        {
+          "name": "prompt_cache_key",
+          "kind": "Property",
+          "displayName": "prompt_cache_key",
+          "line": 366,
+          "column": 13,
+          "containingType": "<anonymous type: System.String model, System.String prompt_cache_key, System.String prompt_cache_retention, System.String instructions, System.String input>",
+          "containingNamespace": null
+        },
+        {
+          "name": "prompt_cache_retention",
+          "kind": "Property",
+          "displayName": "prompt_cache_retention",
+          "line": 367,
+          "column": 13,
+          "containingType": "<anonymous type: System.String model, System.String prompt_cache_key, System.String prompt_cache_retention, System.String instructions, System.String input>",
+          "containingNamespace": null
+        },
+        {
+          "name": "instructions",
+          "kind": "Property",
+          "displayName": "instructions",
+          "line": 368,
+          "column": 13,
+          "containingType": "<anonymous type: System.String model, System.String prompt_cache_key, System.String prompt_cache_retention, System.String instructions, System.String input>",
+          "containingNamespace": null
+        },
+        {
+          "name": "input",
+          "kind": "Property",
+          "displayName": "input",
+          "line": 369,
+          "column": 13,
+          "containingType": "<anonymous type: System.String model, System.String prompt_cache_key, System.String prompt_cache_retention, System.String instructions, System.String input>",
+          "containingNamespace": null
+        },
+        {
+          "name": "LoadStableFiles",
+          "kind": "Method",
+          "displayName": "LoadStableFiles",
+          "line": 391,
+          "column": 60,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "LoadTextFile",
+          "kind": "Method",
+          "displayName": "LoadTextFile",
+          "line": 417,
+          "column": 45,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "RunRouteAsync",
+          "kind": "Method",
+          "displayName": "RunRouteAsync",
+          "line": 423,
+          "column": 61,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ParseRouteOutput",
+          "kind": "Method",
+          "displayName": "ParseRouteOutput",
+          "line": 467,
+          "column": 49,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "LoadIndex",
+          "kind": "Method",
+          "displayName": "LoadIndex<TIndex, TSelection>",
+          "line": 521,
+          "column": 32,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "IsProjectRelevant",
+          "kind": "Method",
+          "displayName": "IsProjectRelevant",
+          "line": 551,
+          "column": 25,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ExtractResponseText",
+          "kind": "Method",
+          "displayName": "ExtractResponseText",
+          "line": 563,
+          "column": 27,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "GetOptionalInt64",
+          "kind": "Method",
+          "displayName": "GetOptionalInt64",
+          "line": 614,
+          "column": 26,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "GetNestedOptionalInt64",
+          "kind": "Method",
+          "displayName": "GetNestedOptionalInt64",
+          "line": 621,
+          "column": 26,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "GetOptionalString",
+          "kind": "Method",
+          "displayName": "GetOptionalString",
+          "line": 628,
+          "column": 28,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ResolveRepositoryRoot",
+          "kind": "Method",
+          "displayName": "ResolveRepositoryRoot",
+          "line": 635,
+          "column": 27,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "NormalizeRelativePath",
+          "kind": "Method",
+          "displayName": "NormalizeRelativePath",
+          "line": 649,
+          "column": 27,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "NormalizeDirectory",
+          "kind": "Method",
+          "displayName": "NormalizeDirectory",
+          "line": 661,
+          "column": 27,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AppendList",
+          "kind": "Method",
+          "displayName": "AppendList",
+          "line": 666,
+          "column": 25,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeLaneExtensions",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLaneExtensions",
+          "line": 685,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Parse",
+          "kind": "Method",
+          "displayName": "Parse",
+          "line": 687,
+          "column": 40,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLaneExtensions",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ToAgentConfigName",
+          "kind": "Method",
+          "displayName": "ToAgentConfigName",
+          "line": 699,
+          "column": 26,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLaneExtensions",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ToOptionValue",
+          "kind": "Method",
+          "displayName": "ToOptionValue",
+          "line": 711,
+          "column": 26,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLaneExtensions",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ToCliValue",
+          "kind": "Method",
+          "displayName": "ToCliValue",
+          "line": 723,
+          "column": 26,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLaneExtensions",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeTextFile",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTextFile",
+          "line": 732,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Path",
+          "kind": "Property",
+          "displayName": "Path",
+          "line": 740,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTextFile",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Content",
+          "kind": "Property",
+          "displayName": "Content",
+          "line": 742,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTextFile",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeRouteSummary",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRouteSummary",
+          "line": 748,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Task",
+          "kind": "Property",
+          "displayName": "Task",
+          "line": 767,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRouteSummary",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "RawOutput",
+          "kind": "Property",
+          "displayName": "RawOutput",
+          "line": 770,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRouteSummary",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "FeatureCards",
+          "kind": "Property",
+          "displayName": "FeatureCards",
+          "line": 773,
+          "column": 34,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRouteSummary",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "MatchingFiles",
+          "kind": "Property",
+          "displayName": "MatchingFiles",
+          "line": 776,
+          "column": 34,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRouteSummary",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "MatchingTests",
+          "kind": "Property",
+          "displayName": "MatchingTests",
+          "line": 779,
+          "column": 34,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRouteSummary",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "SuggestedReadOrder",
+          "kind": "Property",
+          "displayName": "SuggestedReadOrder",
+          "line": 782,
+          "column": 34,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRouteSummary",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeSelectedIndexes",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSelectedIndexes",
+          "line": 788,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Empty",
+          "kind": "Field",
+          "displayName": "Empty",
+          "line": 790,
+          "column": 60,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSelectedIndexes",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "FileEntries",
+          "kind": "Property",
+          "displayName": "FileEntries",
+          "line": 815,
+          "column": 58,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSelectedIndexes",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ProjectEntries",
+          "kind": "Property",
+          "displayName": "ProjectEntries",
+          "line": 818,
+          "column": 61,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSelectedIndexes",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "TestProjects",
+          "kind": "Property",
+          "displayName": "TestProjects",
+          "line": 821,
+          "column": 60,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSelectedIndexes",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "TestFiles",
+          "kind": "Property",
+          "displayName": "TestFiles",
+          "line": 824,
+          "column": 60,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSelectedIndexes",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "SupportFiles",
+          "kind": "Property",
+          "displayName": "SupportFiles",
+          "line": 827,
+          "column": 60,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSelectedIndexes",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "SymbolDocuments",
+          "kind": "Property",
+          "displayName": "SymbolDocuments",
+          "line": 830,
+          "column": 58,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSelectedIndexes",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "HasAnyData",
+          "kind": "Property",
+          "displayName": "HasAnyData",
+          "line": 833,
+          "column": 17,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSelectedIndexes",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeIndexLoadResult",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeIndexLoadResult",
+          "line": 845,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "SelectedIndexes",
+          "kind": "Property",
+          "displayName": "SelectedIndexes",
+          "line": 853,
+          "column": 44,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeIndexLoadResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Warnings",
+          "kind": "Property",
+          "displayName": "Warnings",
+          "line": 855,
+          "column": 34,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeIndexLoadResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeResult",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "line": 861,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Lane",
+          "kind": "Property",
+          "displayName": "Lane",
+          "line": 892,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Model",
+          "kind": "Property",
+          "displayName": "Model",
+          "line": 895,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "PromptCacheKey",
+          "kind": "Property",
+          "displayName": "PromptCacheKey",
+          "line": 898,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "PromptCacheRetention",
+          "kind": "Property",
+          "displayName": "PromptCacheRetention",
+          "line": 901,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "StableFiles",
+          "kind": "Property",
+          "displayName": "StableFiles",
+          "line": 904,
+          "column": 34,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "StablePrefixLength",
+          "kind": "Property",
+          "displayName": "StablePrefixLength",
+          "line": 907,
+          "column": 16,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "DynamicSuffixLength",
+          "kind": "Property",
+          "displayName": "DynamicSuffixLength",
+          "line": 910,
+          "column": 16,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "DynamicRoute",
+          "kind": "Property",
+          "displayName": "DynamicRoute",
+          "line": 913,
+          "column": 41,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "SelectedIndexes",
+          "kind": "Property",
+          "displayName": "SelectedIndexes",
+          "line": 916,
+          "column": 44,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Response",
+          "kind": "Property",
+          "displayName": "Response",
+          "line": 919,
+          "column": 37,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Usage",
+          "kind": "Property",
+          "displayName": "Usage",
+          "line": 922,
+          "column": 34,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Warnings",
+          "kind": "Property",
+          "displayName": "Warnings",
+          "line": 925,
+          "column": 34,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeResponse",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResponse",
+          "line": 931,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "displayName": "Id",
+          "line": 941,
+          "column": 20,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResponse",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "displayName": "Status",
+          "line": 944,
+          "column": 20,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResponse",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "OutputText",
+          "kind": "Property",
+          "displayName": "OutputText",
+          "line": 947,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResponse",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeUsage",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeUsage",
+          "line": 953,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "InputTokens",
+          "kind": "Property",
+          "displayName": "InputTokens",
+          "line": 964,
+          "column": 18,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeUsage",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "OutputTokens",
+          "kind": "Property",
+          "displayName": "OutputTokens",
+          "line": 967,
+          "column": 18,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeUsage",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "TotalTokens",
+          "kind": "Property",
+          "displayName": "TotalTokens",
+          "line": 970,
+          "column": 18,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeUsage",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "CachedTokens",
+          "kind": "Property",
+          "displayName": "CachedTokens",
+          "line": 973,
+          "column": 18,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeUsage",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeFileIndexEntry",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeFileIndexEntry",
+          "line": 979,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Path",
+          "kind": "Property",
+          "displayName": "Path",
+          "line": 982,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeFileIndexEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Extension",
+          "kind": "Property",
+          "displayName": "Extension",
+          "line": 985,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeFileIndexEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Area",
+          "kind": "Property",
+          "displayName": "Area",
+          "line": 988,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeFileIndexEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Category",
+          "kind": "Property",
+          "displayName": "Category",
+          "line": 991,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeFileIndexEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeProjectIndexEntry",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeProjectIndexEntry",
+          "line": 997,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "displayName": "Name",
+          "line": 1000,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeProjectIndexEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Path",
+          "kind": "Property",
+          "displayName": "Path",
+          "line": 1003,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeProjectIndexEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Category",
+          "kind": "Property",
+          "displayName": "Category",
+          "line": 1006,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeProjectIndexEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "IsTestProject",
+          "kind": "Property",
+          "displayName": "IsTestProject",
+          "line": 1009,
+          "column": 17,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeProjectIndexEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "IncludedInSolution",
+          "kind": "Property",
+          "displayName": "IncludedInSolution",
+          "line": 1012,
+          "column": 17,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeProjectIndexEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeTestProjectEntry",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestProjectEntry",
+          "line": 1018,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "displayName": "Name",
+          "line": 1021,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestProjectEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Path",
+          "kind": "Property",
+          "displayName": "Path",
+          "line": 1024,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestProjectEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Category",
+          "kind": "Property",
+          "displayName": "Category",
+          "line": 1027,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestProjectEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeIndexedPathEntry",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeIndexedPathEntry",
+          "line": 1033,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Path",
+          "kind": "Property",
+          "displayName": "Path",
+          "line": 1036,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeIndexedPathEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Category",
+          "kind": "Property",
+          "displayName": "Category",
+          "line": 1039,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeIndexedPathEntry",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeSymbolDocument",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbolDocument",
+          "line": 1045,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Path",
+          "kind": "Property",
+          "displayName": "Path",
+          "line": 1048,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbolDocument",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ProjectName",
+          "kind": "Property",
+          "displayName": "ProjectName",
+          "line": 1051,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbolDocument",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "DocumentKind",
+          "kind": "Property",
+          "displayName": "DocumentKind",
+          "line": 1054,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbolDocument",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "SymbolCount",
+          "kind": "Property",
+          "displayName": "SymbolCount",
+          "line": 1057,
+          "column": 16,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbolDocument",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Symbols",
+          "kind": "Property",
+          "displayName": "Symbols",
+          "line": 1060,
+          "column": 50,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbolDocument",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeSymbol",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbol",
+          "line": 1066,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "displayName": "Name",
+          "line": 1069,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbol",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "displayName": "Kind",
+          "line": 1072,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbol",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "DisplayName",
+          "kind": "Property",
+          "displayName": "DisplayName",
+          "line": 1075,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbol",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Line",
+          "kind": "Property",
+          "displayName": "Line",
+          "line": 1078,
+          "column": 16,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbol",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Column",
+          "kind": "Property",
+          "displayName": "Column",
+          "line": 1081,
+          "column": 16,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbol",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ContainingType",
+          "kind": "Property",
+          "displayName": "ContainingType",
+          "line": 1084,
+          "column": 20,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbol",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ContainingNamespace",
+          "kind": "Property",
+          "displayName": "ContainingNamespace",
+          "line": 1087,
+          "column": 20,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbol",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ProbeEnvelope",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.ProbeEnvelope",
+          "line": 1093,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "SchemaVersion",
+          "kind": "Property",
+          "displayName": "SchemaVersion",
+          "line": 1106,
+          "column": 16,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeEnvelope",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Tool",
+          "kind": "Property",
+          "displayName": "Tool",
+          "line": 1109,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeEnvelope",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Command",
+          "kind": "Property",
+          "displayName": "Command",
+          "line": 1112,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeEnvelope",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Success",
+          "kind": "Property",
+          "displayName": "Success",
+          "line": 1115,
+          "column": 17,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeEnvelope",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Data",
+          "kind": "Property",
+          "displayName": "Data",
+          "line": 1118,
+          "column": 20,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeEnvelope",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Errors",
+          "kind": "Property",
+          "displayName": "Errors",
+          "line": 1121,
+          "column": 42,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeEnvelope",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ForSuccess",
+          "kind": "Method",
+          "displayName": "ForSuccess",
+          "line": 1123,
+          "column": 33,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeEnvelope",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Failure",
+          "kind": "Method",
+          "displayName": "Failure",
+          "line": 1128,
+          "column": 33,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeEnvelope",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "ProbeErrorInfo",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.ProbeErrorInfo",
+          "line": 1137,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "displayName": "Kind",
+          "line": 1147,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeErrorInfo",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Message",
+          "kind": "Property",
+          "displayName": "Message",
+          "line": 1150,
+          "column": 19,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeErrorInfo",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Code",
+          "kind": "Property",
+          "displayName": "Code",
+          "line": 1153,
+          "column": 20,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeErrorInfo",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Usage",
+          "kind": "Method",
+          "displayName": "Usage",
+          "line": 1155,
+          "column": 34,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeErrorInfo",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Canceled",
+          "kind": "Method",
+          "displayName": "Canceled",
+          "line": 1160,
+          "column": 34,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeErrorInfo",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Internal",
+          "kind": "Method",
+          "displayName": "Internal",
+          "line": 1165,
+          "column": 34,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.ProbeErrorInfo",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeUsageException",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeUsageException",
+          "line": 1174,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeFileIndexDocument",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeFileIndexDocument",
+          "line": 1182,
+          "column": 23,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Files",
+          "kind": "Property",
+          "displayName": "Files",
+          "line": 1185,
+          "column": 58,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeFileIndexDocument",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeProjectIndexDocument",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeProjectIndexDocument",
+          "line": 1188,
+          "column": 23,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Projects",
+          "kind": "Property",
+          "displayName": "Projects",
+          "line": 1191,
+          "column": 61,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeProjectIndexDocument",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeTestIndexDocument",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestIndexDocument",
+          "line": 1194,
+          "column": 23,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "TestProjects",
+          "kind": "Property",
+          "displayName": "TestProjects",
+          "line": 1197,
+          "column": 60,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestIndexDocument",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "TestFiles",
+          "kind": "Property",
+          "displayName": "TestFiles",
+          "line": 1200,
+          "column": 60,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestIndexDocument",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "SupportFiles",
+          "kind": "Property",
+          "displayName": "SupportFiles",
+          "line": 1203,
+          "column": 60,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestIndexDocument",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeTestIndexSelection",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestIndexSelection",
+          "line": 1206,
+          "column": 23,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "TestProjects",
+          "kind": "Property",
+          "displayName": "TestProjects",
+          "line": 1218,
+          "column": 60,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestIndexSelection",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "TestFiles",
+          "kind": "Property",
+          "displayName": "TestFiles",
+          "line": 1220,
+          "column": 60,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestIndexSelection",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "SupportFiles",
+          "kind": "Property",
+          "displayName": "SupportFiles",
+          "line": 1222,
+          "column": 60,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestIndexSelection",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "AtlasPromptProbeSymbolIndexDocument",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbolIndexDocument",
+          "line": 1225,
+          "column": 23,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Documents",
+          "kind": "Property",
+          "displayName": "Documents",
+          "line": 1228,
+          "column": 58,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbolIndexDocument",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        }
+      ]
+    },
+    {
+      "path": "tests/RoslynKit.AtlasPromptCacheProbe/Program.cs",
+      "projectName": "RoslynKit.AtlasPromptCacheProbe",
+      "documentKind": "source",
+      "symbolCount": 3,
+      "symbols": [
+        {
+          "name": "Program",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.AtlasPromptCacheProbe.Program",
+          "line": 6,
+          "column": 23,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "JsonOptions",
+          "kind": "Field",
+          "displayName": "JsonOptions",
+          "line": 8,
+          "column": 51,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.Program",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        },
+        {
+          "name": "Main",
+          "kind": "Method",
+          "displayName": "Main",
+          "line": 15,
+          "column": 35,
+          "containingType": "RoslynKit.AtlasPromptCacheProbe.Program",
+          "containingNamespace": "RoslynKit.AtlasPromptCacheProbe"
+        }
+      ]
+    },
+    {
+      "path": "tests/RoslynKit.Tests/AtlasPromptCacheProbeTests.cs",
+      "projectName": "RoslynKit.Tests",
+      "documentKind": "source",
+      "symbolCount": 6,
+      "symbols": [
+        {
+          "name": "AtlasPromptCacheProbeTests",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.Tests.AtlasPromptCacheProbeTests",
+          "line": 9,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BuildStablePrefix_SortsFeatureCardsByPath",
+          "kind": "Method",
+          "displayName": "BuildStablePrefix_SortsFeatureCardsByPath",
+          "line": 12,
+          "column": 17,
+          "containingType": "RoslynKit.Tests.AtlasPromptCacheProbeTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BuildStablePrefix_ExcludesGeneratedIndexMetadata",
+          "kind": "Method",
+          "displayName": "BuildStablePrefix_ExcludesGeneratedIndexMetadata",
+          "line": 30,
+          "column": 17,
+          "containingType": "RoslynKit.Tests.AtlasPromptCacheProbeTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "GetPromptCacheKey_UsesLaneSpecificValue",
+          "kind": "Method",
+          "displayName": "GetPromptCacheKey_UsesLaneSpecificValue",
+          "line": 47,
+          "column": 17,
+          "containingType": "RoslynKit.Tests.AtlasPromptCacheProbeTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "LoadSelectedIndexes_WarnsWhenIndexesAreMissing",
+          "kind": "Method",
+          "displayName": "LoadSelectedIndexes_WarnsWhenIndexesAreMissing",
+          "line": 56,
+          "column": 17,
+          "containingType": "RoslynKit.Tests.AtlasPromptCacheProbeTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "ReadUsage_ReadsCachedTokensFromPromptTokensDetails",
+          "kind": "Method",
+          "displayName": "ReadUsage_ReadsCachedTokensFromPromptTokensDetails",
+          "line": 86,
+          "column": 17,
+          "containingType": "RoslynKit.Tests.AtlasPromptCacheProbeTests",
+          "containingNamespace": "RoslynKit.Tests"
+        }
+      ]
+    },
+    {
       "path": "tests/RoslynKit.Tests/CliParserTests.cs",
       "projectName": "RoslynKit.Tests",
       "documentKind": "source",
-      "symbolCount": 17,
+      "symbolCount": 22,
       "symbols": [
         {
           "name": "CliParserTests",
@@ -3420,10 +4938,19 @@
           "containingNamespace": "RoslynKit.Tests"
         },
         {
-          "name": "Parse_CollectsDocumentTextRangeOptions",
+          "name": "Parse_AcceptsWholeFileDocumentTextFileSelector",
           "kind": "Method",
-          "displayName": "Parse_CollectsDocumentTextRangeOptions",
+          "displayName": "Parse_AcceptsWholeFileDocumentTextFileSelector",
           "line": 63,
+          "column": 17,
+          "containingType": "RoslynKit.Tests.CliParserTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "Parse_AcceptsWholeFileDocumentTextDocumentKeySelector",
+          "kind": "Method",
+          "displayName": "Parse_AcceptsWholeFileDocumentTextDocumentKeySelector",
+          "line": 73,
           "column": 17,
           "containingType": "RoslynKit.Tests.CliParserTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3492,19 +5019,55 @@
           "containingNamespace": "RoslynKit.Tests"
         },
         {
-          "name": "Parse_RejectsRangeColumnWithoutLine",
+          "name": "Parse_RejectsLegacyDocumentTextRangeOptions",
           "kind": "Method",
-          "displayName": "Parse_RejectsRangeColumnWithoutLine",
+          "displayName": "Parse_RejectsLegacyDocumentTextRangeOptions",
           "line": 153,
           "column": 17,
           "containingType": "RoslynKit.Tests.CliParserTests",
           "containingNamespace": "RoslynKit.Tests"
         },
         {
+          "name": "ValueTuple",
+          "kind": "NamedType",
+          "displayName": "(System.String, System.String)",
+          "line": 157,
+          "column": 13,
+          "containingType": null,
+          "containingNamespace": "System"
+        },
+        {
+          "name": "ValueTuple",
+          "kind": "NamedType",
+          "displayName": "(System.String, System.String)",
+          "line": 158,
+          "column": 13,
+          "containingType": null,
+          "containingNamespace": "System"
+        },
+        {
+          "name": "ValueTuple",
+          "kind": "NamedType",
+          "displayName": "(System.String, System.String)",
+          "line": 159,
+          "column": 13,
+          "containingType": null,
+          "containingNamespace": "System"
+        },
+        {
+          "name": "ValueTuple",
+          "kind": "NamedType",
+          "displayName": "(System.String, System.String)",
+          "line": 160,
+          "column": 13,
+          "containingType": null,
+          "containingNamespace": "System"
+        },
+        {
           "name": "Parse_RejectsAmbiguousAbbreviation",
           "kind": "Method",
           "displayName": "Parse_RejectsAmbiguousAbbreviation",
-          "line": 167,
+          "line": 179,
           "column": 17,
           "containingType": "RoslynKit.Tests.CliParserTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3513,9 +5076,386 @@
           "name": "Parse_RejectsDuplicateOption",
           "kind": "Method",
           "displayName": "Parse_RejectsDuplicateOption",
-          "line": 176,
+          "line": 188,
           "column": 17,
           "containingType": "RoslynKit.Tests.CliParserTests",
+          "containingNamespace": "RoslynKit.Tests"
+        }
+      ]
+    },
+    {
+      "path": "tests/RoslynKit.Tests/CodexExecTokenComparisonTests.cs",
+      "projectName": "RoslynKit.Tests",
+      "documentKind": "source",
+      "symbolCount": 41,
+      "symbols": [
+        {
+          "name": "CodexExecTokenComparisonTests",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "line": 12,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "_output",
+          "kind": "Field",
+          "displayName": "_output",
+          "line": 14,
+          "column": 40,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BenchmarkModelProvider",
+          "kind": "Field",
+          "displayName": "BenchmarkModelProvider",
+          "line": 16,
+          "column": 26,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BenchmarkModel",
+          "kind": "Field",
+          "displayName": "BenchmarkModel",
+          "line": 17,
+          "column": 26,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BenchmarkApprovalPolicyToml",
+          "kind": "Field",
+          "displayName": "BenchmarkApprovalPolicyToml",
+          "line": 18,
+          "column": 26,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BenchmarkModelProviderToml",
+          "kind": "Field",
+          "displayName": "BenchmarkModelProviderToml",
+          "line": 19,
+          "column": 26,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BenchmarkSandboxMode",
+          "kind": "Field",
+          "displayName": "BenchmarkSandboxMode",
+          "line": 20,
+          "column": 26,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "LiveOutputRunnerCommand",
+          "kind": "Field",
+          "displayName": "LiveOutputRunnerCommand",
+          "line": 21,
+          "column": 26,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "RunOrder",
+          "kind": "Field",
+          "displayName": "RunOrder",
+          "line": 24,
+          "column": 44,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "RoslynkitDevPrompt_UsesFewerInputTokens_ThanShellOnlyCodexExec",
+          "kind": "Method",
+          "displayName": "RoslynkitDevPrompt_UsesFewerInputTokens_ThanShellOnlyCodexExec",
+          "line": 40,
+          "column": 23,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "RoslynkitDevPrompt_DumpsComparisonInFailureMessage",
+          "kind": "Method",
+          "displayName": "RoslynkitDevPrompt_DumpsComparisonInFailureMessage",
+          "line": 50,
+          "column": 23,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "ResolveRoslynkitDevPath",
+          "kind": "Method",
+          "displayName": "ResolveRoslynkitDevPath",
+          "line": 60,
+          "column": 27,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "ResolveCodexExecutablePath",
+          "kind": "Method",
+          "displayName": "ResolveCodexExecutablePath",
+          "line": 67,
+          "column": 27,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BuildBenchmarkTaskBody",
+          "kind": "Method",
+          "displayName": "BuildBenchmarkTaskBody",
+          "line": 94,
+          "column": 27,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BuildControlPrompt",
+          "kind": "Method",
+          "displayName": "BuildControlPrompt",
+          "line": 119,
+          "column": 27,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BuildTreatmentPrompt",
+          "kind": "Method",
+          "displayName": "BuildTreatmentPrompt",
+          "line": 130,
+          "column": 27,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "PrintBenchmarkPrompts",
+          "kind": "Method",
+          "displayName": "PrintBenchmarkPrompts",
+          "line": 150,
+          "column": 18,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "ExecuteBenchmarkAsync",
+          "kind": "Method",
+          "displayName": "ExecuteBenchmarkAsync",
+          "line": 156,
+          "column": 44,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "PrintInputTokenSummary",
+          "kind": "Method",
+          "displayName": "PrintInputTokenSummary",
+          "line": 206,
+          "column": 18,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BuildBenchmarkReport",
+          "kind": "Method",
+          "displayName": "BuildBenchmarkReport",
+          "line": 223,
+          "column": 27,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "AppendReportBlock",
+          "kind": "Method",
+          "displayName": "AppendReportBlock",
+          "line": 247,
+          "column": 25,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "WriteOutputBlock",
+          "kind": "Method",
+          "displayName": "WriteOutputBlock",
+          "line": 254,
+          "column": 18,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "WriteVisibleLine",
+          "kind": "Method",
+          "displayName": "WriteVisibleLine",
+          "line": 266,
+          "column": 18,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "RunCodexExecAsync",
+          "kind": "Method",
+          "displayName": "RunCodexExecAsync",
+          "line": 276,
+          "column": 51,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "TryKillProcess",
+          "kind": "Method",
+          "displayName": "TryKillProcess",
+          "line": 374,
+          "column": 25,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "ExtractFinalTokenUsage",
+          "kind": "Method",
+          "displayName": "ExtractFinalTokenUsage",
+          "line": 388,
+          "column": 31,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "TryReadTokenUsage",
+          "kind": "Method",
+          "displayName": "TryReadTokenUsage",
+          "line": 425,
+          "column": 25,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "TryFindRoslynKitPolicyBlock",
+          "kind": "Method",
+          "displayName": "TryFindRoslynKitPolicyBlock",
+          "line": 468,
+          "column": 25,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "GetRequiredObject",
+          "kind": "Method",
+          "displayName": "GetRequiredObject",
+          "line": 533,
+          "column": 32,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "GetRequiredInt64",
+          "kind": "Method",
+          "displayName": "GetRequiredInt64",
+          "line": 543,
+          "column": 25,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "GetRequiredInt64OrDefault",
+          "kind": "Method",
+          "displayName": "GetRequiredInt64OrDefault",
+          "line": 553,
+          "column": 25,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BuildProcessFailureMessage",
+          "kind": "Method",
+          "displayName": "BuildProcessFailureMessage",
+          "line": 568,
+          "column": 27,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "DescribeRun",
+          "kind": "Method",
+          "displayName": "DescribeRun",
+          "line": 585,
+          "column": 27,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "TruncateForMessage",
+          "kind": "Method",
+          "displayName": "TruncateForMessage",
+          "line": 590,
+          "column": 27,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "ContainsRoslynKitInvocation",
+          "kind": "Method",
+          "displayName": "ContainsRoslynKitInvocation",
+          "line": 609,
+          "column": 25,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BenchmarkArm",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.Tests.CodexExecTokenComparisonTests.BenchmarkArm",
+          "line": 615,
+          "column": 18,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "Control",
+          "kind": "Field",
+          "displayName": "Control",
+          "line": 617,
+          "column": 9,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests.BenchmarkArm",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "Treatment",
+          "kind": "Field",
+          "displayName": "Treatment",
+          "line": 618,
+          "column": 9,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests.BenchmarkArm",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BenchmarkExecution",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.Tests.CodexExecTokenComparisonTests.BenchmarkExecution",
+          "line": 621,
+          "column": 27,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "TokenUsage",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.Tests.CodexExecTokenComparisonTests.TokenUsage",
+          "line": 626,
+          "column": 36,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "BenchmarkRunResult",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.Tests.CodexExecTokenComparisonTests.BenchmarkRunResult",
+          "line": 628,
+          "column": 27,
+          "containingType": "RoslynKit.Tests.CodexExecTokenComparisonTests",
           "containingNamespace": "RoslynKit.Tests"
         }
       ]
@@ -3524,7 +5464,7 @@
       "path": "tests/RoslynKit.Tests/CommandExecutionTests.cs",
       "projectName": "RoslynKit.Tests",
       "documentKind": "source",
-      "symbolCount": 10,
+      "symbolCount": 11,
       "symbols": [
         {
           "name": "CommandExecutionTests",
@@ -3554,9 +5494,9 @@
           "containingNamespace": "RoslynKit.Tests"
         },
         {
-          "name": "DocumentText_ReadsMethodBodySlice_FromFileSelector",
+          "name": "DocumentText_ReadsFullSourceDocument_FromFileSelector",
           "kind": "Method",
-          "displayName": "DocumentText_ReadsMethodBodySlice_FromFileSelector",
+          "displayName": "DocumentText_ReadsFullSourceDocument_FromFileSelector",
           "line": 37,
           "column": 23,
           "containingType": "RoslynKit.Tests.CommandExecutionTests",
@@ -3566,7 +5506,7 @@
           "name": "Definition_ReturnsCliApplicationConstructorDeclaration",
           "kind": "Method",
           "displayName": "Definition_ReturnsCliApplicationConstructorDeclaration",
-          "line": 57,
+          "line": 54,
           "column": 23,
           "containingType": "RoslynKit.Tests.CommandExecutionTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3575,7 +5515,7 @@
           "name": "QuickInfo_ReturnsConstructorSections_ForCliApplicationInstantiation",
           "kind": "Method",
           "displayName": "QuickInfo_ReturnsConstructorSections_ForCliApplicationInstantiation",
-          "line": 75,
+          "line": 72,
           "column": 23,
           "containingType": "RoslynKit.Tests.CommandExecutionTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3584,7 +5524,7 @@
           "name": "TypeDefinition_ReturnsFixtureInterfaceType",
           "kind": "Method",
           "displayName": "TypeDefinition_ReturnsFixtureInterfaceType",
-          "line": 92,
+          "line": 89,
           "column": 23,
           "containingType": "RoslynKit.Tests.CommandExecutionTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3593,7 +5533,7 @@
           "name": "Implementations_ReturnsFixtureImplementation",
           "kind": "Method",
           "displayName": "Implementations_ReturnsFixtureImplementation",
-          "line": 109,
+          "line": 106,
           "column": 23,
           "containingType": "RoslynKit.Tests.CommandExecutionTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3602,17 +5542,26 @@
           "name": "SignatureHelp_ReturnsConstructorSignature",
           "kind": "Method",
           "displayName": "SignatureHelp_ReturnsConstructorSignature",
-          "line": 125,
+          "line": 122,
           "column": 23,
           "containingType": "RoslynKit.Tests.CommandExecutionTests",
           "containingNamespace": "RoslynKit.Tests"
         },
         {
-          "name": "DocumentText_DocumentKey_ReadsGeneratedDocument",
+          "name": "DocumentText_DocumentKey_ReadsFullGeneratedDocument",
           "kind": "Method",
-          "displayName": "DocumentText_DocumentKey_ReadsGeneratedDocument",
-          "line": 145,
+          "displayName": "DocumentText_DocumentKey_ReadsFullGeneratedDocument",
+          "line": 142,
           "column": 23,
+          "containingType": "RoslynKit.Tests.CommandExecutionTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "AssertWholeDocumentRange",
+          "kind": "Method",
+          "displayName": "AssertWholeDocumentRange",
+          "line": 164,
+          "column": 25,
           "containingType": "RoslynKit.Tests.CommandExecutionTests",
           "containingNamespace": "RoslynKit.Tests"
         }
@@ -3622,7 +5571,7 @@
       "path": "tests/RoslynKit.Tests/EnvelopeTests.cs",
       "projectName": "RoslynKit.Tests",
       "documentKind": "source",
-      "symbolCount": 20,
+      "symbolCount": 21,
       "symbols": [
         {
           "name": "EnvelopeTests",
@@ -3697,10 +5646,19 @@
           "containingNamespace": "RoslynKit.Tests"
         },
         {
+          "name": "RunAsync_ReturnsUsageError_ForDocumentTextLegacyRangeOptionBeforeWorkspaceLoad",
+          "kind": "Method",
+          "displayName": "RunAsync_ReturnsUsageError_ForDocumentTextLegacyRangeOptionBeforeWorkspaceLoad",
+          "line": 108,
+          "column": 23,
+          "containingType": "RoslynKit.Tests.EnvelopeTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
           "name": "JsonEnvelope_UsesExplicitPropertyNames_ForWorkspaceContracts",
           "kind": "Method",
           "displayName": "JsonEnvelope_UsesExplicitPropertyNames_ForWorkspaceContracts",
-          "line": 108,
+          "line": 125,
           "column": 17,
           "containingType": "RoslynKit.Tests.EnvelopeTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3709,7 +5667,7 @@
           "name": "JsonEnvelope_UsesExplicitPropertyNames_ForDocumentTextContracts",
           "kind": "Method",
           "displayName": "JsonEnvelope_UsesExplicitPropertyNames_ForDocumentTextContracts",
-          "line": 136,
+          "line": 153,
           "column": 17,
           "containingType": "RoslynKit.Tests.EnvelopeTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3718,7 +5676,7 @@
           "name": "JsonEnvelope_UsesExplicitPropertyNames_ForTypeDefinitionContracts",
           "kind": "Method",
           "displayName": "JsonEnvelope_UsesExplicitPropertyNames_ForTypeDefinitionContracts",
-          "line": 157,
+          "line": 174,
           "column": 17,
           "containingType": "RoslynKit.Tests.EnvelopeTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3727,7 +5685,7 @@
           "name": "JsonEnvelope_UsesExplicitPropertyNames_ForQuickInfoContracts",
           "kind": "Method",
           "displayName": "JsonEnvelope_UsesExplicitPropertyNames_ForQuickInfoContracts",
-          "line": 177,
+          "line": 194,
           "column": 17,
           "containingType": "RoslynKit.Tests.EnvelopeTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3736,7 +5694,7 @@
           "name": "JsonEnvelope_UsesExplicitPropertyNames_ForImplementationsContracts",
           "kind": "Method",
           "displayName": "JsonEnvelope_UsesExplicitPropertyNames_ForImplementationsContracts",
-          "line": 200,
+          "line": 217,
           "column": 17,
           "containingType": "RoslynKit.Tests.EnvelopeTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3745,7 +5703,7 @@
           "name": "JsonEnvelope_UsesExplicitPropertyNames_ForSignatureHelpContracts",
           "kind": "Method",
           "displayName": "JsonEnvelope_UsesExplicitPropertyNames_ForSignatureHelpContracts",
-          "line": 224,
+          "line": 241,
           "column": 17,
           "containingType": "RoslynKit.Tests.EnvelopeTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3754,7 +5712,7 @@
           "name": "HelpModels_UseExplicitPropertyNames_WithoutNamingPolicy",
           "kind": "Method",
           "displayName": "HelpModels_UseExplicitPropertyNames_WithoutNamingPolicy",
-          "line": 254,
+          "line": 271,
           "column": 17,
           "containingType": "RoslynKit.Tests.EnvelopeTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3763,7 +5721,7 @@
           "name": "CreateDescriptor",
           "kind": "Method",
           "displayName": "CreateDescriptor",
-          "line": 279,
+          "line": 296,
           "column": 39,
           "containingType": "RoslynKit.Tests.EnvelopeTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3772,7 +5730,7 @@
           "name": "CreateSymbol",
           "kind": "Method",
           "displayName": "CreateSymbol",
-          "line": 291,
+          "line": 308,
           "column": 31,
           "containingType": "RoslynKit.Tests.EnvelopeTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3781,7 +5739,7 @@
           "name": "AssertVersionOutputAsync",
           "kind": "Method",
           "displayName": "AssertVersionOutputAsync",
-          "line": 307,
+          "line": 324,
           "column": 31,
           "containingType": "RoslynKit.Tests.EnvelopeTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3790,7 +5748,7 @@
           "name": "GetExpectedVersionOutput",
           "kind": "Method",
           "displayName": "GetExpectedVersionOutput",
-          "line": 316,
+          "line": 333,
           "column": 27,
           "containingType": "RoslynKit.Tests.EnvelopeTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3799,7 +5757,7 @@
           "name": "CreateContractOptions",
           "kind": "Method",
           "displayName": "CreateContractOptions",
-          "line": 326,
+          "line": 343,
           "column": 42,
           "containingType": "RoslynKit.Tests.EnvelopeTests",
           "containingNamespace": "RoslynKit.Tests"
@@ -3989,6 +5947,41 @@
           "line": 62,
           "column": 33,
           "containingType": "RoslynKit.Tests.TestPaths",
+          "containingNamespace": "RoslynKit.Tests"
+        }
+      ]
+    },
+    {
+      "path": "tests/RoslynKit.Tests/XunitOutputProbeTests.cs",
+      "projectName": "RoslynKit.Tests",
+      "documentKind": "source",
+      "symbolCount": 3,
+      "symbols": [
+        {
+          "name": "XunitOutputProbeTests",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.Tests.XunitOutputProbeTests",
+          "line": 6,
+          "column": 21,
+          "containingType": null,
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "_output",
+          "kind": "Field",
+          "displayName": "_output",
+          "line": 8,
+          "column": 40,
+          "containingType": "RoslynKit.Tests.XunitOutputProbeTests",
+          "containingNamespace": "RoslynKit.Tests"
+        },
+        {
+          "name": "OutputChannels_AreVisible_ForExplicitRuns",
+          "kind": "Method",
+          "displayName": "OutputChannels_AreVisible_ForExplicitRuns",
+          "line": 16,
+          "column": 17,
+          "containingType": "RoslynKit.Tests.XunitOutputProbeTests",
           "containingNamespace": "RoslynKit.Tests"
         }
       ]

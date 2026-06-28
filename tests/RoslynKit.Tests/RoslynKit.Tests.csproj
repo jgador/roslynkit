@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\RoslynKit.AtlasPromptCacheProbe\RoslynKit.AtlasPromptCacheProbe.csproj" />
     <ProjectReference Include="..\..\src\RoslynKit\RoslynKit.csproj" />
   </ItemGroup>
 

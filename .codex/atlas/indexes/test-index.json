@@ -1,7 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-06-27T02:36:11.7997657Z",
+  "generatedAtUtc": "2026-06-28T03:04:19.1670431Z",
   "testProjects": [
+    {
+      "name": "RoslynKit.AtlasPromptCacheProbe",
+      "path": "tests/RoslynKit.AtlasPromptCacheProbe/RoslynKit.AtlasPromptCacheProbe.csproj",
+      "category": "test-support"
+    },
     {
       "name": "RoslynKit.Tests",
       "path": "tests/RoslynKit.Tests/RoslynKit.Tests.csproj",
@@ -15,8 +20,16 @@
   ],
   "testFiles": [
     {
+      "path": "tests/RoslynKit.Tests/AtlasPromptCacheProbeTests.cs",
+      "category": "test"
+    },
+    {
       "path": "tests/RoslynKit.Tests/CliParserTests.cs",
       "category": "parser"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/CodexExecTokenComparisonTests.cs",
+      "category": "test"
     },
     {
       "path": "tests/RoslynKit.Tests/CommandExecutionTests.cs",
@@ -33,6 +46,10 @@
     {
       "path": "tests/RoslynKit.Tests/TestPaths.cs",
       "category": "support"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/XunitOutputProbeTests.cs",
+      "category": "test"
     }
   ],
   "supportFiles": [
