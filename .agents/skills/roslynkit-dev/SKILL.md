@@ -1,11 +1,11 @@
 ---
 name: roslynkit-dev
-description: Use the side-by-side prerelease RoslynKit dev tool first when working on RoslynKit itself; for literal search, prose, non-C# files, or RoslynKit workspace-load failures, let Codex CLI choose the terminal-native fallback for the current platform.
+description: Use the side-by-side prerelease RoslynKit dev tool first when semantic inspection should run against an installed prerelease build; for literal search, prose, non-C# files, or RoslynKit workspace-load failures, let Codex CLI choose the terminal-native fallback for the current platform.
 ---
 
-# RoslynKit Dev
+# RoslynKit
 
-Use this skill for RoslynKit development when semantic inspection should run against the side-by-side prerelease RoslynKit dev tool that is already installed outside the repo with `--tool-path`.
+Use this skill for ordinary C# semantic inspection when the side-by-side prerelease RoslynKit dev tool is already installed with `--tool-path`.
 
 ## Routing Rule
 
@@ -52,17 +52,17 @@ Example:
 ```powershell
 $roslynkitDev = Join-Path (Join-Path (Join-Path $HOME ".roslynkit") "tools") "roslynkit-dev"
 $roslynkitDev = Join-Path $roslynkitDev ($(if ($IsWindows) { "roslynkit.exe" } else { "roslynkit" }))
-& $roslynkitDev workspace --target .\RoslynKit.slnx --include-generated --include-additional --include-analyzer-config
+& $roslynkitDev workspace --target .\SomeSolution.slnx --include-generated --include-additional --include-analyzer-config
 ```
 
 ## Cursor Choice
 
 When a line contains more than one semantic target, choose the cursor deliberately before you jump:
 
+- Prefer the most flow-bearing symbol on the current line.
 - For chained expressions such as `new SomeType(...).RunAsync(args)`, probe the rightmost invoked method or property first with `quick-info`, then use `definition` on that same position if the jump still looks useful.
-- Do not treat the constructor token or enclosing type name as the default jump target unless object construction or type identity is the actual question.
+- Treat the constructor token or enclosing type name as an opt-in target only when object construction or type identity is the actual question.
 - If the question changes to "what is this type?", resolve the class with `symbols --exact --kind class` and then use `quick-info` at the class declaration before reading the file body.
-- For routing traces in this repo, prefer the method-token sequence `Program.Main` -> `CliApplication.RunAsync` -> `CliParser.Parse` / `BuiltinCommandRegistry` -> `RoslynCommandExecutor.ExecuteAsync` -> `DefinitionAsync`.
 
 ## Cheap-First Semantic Workflow
 
@@ -89,71 +89,71 @@ When the task is a semantic C# question, prefer this order and stop as soon as y
 
 The following examples assume `$roslynkitDev` has already been set as shown above.
 
-### Routing trace entrypoint
+### Follow the active call
 
 ```powershell
-& $roslynkitDev quick-info --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 48
-& $roslynkitDev definition --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 48
+& $roslynkitDev quick-info --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
+& $roslynkitDev definition --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
 ```
 
-### Declaration lookup
+### Find a named type
 
 ```powershell
-& $roslynkitDev symbols --target .\RoslynKit.slnx --query CliApplication --exact --kind class
+& $roslynkitDev symbols --target .\SomeSolution.slnx --query SomeType --exact --kind class
 ```
 
-### Type context before constructor
+### Inspect type context
 
 ```powershell
-& $roslynkitDev quick-info --target .\RoslynKit.slnx --file .\src\RoslynKit\CliApplication.cs --line 10 --column 21
+& $roslynkitDev quick-info --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 11 --column 21
 ```
 
-### File structure
+### List file members
 
 ```powershell
-& $roslynkitDev document-symbols --target .\RoslynKit.slnx --file .\src\RoslynKit\CliApplication.cs
+& $roslynkitDev document-symbols --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs
 ```
 
-### Whole-document reads
+### Read a resolved document
 
 ```powershell
-& $roslynkitDev document-text --target .\RoslynKit.slnx --file .\src\RoslynKit\CliApplication.cs
+& $roslynkitDev document-text --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs
 ```
 
-### Definition
+### Jump to a definition
 
 ```powershell
-& $roslynkitDev definition --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 48
+& $roslynkitDev definition --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
 ```
 
-### References
+### Find references
 
 ```powershell
-& $roslynkitDev references --target .\RoslynKit.slnx --file .\src\RoslynKit\CliParser.cs --line 19 --column 33 --max-results 3
+& $roslynkitDev references --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 32 --column 17 --max-results 3
 ```
 
-### Implementations
+### Find implementations
 
 ```powershell
-& $roslynkitDev implementations --target .\SomeProject.csproj --file .\SomeFile.cs --line 12 --column 9 --max-results 20
+& $roslynkitDev implementations --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 12 --column 9 --max-results 20
 ```
 
-### Quick info
+### Read quick info
 
 ```powershell
-& $roslynkitDev quick-info --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 48
+& $roslynkitDev quick-info --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
 ```
 
-### Type definition
+### Jump to a type definition
 
 ```powershell
-& $roslynkitDev type-definition --target .\SomeProject.csproj --file .\SomeFile.cs --line 18 --column 13
+& $roslynkitDev type-definition --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 13
 ```
 
-### Signature help
+### Inspect call-site signature help
 
 ```powershell
-& $roslynkitDev signature-help --target .\SomeProject.csproj --file .\SomeFile.cs --line 24 --column 17
+& $roslynkitDev signature-help --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 24 --column 17
 ```
 
 ### Generated-document reads

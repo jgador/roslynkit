@@ -3,16 +3,18 @@
 RoslynKit keeps two checked-in agent skills:
 
 - `.agents\skills\roslynkit\SKILL.md` for the stable global `roslynkit` command.
-- `.agents\skills\roslynkit-dev\SKILL.md` for the repo-default RoslynKit development workflow.
+- `.agents\skills\roslynkit-dev\SKILL.md` for the side-by-side prerelease RoslynKit dev tool.
 
 The two skill files should stay structurally aligned. They describe the same RoslynKit command surface and should diverge only where the invocation path is intentionally different.
+Their normative guidance and examples must stay repository-agnostic so the same checked-in files can be reused in arbitrary C# repositories.
 
 ## Ownership
 
 Keep the ownership boundaries explicit:
 
-- `AGENTS.md` is the source of truth for which skill is the default route in this repo.
-- `.agents\skills\roslynkit-dev\SKILL.md` is usage-only guidance for Codex when the dev tool is already installed.
+- `AGENTS.md` is the source of truth for which skill is the default route in this repo and for repo-specific workflow policy.
+- `.codex\atlas\` is the home for durable repo-specific tracing or routing guidance when Atlas coverage exists.
+- `.agents\skills\roslynkit\SKILL.md` and `.agents\skills\roslynkit-dev\SKILL.md` are reusable usage-only guides. Do not embed repo-owned routing sequences, repo-local source paths, or project-specific symbol chains inside either skill.
 - `docs/dev-install.md` is the install/update source of truth for the side-by-side prerelease tool.
 
 ## Intentional differences
@@ -21,6 +23,7 @@ Keep the ownership boundaries explicit:
 - The command prefix:
   - stable skill uses `roslynkit ...`
   - dev skill uses `& $roslynkitDev ...`
+- The dev-skill reference to `docs/dev-install.md`.
 
 Do not hardcode a literal prerelease version inside `.agents\skills\roslynkit-dev\SKILL.md`. Updating from one prerelease to the next should normally require rerunning the install script, not editing the skill file.
 
@@ -31,6 +34,7 @@ Update both skill files together when any of these change:
 - the public CLI command names;
 - required options such as `--target`, `--file`, or `--document-key`;
 - recommended command ordering such as “run `workspace` first”;
+- reusable cursor-choice guidance or generic examples;
 - fallback guidance for non-C# or non-semantic tasks.
 
 When you edit one skill file for command-shape guidance, mirror the same structural change in the other skill file in the same commit.
