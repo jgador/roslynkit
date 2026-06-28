@@ -27,6 +27,7 @@ Route command text from `Program.Main` through parse, help/version, and command 
 - `CliParser.Parse`
 - `BuiltinCommandRegistry.Commands`
 - `RoslynCommandExecutor.ExecuteAsync`
+- `RoslynCommandExecutor.DefinitionAsync`
 
 ## Important files
 
@@ -57,6 +58,13 @@ Route command text from `Program.Main` through parse, help/version, and command 
 
 - Changing parser rules without updating registry, help, and tests.
 - Reading deep executor code before checking parser behavior and nearby tests.
+- Jumping to the `CliApplication` constructor token in `Program.Main` when the routing question is really about the flow into `RunAsync`.
+
+## Cursor choices
+
+- For chained expressions in runtime routing traces, jump to the rightmost invoked method first.
+- In `Program.Main`, prefer the `RunAsync` token over the `CliApplication` constructor token when tracing command flow.
+- If the question changes from flow to type identity, switch to the `CliApplication` class declaration and its XML summary instead of the constructor.
 
 ## Do not read first
 
@@ -66,4 +74,4 @@ Route command text from `Program.Main` through parse, help/version, and command 
 
 ## Last verified
 
-`2026-06-27`
+`2026-06-28`

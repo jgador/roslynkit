@@ -49,15 +49,25 @@ Example:
 roslynkit workspace --target .\RoslynKit.slnx --include-generated --include-additional --include-analyzer-config
 ```
 
+## Cursor Choice
+
+When a line contains more than one semantic target, choose the cursor deliberately before you jump:
+
+- For chained expressions such as `new SomeType(...).RunAsync(args)`, probe the rightmost invoked method or property first with `quick-info`, then use `definition` on that same position if the jump still looks useful.
+- Do not treat the constructor token or enclosing type name as the default jump target unless object construction or type identity is the actual question.
+- If the question changes to "what is this type?", resolve the class with `symbols --exact --kind class` and then use `quick-info` at the class declaration before reading the file body.
+- For routing traces in this repo, prefer the method-token sequence `Program.Main` -> `CliApplication.RunAsync` -> `CliParser.Parse` / `BuiltinCommandRegistry` -> `RoslynCommandExecutor.ExecuteAsync` -> `DefinitionAsync`.
+
 ## Cheap-First Semantic Workflow
 
 When the task is a semantic C# question, prefer this order and stop as soon as you have enough evidence:
 
-1. Resolve the exact symbol or declaration first with `symbols`, `definition`, `references`, or `implementations`, depending on the question.
-2. Use `quick-info` at the resolved location before reading source text when you need signature, type, or documentation context.
-3. If source text is still necessary, use `document-text` only when a full document read is justified after the symbol or file is already resolved.
-4. If only a small literal snippet or comment block is needed after semantic resolution, let Codex CLI choose the terminal-native fallback instead of pulling the whole document through RoslynKit.
-5. Read a method or class body only when symbol locations, quick info, document structure, and targeted cross-references are still insufficient.
+1. Pick the most flow-bearing symbol on the current line before you jump. For chained invocations, start with the rightmost invoked method or property, not the constructor or enclosing type, unless construction is the question.
+2. Resolve the exact symbol or declaration first with `symbols`, `definition`, `references`, or `implementations`, depending on the question.
+3. Use `quick-info` at the resolved location before reading source text when you need signature, type, or documentation context.
+4. If source text is still necessary, use `document-text` only when a full document read is justified after the symbol or file is already resolved.
+5. If only a small literal snippet or comment block is needed after semantic resolution, let Codex CLI choose the terminal-native fallback instead of pulling the whole document through RoslynKit.
+6. Read a method or class body only when symbol locations, quick info, document structure, and targeted cross-references are still insufficient.
 
 ## Token Discipline
 
@@ -65,14 +75,29 @@ When the task is a semantic C# question, prefer this order and stop as soon as y
 - Do not read a whole class body by default.
 - Do not start with `document-symbols` unless you already know the file and need local structure to choose a member or range.
 - Prefer exact `symbols --exact --kind <kind>` or position-based commands over broad pattern searches when the likely symbol is already known.
+- Prefer `definition` plus `quick-info` over `document-symbols` or `document-text` when the next useful hop is already on the current line.
+- Keep `references` narrow with the smallest useful `--max-results` when the goal is routing or nearest-test discovery.
 - Once you have enough evidence, stop instead of gathering extra member bodies or sibling declarations.
 
 ## Agent-Facing Operations
+
+### Routing trace entrypoint
+
+```powershell
+roslynkit quick-info --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 48
+roslynkit definition --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 48
+```
 
 ### Declaration lookup
 
 ```powershell
 roslynkit symbols --target .\RoslynKit.slnx --query CliApplication --exact --kind class
+```
+
+### Type context before constructor
+
+```powershell
+roslynkit quick-info --target .\RoslynKit.slnx --file .\src\RoslynKit\CliApplication.cs --line 10 --column 21
 ```
 
 ### File structure
@@ -90,13 +115,13 @@ roslynkit document-text --target .\RoslynKit.slnx --file .\src\RoslynKit\CliAppl
 ### Definition
 
 ```powershell
-roslynkit definition --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 20
+roslynkit definition --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 48
 ```
 
 ### References
 
 ```powershell
-roslynkit references --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 20 --max-results 50
+roslynkit references --target .\RoslynKit.slnx --file .\src\RoslynKit\CliParser.cs --line 19 --column 33 --max-results 3
 ```
 
 ### Implementations
@@ -108,7 +133,7 @@ roslynkit implementations --target .\SomeProject.csproj --file .\SomeFile.cs --l
 ### Quick info
 
 ```powershell
-roslynkit quick-info --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 20
+roslynkit quick-info --target .\RoslynKit.slnx --file .\src\RoslynKit\Program.cs --line 10 --column 48
 ```
 
 ### Type definition
