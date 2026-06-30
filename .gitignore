@@ -12,3 +12,4 @@ artifacts/
 *.user
 *.suo
 *.nupkg
+.tmp/
