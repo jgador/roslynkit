@@ -5,6 +5,17 @@ description: Use the side-by-side prerelease RoslynKit dev tool first when seman
 
 # RoslynKit
 
+## Hard Limits (read first)
+
+These override every other section when they conflict. They exist because reading whole files and re-reading files is the dominant token cost.
+
+- Pass `--format compact` on every semantic command. It returns a minified envelope with `path:line:column` locations and drops verbose per-symbol metadata, which is the single biggest token saving when issuing several commands.
+- Never read a whole `.cs` file when a position-based command (`quick-info`, `definition`, `references`) answers the question.
+- Never read the same file twice. Capture what you need the first time.
+- Resolve positions with RoslynKit instead of falling back to `Read`/grep on `.cs` source once the file is loaded.
+- Prefer single-target commands (`definition`, `quick-info`, `type-definition`) over `symbols`; `symbols` returns verbose arrays. When you must use `symbols` or `references`, always cap output with the smallest useful `--max-results` (often `--max-results 1` to confirm one known declaration).
+- Stop as soon as you can answer. Do not gather extra members, siblings, or confirmation reads.
+
 Use this skill for ordinary C# semantic inspection when the side-by-side prerelease RoslynKit dev tool is already installed with `--tool-path`.
 
 ## Routing Rule

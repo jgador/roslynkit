@@ -16,6 +16,13 @@ public sealed class CliApplication
         WriteIndented = true,
     };
 
+    private static readonly JsonSerializerOptions CompactJsonOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+    };
+
     private static readonly string VersionText = $"roslynkit version {ResolveDisplayVersion()}";
 
     private readonly TextWriter _stdout;
@@ -48,6 +55,12 @@ public sealed class CliApplication
             else
             {
                 var data = await RoslynCommandExecutor.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
+                if (command.IsCompact)
+                {
+                    await _stdout.WriteLineAsync(JsonSerializer.Serialize(CompactProjection.Envelope(command.Name, data), CompactJsonOptions)).ConfigureAwait(false);
+                    return 0;
+                }
+
                 envelope = JsonEnvelope.ForSuccess(command.Name, data);
             }
         }

@@ -5,7 +5,7 @@ namespace RoslynKit;
 /// </summary>
 public static class BuiltinCommandRegistry
 {
-    private static readonly BuiltinCommand[] Builtins =
+    private static readonly BuiltinCommand[] BaseBuiltins =
     [
         new BuiltinCommand(
             "version",
@@ -132,6 +132,12 @@ public static class BuiltinCommandRegistry
             ]),
     ];
 
+    private static readonly BuiltinCommand[] Builtins = BaseBuiltins
+        .Select(command => string.Equals(command.Name, "version", StringComparison.Ordinal)
+            ? command
+            : command with { Options = [.. command.Options, FormatOption()] })
+        .ToArray();
+
     private static readonly IReadOnlyDictionary<string, BuiltinCommand> Lookup =
         Builtins.ToDictionary(command => command.Name, StringComparer.Ordinal);
 
@@ -170,5 +176,10 @@ public static class BuiltinCommandRegistry
     private static OptionSpec MaxResultsOption()
     {
         return OptionSpec.Integer(null, "max-results", "n", "maximum results to return");
+    }
+
+    private static OptionSpec FormatOption()
+    {
+        return OptionSpec.String(null, "format", "format", "output format: json (default) or compact");
     }
 }

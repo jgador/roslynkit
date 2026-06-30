@@ -66,6 +66,13 @@ Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-bas
 
 For document-oriented commands such as `document-symbols`, `document-text`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, and `signature-help`, pass `--target` plus exactly one of `--file <path>` or `--document-key <id>`. Use `workspace` first when the same file appears in multiple project contexts or when you need a generated document key. Semantic position commands operate on C# source or source-generated documents; `document-text` can read source, source-generated, additional, and analyzer-config documents. `document-text` always returns the entire resolved document, and `resolvedRange` covers that whole document.
 
+Every structured command accepts `--format <json|compact>` (default `json`). `--format compact` emits a single-line, minified envelope trimmed to `command`, `success`, and `data`, with each source location collapsed to a `path:line:column` string and verbose per-symbol metadata (`metadataName`, `displayName`, `declarations[]`, span end positions) dropped. It is a token-efficient view for coding agents; the default `json` output and its schema are unchanged.
+
+```powershell
+roslynkit symbols --target .\MySolution.slnx --query MyType --format compact
+roslynkit definition --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20 --format compact
+```
+
 See `docs/roslyn-lsp-commands.md` for the exhaustive Roslyn language-server method inventory used to compare RoslynKit's current command set with Roslyn's broader code intelligence surface.
 
 ## Command Model

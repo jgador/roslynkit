@@ -44,6 +44,7 @@ public static class CliParser
         var options = ParseOptions(builtin, args, firstOptionIndex: 1);
         ValidateRequiredOptions(builtin, options);
         ValidateCommandOptions(builtin.Name, options);
+        ValidateFormatOption(builtin.Name, options);
 
         return new ParsedCommand(builtin.Name, builtin, options, HelpSubject: null);
     }
@@ -285,6 +286,16 @@ public static class CliParser
         }
     }
 
+    private static void ValidateFormatOption(string commandName, IReadOnlyDictionary<string, string> options)
+    {
+        if (options.TryGetValue("format", out var format)
+            && !string.Equals(format, OutputFormat.Json, StringComparison.Ordinal)
+            && !string.Equals(format, OutputFormat.Compact, StringComparison.Ordinal))
+        {
+            throw new CliUsageException(commandName, $"Option '--format' must be '{OutputFormat.Json}' or '{OutputFormat.Compact}'.");
+        }
+    }
+
     private static void ValidateDocumentSelector(string commandName, IReadOnlyDictionary<string, string> options)
     {
         var hasFile = options.ContainsKey("file");
@@ -312,6 +323,8 @@ public sealed record ParsedCommand(
     BuiltinCommand? HelpSubject)
 {
     public bool IsHelp => Name == "help";
+
+    public bool IsCompact => string.Equals(Optional("format"), OutputFormat.Compact, StringComparison.Ordinal);
 
     public static ParsedCommand Help(BuiltinCommand? subject = null)
     {
@@ -357,6 +370,15 @@ public sealed record ParsedCommand(
     {
         return OptionalInt(name, minimumValue) ?? defaultValue;
     }
+}
+
+/// <summary>
+/// Names the supported <c>--format</c> output formats.
+/// </summary>
+public static class OutputFormat
+{
+    public const string Json = "json";
+    public const string Compact = "compact";
 }
 
 /// <summary>

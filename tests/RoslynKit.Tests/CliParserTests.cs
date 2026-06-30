@@ -185,6 +185,38 @@ public sealed class CliParserTests
     }
 
     [Fact]
+    public void Parse_DefaultsToJsonFormat_WhenFormatOptionAbsent()
+    {
+        var command = CliParser.Parse(["symbols", "--target", "repo.slnx", "--query", "CliApplication"]);
+
+        Assert.False(command.IsCompact);
+        Assert.Null(command.Optional("format"));
+    }
+
+    [Fact]
+    public void Parse_AcceptsCompactFormatOption()
+    {
+        var command = CliParser.Parse(["symbols", "--target", "repo.slnx", "--query", "CliApplication", "--format", "compact"]);
+
+        Assert.True(command.IsCompact);
+        Assert.Equal("compact", command.Optional("format"));
+    }
+
+    [Fact]
+    public void Parse_RejectsUnknownFormatValue()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
+            "symbols",
+            "--target", "repo.slnx",
+            "--query", "CliApplication",
+            "--format", "xml",
+        ]));
+
+        Assert.Equal("symbols", exception.CommandName);
+        Assert.Contains("Option '--format' must be 'json' or 'compact'.", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Parse_RejectsDuplicateOption()
     {
         var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(["workspace", "--target", "a.slnx", "--target", "b.slnx"]));
