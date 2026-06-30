@@ -24,10 +24,11 @@ public sealed class EnvelopeTests
             .ToArray();
 
         Assert.Equal(0, exitCode);
-        Assert.Equal("roslynkit", root.GetProperty("tool").GetString());
-        Assert.Equal("help", root.GetProperty("command").GetString());
-        Assert.True(root.GetProperty("success").GetBoolean());
-        Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
+        Assert.False(root.TryGetProperty("tool", out _));
+        Assert.False(root.TryGetProperty("command", out _));
+        Assert.False(root.TryGetProperty("success", out _));
+        Assert.False(root.TryGetProperty("schemaVersion", out _));
+        Assert.False(root.TryGetProperty("errors", out _));
         Assert.Contains("version", commandNames);
     }
 
@@ -54,8 +55,8 @@ public sealed class EnvelopeTests
         var command = root.GetProperty("data").GetProperty("commands")[0];
 
         Assert.Equal(0, exitCode);
-        Assert.Equal("help", root.GetProperty("command").GetString());
-        Assert.True(root.GetProperty("success").GetBoolean());
+        Assert.False(root.TryGetProperty("command", out _));
+        Assert.False(root.TryGetProperty("errors", out _));
         Assert.Equal("version", command.GetProperty("name").GetString());
     }
 
@@ -69,8 +70,8 @@ public sealed class EnvelopeTests
         var root = document.RootElement;
 
         Assert.Equal(2, exitCode);
-        Assert.Equal("symbols", root.GetProperty("command").GetString());
-        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.False(root.TryGetProperty("success", out _));
+        Assert.False(root.TryGetProperty("data", out _));
         Assert.Contains("Unknown symbol kind 'banana'", root.GetProperty("errors")[0].GetProperty("message").GetString(), StringComparison.Ordinal);
     }
 
@@ -84,8 +85,7 @@ public sealed class EnvelopeTests
         var root = document.RootElement;
 
         Assert.Equal(2, exitCode);
-        Assert.Equal("version", root.GetProperty("command").GetString());
-        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.False(root.TryGetProperty("success", out _));
         Assert.Contains("Unexpected positional argument 'extra'", root.GetProperty("errors")[0].GetProperty("message").GetString(), StringComparison.Ordinal);
     }
 
@@ -99,8 +99,7 @@ public sealed class EnvelopeTests
         var root = document.RootElement;
 
         Assert.Equal(2, exitCode);
-        Assert.Equal("document-text", root.GetProperty("command").GetString());
-        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.False(root.TryGetProperty("success", out _));
         Assert.Contains("Exactly one of '--file' or '--document-key' is required.", root.GetProperty("errors")[0].GetProperty("message").GetString(), StringComparison.Ordinal);
     }
 
@@ -115,8 +114,7 @@ public sealed class EnvelopeTests
         var message = root.GetProperty("errors")[0].GetProperty("message").GetString();
 
         Assert.Equal(2, exitCode);
-        Assert.Equal("document-text", root.GetProperty("command").GetString());
-        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.False(root.TryGetProperty("success", out _));
         Assert.Contains("Option '--start-line' is no longer supported.", message, StringComparison.Ordinal);
         Assert.Contains("reads the entire resolved document only", message, StringComparison.Ordinal);
     }
@@ -125,7 +123,6 @@ public sealed class EnvelopeTests
     public void JsonEnvelope_UsesExplicitPropertyNames_ForWorkspaceContracts()
     {
         var envelope = JsonEnvelope.ForSuccess(
-            "workspace",
             new WorkspaceResult(
                 @"C:\repo\GitHub\roslynkit\RoslynKit.slnx",
                 "slnx",
@@ -139,9 +136,9 @@ public sealed class EnvelopeTests
         var project = data.GetProperty("projects")[0];
         var workspaceDocument = data.GetProperty("documents")[0];
 
-        Assert.True(root.TryGetProperty("schemaVersion", out _));
-        Assert.False(root.TryGetProperty("SchemaVersion", out _));
-        Assert.Equal("workspace", root.GetProperty("command").GetString());
+        Assert.False(root.TryGetProperty("schemaVersion", out _));
+        Assert.False(root.TryGetProperty("command", out _));
+        Assert.False(root.TryGetProperty("success", out _));
         Assert.Equal("net10.0", project.GetProperty("targetFramework").GetString());
         Assert.False(project.TryGetProperty("TargetFramework", out _));
         Assert.Equal("doc_123", workspaceDocument.GetProperty("documentKey").GetString());
@@ -153,7 +150,6 @@ public sealed class EnvelopeTests
     public void JsonEnvelope_UsesExplicitPropertyNames_ForDocumentTextContracts()
     {
         var envelope = JsonEnvelope.ForSuccess(
-            "document-text",
             new DocumentTextResult(
                 CreateDescriptor(),
                 new DocumentRange(5, 2, 8, 11),
@@ -174,7 +170,6 @@ public sealed class EnvelopeTests
     public void JsonEnvelope_UsesExplicitPropertyNames_ForTypeDefinitionContracts()
     {
         var envelope = JsonEnvelope.ForSuccess(
-            "type-definition",
             new TypeDefinitionResult(
                 CreateDescriptor(),
                 7,
@@ -194,7 +189,6 @@ public sealed class EnvelopeTests
     public void JsonEnvelope_UsesExplicitPropertyNames_ForQuickInfoContracts()
     {
         var envelope = JsonEnvelope.ForSuccess(
-            "quick-info",
             new QuickInfoResult(
                 CreateDescriptor(),
                 7,
@@ -217,7 +211,6 @@ public sealed class EnvelopeTests
     public void JsonEnvelope_UsesExplicitPropertyNames_ForImplementationsContracts()
     {
         var envelope = JsonEnvelope.ForSuccess(
-            "implementations",
             new ImplementationsResult(
                 CreateDescriptor(),
                 12,
@@ -241,7 +234,6 @@ public sealed class EnvelopeTests
     public void JsonEnvelope_UsesExplicitPropertyNames_ForSignatureHelpContracts()
     {
         var envelope = JsonEnvelope.ForSuccess(
-            "signature-help",
             new SignatureHelpResult(
                 CreateDescriptor(),
                 9,
@@ -271,7 +263,6 @@ public sealed class EnvelopeTests
     public void HelpModels_UseExplicitPropertyNames_WithoutNamingPolicy()
     {
         var envelope = JsonEnvelope.ForSuccess(
-            "help",
             new HelpResult(
                 "roslynkit",
                 "desc",

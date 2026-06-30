@@ -1,23 +1,19 @@
 namespace RoslynKit;
 
 /// <summary>
-/// Projects verbose command result payloads into the typed compact DTOs in <see cref="CompactEnvelope"/>
-/// for the <c>--format compact</c> output mode. Compact output drops the constant envelope fields and the
-/// per-item metadata that agents rarely need, collapsing source locations into a single
-/// <c>path:line:column</c> string to minimize token usage. No anonymous objects are produced; every shape
-/// is a typed record with explicit <c>[JsonPropertyName]</c>.
+/// Projects verbose command result payloads into the typed compact DTOs in <c>CompactModels</c> for the
+/// <c>--format compact</c> output mode. The result is wrapped in the shared <see cref="JsonEnvelope"/>, so
+/// compact and default json share an identical envelope frame; only the data projection and minification
+/// differ. Compact drops the per-item metadata that agents rarely need and collapses source locations into
+/// a single <c>path:line:column</c> string to minimize token usage. No anonymous objects are produced;
+/// every shape is a typed record with explicit <c>[JsonPropertyName]</c>.
 /// </summary>
 public static class CompactProjection
 {
     /// <summary>
-    /// Builds the trimmed compact envelope for a successful command result.
+    /// Projects a verbose command result payload into its trimmed compact DTO.
     /// </summary>
-    public static CompactEnvelope Envelope(string command, object data)
-    {
-        return new CompactEnvelope(command, true, ProjectData(data));
-    }
-
-    private static object ProjectData(object data)
+    public static object ProjectData(object data)
     {
         return data switch
         {

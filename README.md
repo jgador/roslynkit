@@ -13,21 +13,26 @@ This guide assumes `roslynkit` is already installed and available on `PATH`. For
 - Use Roslyn APIs directly instead of shelling out to an editor, language server, or IDE.
 - Prioritize read-only code intelligence before edit-producing refactor or formatting features.
 - Keep commands deterministic and scriptable for agents and terminal workflows.
-- Emit one JSON envelope for every structured command result, including usage and error responses. The Git-style `version` command prints plain text.
+- Emit one JSON envelope for every structured command result, including usage and error responses. A response carries `data` on success or `errors` on failure; the absence of `errors` is an implicit success. The Git-style `version` command prints plain text.
 - Support solution-level and project-level inspection with stable sorting and one-based source positions.
 
 ## Commands
 
-Most commands write a JSON envelope:
+Most commands write a JSON envelope. A successful result carries only `data`:
 
 ```json
 {
-  "schemaVersion": 1,
-  "tool": "roslynkit",
-  "command": "workspace",
-  "success": true,
-  "data": {},
-  "errors": []
+  "data": {}
+}
+```
+
+A failed result carries only `errors` (and the process exits non-zero):
+
+```json
+{
+  "errors": [
+    { "code": "usage", "message": "..." }
+  ]
 }
 ```
 
@@ -66,7 +71,7 @@ Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-bas
 
 For document-oriented commands such as `document-symbols`, `document-text`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, and `signature-help`, pass `--target` plus exactly one of `--file <path>` or `--document-key <id>`. Use `workspace` first when the same file appears in multiple project contexts or when you need a generated document key. Semantic position commands operate on C# source or source-generated documents; `document-text` can read source, source-generated, additional, and analyzer-config documents. `document-text` always returns the entire resolved document, and `resolvedRange` covers that whole document.
 
-Every structured command accepts `--format <json|compact>` (default `json`). `--format compact` emits a single-line, minified envelope trimmed to `command`, `success`, and `data`, with each source location collapsed to a `path:line:column` string and verbose per-symbol metadata (`metadataName`, `displayName`, `declarations[]`, span end positions) dropped. It is a token-efficient view for coding agents; the default `json` output and its schema are unchanged.
+Every structured command accepts `--format <json|compact>` (default `json`). Both formats share the same envelope frame (`data` on success, `errors` on failure). `--format compact` emits that envelope on a single minified line and trims the payload: each source location collapses to a `path:line:column` string and verbose per-symbol metadata (`metadataName`, `displayName`, `declarations[]`, span end positions) is dropped. It is a token-efficient view for coding agents; the default `json` payload schema is unchanged.
 
 ```powershell
 roslynkit symbols --target .\MySolution.slnx --query MyType --format compact

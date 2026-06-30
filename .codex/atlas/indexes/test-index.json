@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-06-28T03:04:19.1670431Z",
+  "generatedAtUtc": "2026-06-30T21:21:11.0504322Z",
   "testProjects": [
     {
       "name": "RoslynKit.AtlasPromptCacheProbe",
@@ -28,12 +28,12 @@
       "category": "parser"
     },
     {
-      "path": "tests/RoslynKit.Tests/CodexExecTokenComparisonTests.cs",
-      "category": "test"
-    },
-    {
       "path": "tests/RoslynKit.Tests/CommandExecutionTests.cs",
       "category": "execution"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/CompactFormatTests.cs",
+      "category": "test"
     },
     {
       "path": "tests/RoslynKit.Tests/EnvelopeTests.cs",

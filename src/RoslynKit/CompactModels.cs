@@ -6,12 +6,9 @@ namespace RoslynKit;
 /// Typed payloads for the <c>--format compact</c> output mode. Every property carries an explicit
 /// <see cref="JsonPropertyName"/> so the compact contract is stable and round-trip (de)serializable,
 /// with no anonymous/dynamic objects. Compact intentionally trims verbose fields from the default
-/// json models and collapses source locations into <c>path:line:column</c> strings.
+/// json models and collapses source locations into <c>path:line:column</c> strings. These payloads are
+/// wrapped in the shared <see cref="JsonEnvelope"/>, identical to the default json frame.
 /// </summary>
-public sealed record CompactEnvelope(
-    [property: JsonPropertyName("command")] string Command,
-    [property: JsonPropertyName("success")] bool Success,
-    [property: JsonPropertyName("data")] object Data);
 
 /// <summary>One source-declared symbol in compact form.</summary>
 public sealed record CompactSymbol(

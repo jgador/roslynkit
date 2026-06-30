@@ -36,11 +36,14 @@ public sealed class CompactFormatTests
         using var document = JsonDocument.Parse(output);
         var root = document.RootElement;
 
-        // Trimmed envelope: keeps command/success/data, drops the constant schemaVersion/tool fields.
-        Assert.Equal("definition", root.GetProperty("command").GetString());
-        Assert.True(root.GetProperty("success").GetBoolean());
+        // Trimmed envelope: carries only data on success; the constant frame fields are gone and the
+        // absence of errors is an implicit success.
+        Assert.True(root.TryGetProperty("data", out _));
+        Assert.False(root.TryGetProperty("command", out _));
+        Assert.False(root.TryGetProperty("success", out _));
         Assert.False(root.TryGetProperty("schemaVersion", out _));
         Assert.False(root.TryGetProperty("tool", out _));
+        Assert.False(root.TryGetProperty("errors", out _));
 
         var symbol = root.GetProperty("data").GetProperty("symbol");
 

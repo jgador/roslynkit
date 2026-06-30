@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-06-28T03:04:19.1670431Z",
+  "generatedAtUtc": "2026-06-30T21:21:11.0504322Z",
   "repoRoot": "C:\\repo\\GitHub\\roslynkit",
   "files": [
     {
@@ -14,6 +14,12 @@
       "extension": ".md",
       "area": "agents",
       "category": "skill"
+    },
+    {
+      "path": ".claude/skills/roslynkit-dev",
+      "extension": "",
+      "area": ".claude",
+      "category": "other"
     },
     {
       "path": ".codex/agents/atlas-csharp-mapper.toml",
@@ -166,6 +172,12 @@
       "category": "doc"
     },
     {
+      "path": "CLAUDE.md",
+      "extension": ".md",
+      "area": "CLAUDE.md",
+      "category": "config"
+    },
+    {
       "path": "Directory.Build.props",
       "extension": ".props",
       "area": "Directory.Build.props",
@@ -269,6 +281,18 @@
     },
     {
       "path": "src/RoslynKit/CliParser.cs",
+      "extension": ".cs",
+      "area": "src",
+      "category": "source"
+    },
+    {
+      "path": "src/RoslynKit/CompactModels.cs",
+      "extension": ".cs",
+      "area": "src",
+      "category": "source"
+    },
+    {
+      "path": "src/RoslynKit/CompactProjection.cs",
       "extension": ".cs",
       "area": "src",
       "category": "source"
@@ -388,13 +412,13 @@
       "category": "test"
     },
     {
-      "path": "tests/RoslynKit.Tests/CodexExecTokenComparisonTests.cs",
+      "path": "tests/RoslynKit.Tests/CommandExecutionTests.cs",
       "extension": ".cs",
       "area": "tests",
       "category": "test"
     },
     {
-      "path": "tests/RoslynKit.Tests/CommandExecutionTests.cs",
+      "path": "tests/RoslynKit.Tests/CompactFormatTests.cs",
       "extension": ".cs",
       "area": "tests",
       "category": "test"

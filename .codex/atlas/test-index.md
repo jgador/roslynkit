@@ -17,7 +17,6 @@
 
 - Full suite: `dotnet test .\RoslynKit.slnx`
 - Main test project: `dotnet test .\tests\RoslynKit.Tests\RoslynKit.Tests.csproj`
-- Explicit live Codex token benchmark: `dotnet test .\tests\RoslynKit.Tests\RoslynKit.Tests.csproj -- --explicit only --filter-method RoslynKit.Tests.CodexExecTokenComparisonTests.RoslynkitDevPrompt_UsesFewerInputTokens_ThanShellOnlyCodexExec`
 - Workspace graph utility: `dotnet run --project .\tests\RoslynKit.WorkspaceGraphDump -- .\RoslynKit.slnx`
 - Atlas prompt-cache probe: `dotnet run --project .\tests\RoslynKit.AtlasPromptCacheProbe`
 
@@ -25,7 +24,6 @@
 
 - command parsing and option validation -> `tests/RoslynKit.Tests/CliParserTests.cs`
 - command execution and navigation flows -> `tests/RoslynKit.Tests/CommandExecutionTests.cs`
-- live Codex shell-only versus RoslynKit-first token benchmark -> `tests/RoslynKit.Tests/CodexExecTokenComparisonTests.cs`
 - Atlas prompt-cache probe helpers and request shaping -> `tests/RoslynKit.Tests/AtlasPromptCacheProbeTests.cs`
 - JSON envelopes, help, and version output -> `tests/RoslynKit.Tests/EnvelopeTests.cs`
 - symbol search behavior -> `tests/RoslynKit.Tests/SymbolsCommandTests.cs`

@@ -54,7 +54,9 @@ public sealed class CommandExecutionTests
     public async Task Definition_ReturnsCliApplicationConstructorDeclaration()
     {
         var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
-        var (line, column) = TestPaths.FindLineAndColumn(programPath, "CliApplication");
+        // Occurrence 2 is the `new CliApplication(...)` constructor call; occurrence 1 is the type
+        // reference inside the XML doc <see cref="..."/>, which resolves to the type, not the constructor.
+        var (line, column) = TestPaths.FindLineAndColumn(programPath, "CliApplication", occurrence: 2);
 
         var result = await TestPaths.ExecuteCommandAsync<DefinitionResult>(
             "definition",
@@ -72,7 +74,9 @@ public sealed class CommandExecutionTests
     public async Task QuickInfo_ReturnsConstructorSections_ForCliApplicationInstantiation()
     {
         var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
-        var (line, column) = TestPaths.FindLineAndColumn(programPath, "CliApplication");
+        // Occurrence 2 is the `new CliApplication(...)` constructor call; occurrence 1 is the type
+        // reference inside the XML doc <see cref="..."/>, which resolves to the type, not the constructor.
+        var (line, column) = TestPaths.FindLineAndColumn(programPath, "CliApplication", occurrence: 2);
 
         var result = await TestPaths.ExecuteCommandAsync<QuickInfoResult>(
             "quick-info",

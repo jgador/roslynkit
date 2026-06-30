@@ -39,14 +39,16 @@ public sealed class CliApplication
     {
         JsonEnvelope envelope;
         var exitCode = 0;
+        var compact = false;
 
         try
         {
             var command = CliParser.Parse(args);
+            compact = command.IsCompact;
 
             if (command.IsHelp)
             {
-                envelope = JsonEnvelope.ForSuccess("help", HelpResult.Create(command.HelpSubject));
+                envelope = JsonEnvelope.ForSuccess(HelpResult.Create(command.HelpSubject));
             }
             else if (command.Name == "version")
             {
@@ -55,32 +57,26 @@ public sealed class CliApplication
             else
             {
                 var data = await RoslynCommandExecutor.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
-                if (command.IsCompact)
-                {
-                    await _stdout.WriteLineAsync(JsonSerializer.Serialize(CompactProjection.Envelope(command.Name, data), CompactJsonOptions)).ConfigureAwait(false);
-                    return 0;
-                }
-
-                envelope = JsonEnvelope.ForSuccess(command.Name, data);
+                envelope = JsonEnvelope.ForSuccess(compact ? CompactProjection.ProjectData(data) : data);
             }
         }
         catch (CliUsageException ex)
         {
             exitCode = 2;
-            envelope = JsonEnvelope.Failure(ex.CommandName, ErrorInfo.Usage(ex.Message));
+            envelope = JsonEnvelope.Failure(ErrorInfo.Usage(ex.Message));
         }
         catch (OperationCanceledException)
         {
             exitCode = 130;
-            envelope = JsonEnvelope.Failure("unknown", ErrorInfo.Canceled("Operation was canceled."));
+            envelope = JsonEnvelope.Failure(ErrorInfo.Canceled("Operation was canceled."));
         }
         catch (Exception ex)
         {
             exitCode = 1;
-            envelope = JsonEnvelope.Failure("unknown", ErrorInfo.Internal(ex.GetType().Name, ex.Message));
+            envelope = JsonEnvelope.Failure(ErrorInfo.Internal(ex.GetType().Name, ex.Message));
         }
 
-        await _stdout.WriteLineAsync(JsonSerializer.Serialize(envelope, JsonOptions)).ConfigureAwait(false);
+        await _stdout.WriteLineAsync(JsonSerializer.Serialize(envelope, compact ? CompactJsonOptions : JsonOptions)).ConfigureAwait(false);
         return exitCode;
     }
 
@@ -104,46 +100,32 @@ public sealed class CliApplication
 }
 
 /// <summary>
-/// Represents the top-level JSON stdout envelope for command results and failures.
+/// Represents the top-level JSON stdout envelope for command results and failures. A response carries
+/// either <c>data</c> (success) or <c>errors</c> (failure); the absence of <c>errors</c> is an implicit
+/// success, so no constant frame fields are emitted.
 /// </summary>
 public sealed class JsonEnvelope
 {
-    public JsonEnvelope(int schemaVersion, string tool, string command, bool success, object? data, IReadOnlyList<ErrorInfo> errors)
+    public JsonEnvelope(object? data, IReadOnlyList<ErrorInfo>? errors)
     {
-        SchemaVersion = schemaVersion;
-        Tool = tool;
-        Command = command;
-        Success = success;
         Data = data;
         Errors = errors;
     }
-
-    [JsonPropertyName("schemaVersion")]
-    public int SchemaVersion { get; }
-
-    [JsonPropertyName("tool")]
-    public string Tool { get; }
-
-    [JsonPropertyName("command")]
-    public string Command { get; }
-
-    [JsonPropertyName("success")]
-    public bool Success { get; }
 
     [JsonPropertyName("data")]
     public object? Data { get; }
 
     [JsonPropertyName("errors")]
-    public IReadOnlyList<ErrorInfo> Errors { get; }
+    public IReadOnlyList<ErrorInfo>? Errors { get; }
 
-    public static JsonEnvelope ForSuccess(string command, object data)
+    public static JsonEnvelope ForSuccess(object data)
     {
-        return new JsonEnvelope(1, "roslynkit", command, true, data, Array.Empty<ErrorInfo>());
+        return new JsonEnvelope(data, null);
     }
 
-    public static JsonEnvelope Failure(string command, params ErrorInfo[] errors)
+    public static JsonEnvelope Failure(params ErrorInfo[] errors)
     {
-        return new JsonEnvelope(1, "roslynkit", command, false, null, errors);
+        return new JsonEnvelope(null, errors);
     }
 }
 
