@@ -16,7 +16,8 @@ public sealed record CompactSymbol(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("container")] string? Container,
     [property: JsonPropertyName("loc")] string? Loc,
-    [property: JsonPropertyName("decls")] IReadOnlyList<string>? Decls);
+    [property: JsonPropertyName("decls")] IReadOnlyList<string>? Decls,
+    [property: JsonPropertyName("id")] string? Id);
 
 /// <summary>One compiler diagnostic in compact form.</summary>
 public sealed record CompactDiagnostic(
@@ -65,7 +66,7 @@ public sealed record CompactSymbolsData(
 
 /// <summary>Compact payload for <c>definition</c> and <c>type-definition</c>.</summary>
 public sealed record CompactDefinitionData(
-    [property: JsonPropertyName("at")] string At,
+    [property: JsonPropertyName("at")] string? At,
     [property: JsonPropertyName("symbol")] CompactSymbol Symbol,
     [property: JsonPropertyName("workspaceDiagnosticCount")] int? WorkspaceDiagnosticCount);
 
@@ -99,6 +100,17 @@ public sealed record CompactSignatureHelpData(
     [property: JsonPropertyName("at")] string At,
     [property: JsonPropertyName("active")] int Active,
     [property: JsonPropertyName("signatures")] IReadOnlyList<string> Signatures,
+    [property: JsonPropertyName("workspaceDiagnosticCount")] int? WorkspaceDiagnosticCount);
+
+/// <summary>One declaring source block in compact form for the <c>symbol-source</c> command.</summary>
+public sealed record CompactSymbolSourceDeclaration(
+    [property: JsonPropertyName("loc")] string Loc,
+    [property: JsonPropertyName("text")] string Text);
+
+/// <summary>Compact payload for the <c>symbol-source</c> command.</summary>
+public sealed record CompactSymbolSourceData(
+    [property: JsonPropertyName("symbol")] CompactSymbol Symbol,
+    [property: JsonPropertyName("declarations")] IReadOnlyList<CompactSymbolSourceDeclaration> Declarations,
     [property: JsonPropertyName("workspaceDiagnosticCount")] int? WorkspaceDiagnosticCount);
 
 /// <summary>Compact payload for the <c>document-symbols</c> command.</summary>

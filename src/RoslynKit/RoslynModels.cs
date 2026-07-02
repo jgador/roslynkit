@@ -202,27 +202,32 @@ public sealed class DocumentSymbolsResult
 public sealed class DefinitionResult
 {
     public DefinitionResult(
-        DocumentDescriptor document,
-        int line,
-        int column,
+        DocumentDescriptor? document,
+        int? line,
+        int? column,
+        string? selector,
         SymbolItem symbol,
         IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
     {
         Document = document;
         Line = line;
         Column = column;
+        Selector = selector;
         Symbol = symbol;
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
     [JsonPropertyName("document")]
-    public DocumentDescriptor Document { get; }
+    public DocumentDescriptor? Document { get; }
 
     [JsonPropertyName("line")]
-    public int Line { get; }
+    public int? Line { get; }
 
     [JsonPropertyName("column")]
-    public int Column { get; }
+    public int? Column { get; }
+
+    [JsonPropertyName("selector")]
+    public string? Selector { get; }
 
     [JsonPropertyName("symbol")]
     public SymbolItem Symbol { get; }
@@ -317,9 +322,10 @@ public sealed class QuickInfoResult
 public sealed class ReferencesResult
 {
     public ReferencesResult(
-        DocumentDescriptor document,
-        int line,
-        int column,
+        DocumentDescriptor? document,
+        int? line,
+        int? column,
+        string? selector,
         SymbolItem symbol,
         int totalCount,
         int returnedCount,
@@ -330,6 +336,7 @@ public sealed class ReferencesResult
         Document = document;
         Line = line;
         Column = column;
+        Selector = selector;
         Symbol = symbol;
         TotalCount = totalCount;
         ReturnedCount = returnedCount;
@@ -339,13 +346,16 @@ public sealed class ReferencesResult
     }
 
     [JsonPropertyName("document")]
-    public DocumentDescriptor Document { get; }
+    public DocumentDescriptor? Document { get; }
 
     [JsonPropertyName("line")]
-    public int Line { get; }
+    public int? Line { get; }
 
     [JsonPropertyName("column")]
-    public int Column { get; }
+    public int? Column { get; }
+
+    [JsonPropertyName("selector")]
+    public string? Selector { get; }
 
     [JsonPropertyName("symbol")]
     public SymbolItem Symbol { get; }
@@ -372,9 +382,10 @@ public sealed class ReferencesResult
 public sealed class ImplementationsResult
 {
     public ImplementationsResult(
-        DocumentDescriptor document,
-        int line,
-        int column,
+        DocumentDescriptor? document,
+        int? line,
+        int? column,
+        string? selector,
         SymbolItem symbol,
         int totalCount,
         int returnedCount,
@@ -385,6 +396,7 @@ public sealed class ImplementationsResult
         Document = document;
         Line = line;
         Column = column;
+        Selector = selector;
         Symbol = symbol;
         TotalCount = totalCount;
         ReturnedCount = returnedCount;
@@ -394,13 +406,16 @@ public sealed class ImplementationsResult
     }
 
     [JsonPropertyName("document")]
-    public DocumentDescriptor Document { get; }
+    public DocumentDescriptor? Document { get; }
 
     [JsonPropertyName("line")]
-    public int Line { get; }
+    public int? Line { get; }
 
     [JsonPropertyName("column")]
-    public int Column { get; }
+    public int? Column { get; }
+
+    [JsonPropertyName("selector")]
+    public string? Selector { get; }
 
     [JsonPropertyName("symbol")]
     public SymbolItem Symbol { get; }
@@ -419,6 +434,63 @@ public sealed class ImplementationsResult
 
     [JsonPropertyName("workspaceDiagnostics")]
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
+}
+
+/// <summary>
+/// Represents the <c>symbol-source</c> command payload with the full declaration text for one resolved symbol.
+/// </summary>
+public sealed class SymbolSourceResult
+{
+    public SymbolSourceResult(
+        string targetPath,
+        string selector,
+        SymbolItem symbol,
+        IReadOnlyList<SymbolSourceDeclaration> declarations,
+        IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
+    {
+        TargetPath = targetPath;
+        Selector = selector;
+        Symbol = symbol;
+        Declarations = declarations;
+        WorkspaceDiagnostics = workspaceDiagnostics;
+    }
+
+    [JsonPropertyName("targetPath")]
+    public string TargetPath { get; }
+
+    [JsonPropertyName("selector")]
+    public string Selector { get; }
+
+    [JsonPropertyName("symbol")]
+    public SymbolItem Symbol { get; }
+
+    [JsonPropertyName("declarations")]
+    public IReadOnlyList<SymbolSourceDeclaration> Declarations { get; }
+
+    [JsonPropertyName("workspaceDiagnostics")]
+    public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
+}
+
+/// <summary>
+/// Represents one declaring syntax block surfaced by the <c>symbol-source</c> command.
+/// </summary>
+public sealed class SymbolSourceDeclaration
+{
+    public SymbolSourceDeclaration(DocumentDescriptor document, DocumentRange range, string text)
+    {
+        Document = document;
+        Range = range;
+        Text = text;
+    }
+
+    [JsonPropertyName("document")]
+    public DocumentDescriptor Document { get; }
+
+    [JsonPropertyName("range")]
+    public DocumentRange Range { get; }
+
+    [JsonPropertyName("text")]
+    public string Text { get; }
 }
 
 /// <summary>
@@ -691,7 +763,8 @@ public sealed class SymbolItem
         string? containingType,
         string? containingNamespace,
         SourceRange? primaryLocation,
-        IReadOnlyList<SourceRange> declarations)
+        IReadOnlyList<SourceRange> declarations,
+        string? symbolId)
     {
         ProjectName = projectName;
         Name = name;
@@ -704,6 +777,7 @@ public sealed class SymbolItem
         ContainingNamespace = containingNamespace;
         PrimaryLocation = primaryLocation;
         Declarations = declarations;
+        SymbolId = symbolId;
     }
 
     [JsonPropertyName("projectName")]
@@ -738,6 +812,9 @@ public sealed class SymbolItem
 
     [JsonPropertyName("declarations")]
     public IReadOnlyList<SourceRange> Declarations { get; }
+
+    [JsonPropertyName("symbolId")]
+    public string? SymbolId { get; }
 
     public static SymbolItem FromSymbol(ISymbol symbol, string projectName)
     {
@@ -790,7 +867,8 @@ public sealed class SymbolItem
             symbol.ContainingType?.ToDisplayString(SymbolDisplayFormats.Qualified),
             symbol.ContainingNamespace is { IsGlobalNamespace: false } ? symbol.ContainingNamespace.ToDisplayString(SymbolDisplayFormats.Qualified) : null,
             declarations.FirstOrDefault(),
-            declarations);
+            declarations,
+            RoslynSymbolSearch.IsCodeSymbol(symbol) ? DocumentationCommentId.CreateDeclarationId(symbol) : null);
     }
 }
 
@@ -990,4 +1068,7 @@ public static class SymbolDisplayFormats
     public static readonly SymbolDisplayFormat Qualified = SymbolDisplayFormat.FullyQualifiedFormat
         .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Omitted)
         .WithMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers);
+
+    public static readonly SymbolDisplayFormat QualifiedMember = Qualified
+        .WithMemberOptions(SymbolDisplayMemberOptions.IncludeContainingType);
 }

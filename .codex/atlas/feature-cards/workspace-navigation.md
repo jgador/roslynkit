@@ -17,6 +17,7 @@ Load targets, resolve documents and positions, and answer Roslyn-backed navigati
 - `src/RoslynKit/RoslynCommandExecutor.cs`
 - `src/RoslynKit/RoslynWorkspaceLoader.cs`
 - `src/RoslynKit/PositionResolver.cs`
+- `src/RoslynKit/RoslynSymbolResolver.cs`
 - `src/RoslynKit/RoslynDocumentFilters.cs`
 - `src/RoslynKit/RoslynSymbolSearch.cs`
 - `src/RoslynKit/RoslynSignatureHelpService.cs`
@@ -27,7 +28,8 @@ Load targets, resolve documents and positions, and answer Roslyn-backed navigati
 - `RoslynWorkspaceLoader.LoadAsync`
 - `RoslynWorkspaceLoader.FindTextDocumentAsync`
 - `PositionResolver.GetPositionAsync`
-- `PositionResolver.ResolveRangeAsync`
+- `PositionResolver.ToDocumentRange`
+- `RoslynSymbolResolver.ResolveAsync`
 - `RoslynSymbolSearch.EnumerateSourceSymbols`
 - `RoslynSignatureHelpService.GetSignatureHelpAsync`
 
@@ -36,6 +38,7 @@ Load targets, resolve documents and positions, and answer Roslyn-backed navigati
 - `src/RoslynKit/RoslynCommandExecutor.cs`
 - `src/RoslynKit/RoslynWorkspaceLoader.cs`
 - `src/RoslynKit/PositionResolver.cs`
+- `src/RoslynKit/RoslynSymbolResolver.cs`
 - `src/RoslynKit/RoslynDocumentFilters.cs`
 - `src/RoslynKit/RoslynSymbolSearch.cs`
 - `src/RoslynKit/RoslynSignatureHelpService.cs`
@@ -57,6 +60,8 @@ Load targets, resolve documents and positions, and answer Roslyn-backed navigati
 - `--target` is explicit.
 - Document selectors are `--file` or `--document-key`.
 - Positions are one-based.
+- `definition`, `references`, and `implementations` accept `--symbol` (doc-comment ID or qualified name) as an alternative to the position selector; `symbol-source` is `--symbol`-only.
+- Every `SymbolItem` payload carries `symbolId` (documentation-comment ID) for identity chaining.
 - Prefer symbol and line-range reads over full-file reads.
 
 ## Common pitfalls
@@ -73,4 +78,4 @@ Load targets, resolve documents and positions, and answer Roslyn-backed navigati
 
 ## Last verified
 
-`2026-06-27`
+`2026-07-02`

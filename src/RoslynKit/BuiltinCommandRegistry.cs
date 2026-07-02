@@ -64,14 +64,18 @@ public static class BuiltinCommandRegistry
             ]),
         new BuiltinCommand(
             "definition",
-            "Resolve the symbol at a one-based line and column to source definitions.",
-            ["roslynkit definition --target <target> (--file <path> | --document-key <id>) --line <n> --column <n>"],
+            "Resolve a symbol selector or the symbol at a one-based line and column to source definitions.",
+            [
+                "roslynkit definition --target <target> (--file <path> | --document-key <id>) --line <n> --column <n>",
+                "roslynkit definition --target <target> --symbol <selector>",
+            ],
             [
                 TargetOption(),
                 FileOption(),
                 DocumentKeyOption(),
-                LineOption(),
-                ColumnOption(),
+                LineOption(required: false),
+                ColumnOption(required: false),
+                SymbolOption(),
             ]),
         new BuiltinCommand(
             "type-definition",
@@ -86,26 +90,34 @@ public static class BuiltinCommandRegistry
             ]),
         new BuiltinCommand(
             "references",
-            "Find source references for the symbol at a one-based line and column.",
-            ["roslynkit references --target <target> (--file <path> | --document-key <id>) --line <n> --column <n> [--max-results <n>]"],
+            "Find source references for a symbol selector or the symbol at a one-based line and column.",
+            [
+                "roslynkit references --target <target> (--file <path> | --document-key <id>) --line <n> --column <n> [--max-results <n>]",
+                "roslynkit references --target <target> --symbol <selector> [--max-results <n>]",
+            ],
             [
                 TargetOption(),
                 FileOption(),
                 DocumentKeyOption(),
-                LineOption(),
-                ColumnOption(),
+                LineOption(required: false),
+                ColumnOption(required: false),
+                SymbolOption(),
                 MaxResultsOption(),
             ]),
         new BuiltinCommand(
             "implementations",
-            "Find implementations for the symbol at a one-based line and column.",
-            ["roslynkit implementations --target <target> (--file <path> | --document-key <id>) --line <n> --column <n> [--max-results <n>]"],
+            "Find implementations for a symbol selector or the symbol at a one-based line and column.",
+            [
+                "roslynkit implementations --target <target> (--file <path> | --document-key <id>) --line <n> --column <n> [--max-results <n>]",
+                "roslynkit implementations --target <target> --symbol <selector> [--max-results <n>]",
+            ],
             [
                 TargetOption(),
                 FileOption(),
                 DocumentKeyOption(),
-                LineOption(),
-                ColumnOption(),
+                LineOption(required: false),
+                ColumnOption(required: false),
+                SymbolOption(),
                 MaxResultsOption(),
             ]),
         new BuiltinCommand(
@@ -129,6 +141,14 @@ public static class BuiltinCommandRegistry
                 DocumentKeyOption(),
                 LineOption(),
                 ColumnOption(),
+            ]),
+        new BuiltinCommand(
+            "symbol-source",
+            "Return the full declaration source text for a symbol selector.",
+            ["roslynkit symbol-source --target <target> --symbol <selector>"],
+            [
+                TargetOption(),
+                SymbolOption(required: true),
             ]),
     ];
 
@@ -163,14 +183,19 @@ public static class BuiltinCommandRegistry
         return OptionSpec.String(null, "document-key", "id", "opaque document key from the workspace command");
     }
 
-    private static OptionSpec LineOption()
+    private static OptionSpec LineOption(bool required = true)
     {
-        return OptionSpec.Integer(null, "line", "n", "one-based source line", required: true);
+        return OptionSpec.Integer(null, "line", "n", "one-based source line", required);
     }
 
-    private static OptionSpec ColumnOption()
+    private static OptionSpec ColumnOption(bool required = true)
     {
-        return OptionSpec.Integer(null, "column", "n", "one-based source column", required: true);
+        return OptionSpec.Integer(null, "column", "n", "one-based source column", required);
+    }
+
+    private static OptionSpec SymbolOption(bool required = false)
+    {
+        return OptionSpec.String(null, "symbol", "selector", "documentation-comment ID (T:/M:/P:/F:/E:/N:) or qualified symbol name", required);
     }
 
     private static OptionSpec MaxResultsOption()

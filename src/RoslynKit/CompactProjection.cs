@@ -57,6 +57,14 @@ public static class CompactProjection
                 result.ActiveSignature,
                 result.Signatures.Select(signature => signature.Label).ToArray(),
                 WorkspaceDiagnosticCount(result.WorkspaceDiagnostics)),
+            SymbolSourceResult result => new CompactSymbolSourceData(
+                Symbol(result.Symbol),
+                result.Declarations
+                    .Select(declaration => new CompactSymbolSourceDeclaration(
+                        $"{DocumentPath(declaration.Document)}:{declaration.Range.Line}:{declaration.Range.Column}",
+                        declaration.Text))
+                    .ToArray(),
+                WorkspaceDiagnosticCount(result.WorkspaceDiagnostics)),
             DocumentSymbolsResult result => new CompactDocumentSymbolsData(
                 DocumentPath(result.Document),
                 result.Symbols.Select(Symbol).ToArray(),
@@ -89,7 +97,8 @@ public static class CompactProjection
             symbol.Name,
             symbol.ContainingType ?? symbol.ContainingNamespace,
             Location(symbol.PrimaryLocation),
-            symbol.Declarations.Count > 1 ? symbol.Declarations.Select(declaration => Location(declaration)!).ToArray() : null);
+            symbol.Declarations.Count > 1 ? symbol.Declarations.Select(declaration => Location(declaration)!).ToArray() : null,
+            symbol.SymbolId);
     }
 
     private static string Reference(ReferenceItem reference)
@@ -115,6 +124,13 @@ public static class CompactProjection
     private static string Position(DocumentDescriptor document, int line, int column)
     {
         return $"{DocumentPath(document)}:{line}:{column}";
+    }
+
+    private static string? Position(DocumentDescriptor? document, int? line, int? column)
+    {
+        return document is null || line is null || column is null
+            ? null
+            : Position(document, line.Value, column.Value);
     }
 
     private static string DocumentPath(DocumentDescriptor document)

@@ -182,7 +182,59 @@ public sealed class EnvelopeTests
 
         Assert.Equal(7, data.GetProperty("line").GetInt32());
         Assert.Equal("CliApplication", data.GetProperty("symbol").GetProperty("name").GetString());
+        Assert.Equal("T:RoslynKit.CliApplication", data.GetProperty("symbol").GetProperty("symbolId").GetString());
         Assert.False(data.GetProperty("symbol").TryGetProperty("PrimaryLocation", out _));
+    }
+
+    [Fact]
+    public void JsonEnvelope_OmitsPositionFields_ForSymbolModeReferences()
+    {
+        var envelope = JsonEnvelope.ForSuccess(
+            new ReferencesResult(
+                document: null,
+                line: null,
+                column: null,
+                selector: "RoslynKit.CliApplication",
+                CreateSymbol(),
+                totalCount: 1,
+                returnedCount: 1,
+                truncated: false,
+                [],
+                []));
+
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(envelope, CreateContractOptions()));
+        var data = document.RootElement.GetProperty("data");
+
+        Assert.False(data.TryGetProperty("document", out _));
+        Assert.False(data.TryGetProperty("line", out _));
+        Assert.False(data.TryGetProperty("column", out _));
+        Assert.Equal("RoslynKit.CliApplication", data.GetProperty("selector").GetString());
+    }
+
+    [Fact]
+    public void JsonEnvelope_UsesExplicitPropertyNames_ForSymbolSourceContracts()
+    {
+        var envelope = JsonEnvelope.ForSuccess(
+            new SymbolSourceResult(
+                @"C:\repo\GitHub\roslynkit\RoslynKit.slnx",
+                "T:RoslynKit.CliApplication",
+                CreateSymbol(),
+                [new SymbolSourceDeclaration(
+                    CreateDescriptor(),
+                    new DocumentRange(8, 1, 20, 2),
+                    "public sealed class CliApplication { }")],
+                [new WorkspaceLoadDiagnostic("Warning", "Workspace issue")]));
+
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(envelope, CreateContractOptions()));
+        var data = document.RootElement.GetProperty("data");
+        var declaration = data.GetProperty("declarations")[0];
+
+        Assert.Equal("T:RoslynKit.CliApplication", data.GetProperty("selector").GetString());
+        Assert.Equal("Program.cs", declaration.GetProperty("document").GetProperty("name").GetString());
+        Assert.Equal(8, declaration.GetProperty("range").GetProperty("line").GetInt32());
+        Assert.Equal(20, declaration.GetProperty("range").GetProperty("endLine").GetInt32());
+        Assert.Equal("public sealed class CliApplication { }", declaration.GetProperty("text").GetString());
+        Assert.False(declaration.TryGetProperty("Text", out _));
     }
 
     [Fact]
@@ -215,6 +267,7 @@ public sealed class EnvelopeTests
                 CreateDescriptor(),
                 12,
                 4,
+                selector: null,
                 CreateSymbol(),
                 totalCount: 2,
                 returnedCount: 1,
@@ -309,7 +362,8 @@ public sealed class EnvelopeTests
             containingType: null,
             containingNamespace: "RoslynKit",
             new SourceRange(@"C:\repo\GitHub\roslynkit\src\RoslynKit\CliApplication.cs", 8, 20, 8, 34),
-            [new SourceRange(@"C:\repo\GitHub\roslynkit\src\RoslynKit\CliApplication.cs", 8, 20, 8, 34)]);
+            [new SourceRange(@"C:\repo\GitHub\roslynkit\src\RoslynKit\CliApplication.cs", 8, 20, 8, 34)],
+            "T:RoslynKit.CliApplication");
     }
 
     private static async Task AssertVersionOutputAsync(params string[] args)

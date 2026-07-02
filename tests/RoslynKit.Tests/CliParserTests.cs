@@ -224,4 +224,78 @@ public sealed class CliParserTests
         Assert.Equal("workspace", exception.CommandName);
         Assert.Contains("more than once", exception.Message, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData("definition")]
+    [InlineData("references")]
+    [InlineData("implementations")]
+    public void Parse_AcceptsSymbolSelector_WithoutPositionOptions(string commandName)
+    {
+        var command = CliParser.Parse([commandName, "--target", "repo.slnx", "--symbol", "RoslynKit.CliApplication"]);
+
+        Assert.Equal(commandName, command.Name);
+        Assert.Equal("RoslynKit.CliApplication", command.Required("symbol"));
+        Assert.Null(command.Optional("file"));
+        Assert.Null(command.OptionalInt("line", 1));
+    }
+
+    [Fact]
+    public void Parse_RejectsSymbolCombinedWithLine_ForDefinition()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
+            "definition",
+            "--target", "repo.slnx",
+            "--symbol", "RoslynKit.CliApplication",
+            "--line", "10",
+        ]));
+
+        Assert.Equal("definition", exception.CommandName);
+        Assert.Contains("Option '--symbol' cannot be combined with", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_RejectsSymbolCombinedWithFile_ForImplementations()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
+            "implementations",
+            "--target", "repo.slnx",
+            "--symbol", "RoslynKit.CliApplication",
+            "--file", "Program.cs",
+        ]));
+
+        Assert.Equal("implementations", exception.CommandName);
+        Assert.Contains("Option '--symbol' cannot be combined with", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_RejectsMissingColumn_WhenPositionModeWithoutSymbol()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
+            "references",
+            "--target", "repo.slnx",
+            "--file", "Program.cs",
+            "--line", "10",
+        ]));
+
+        Assert.Equal("references", exception.CommandName);
+        Assert.Contains("Missing required option '--column'", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_AcceptsSymbolSource_WithTargetAndSymbol()
+    {
+        var command = CliParser.Parse(["symbol-source", "--target", "repo.slnx", "--symbol", "M:RoslynKit.CliParser.Parse(System.Collections.Generic.IReadOnlyList{System.String})"]);
+
+        Assert.Equal("symbol-source", command.Name);
+        Assert.StartsWith("M:RoslynKit.CliParser.Parse(", command.Required("symbol"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_RejectsMissingSymbol_ForSymbolSource()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(["symbol-source", "--target", "repo.slnx"]));
+
+        Assert.Equal("symbol-source", exception.CommandName);
+        Assert.Contains("Missing required option '--symbol'", exception.Message, StringComparison.Ordinal);
+    }
 }

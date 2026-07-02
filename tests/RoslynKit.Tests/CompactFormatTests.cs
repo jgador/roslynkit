@@ -106,7 +106,7 @@ public sealed class CompactFormatTests
             3,
             1,
             Truncated: true,
-            [new CompactSymbol("Method", "Foo", "App.Bar", "src/Bar.cs:10:5", null)],
+            [new CompactSymbol("Method", "Foo", "App.Bar", "src/Bar.cs:10:5", null, "M:App.Bar.Foo")],
             WorkspaceDiagnosticCount: null);
 
         var json = JsonSerializer.Serialize(original);
@@ -118,6 +118,67 @@ public sealed class CompactFormatTests
         Assert.Equal(json, JsonSerializer.Serialize(roundTripped));
         Assert.Equal("app.slnx", roundTripped!.Target);
         Assert.Equal("src/Bar.cs:10:5", roundTripped.Symbols[0].Loc);
+        Assert.Equal("M:App.Bar.Foo", roundTripped.Symbols[0].Id);
         Assert.True(roundTripped.Truncated);
+    }
+
+    [Fact]
+    public async Task Compact_IncludesSymbolId_ForSymbols()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(
+            [
+                "symbols",
+                "--target", TestPaths.SolutionPath(),
+                "--query", "CliApplication",
+                "--exact",
+                "--kind", "class",
+                "--format", "compact",
+            ],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, exitCode);
+
+        using var document = JsonDocument.Parse(writer.ToString());
+        var symbols = document.RootElement.GetProperty("data").GetProperty("symbols");
+
+        Assert.Equal("T:RoslynKit.CliApplication", symbols[0].GetProperty("id").GetString());
+    }
+
+    [Fact]
+    public void Compact_ProjectsSymbolSourceDeclarations()
+    {
+        var descriptor = new DocumentDescriptor(
+            "doc_123",
+            "App",
+            null,
+            "net10.0",
+            DocumentKindNames.Source,
+            "Source.cs",
+            @"C:\repo\App\Source.cs");
+        var result = new SymbolSourceResult(
+            "app.slnx",
+            "T:App.Widget",
+            new SymbolItem(
+                "App",
+                "Widget",
+                "Widget",
+                "App.Widget",
+                "NamedType",
+                "Public",
+                isStatic: false,
+                containingType: null,
+                containingNamespace: "App",
+                new SourceRange(@"C:\repo\App\Source.cs", 3, 14, 3, 20),
+                [new SourceRange(@"C:\repo\App\Source.cs", 3, 14, 3, 20)],
+                "T:App.Widget"),
+            [new SymbolSourceDeclaration(descriptor, new DocumentRange(3, 1, 9, 2), "public sealed class Widget { }")],
+            []);
+
+        var projected = Assert.IsType<CompactSymbolSourceData>(CompactProjection.ProjectData(result));
+
+        Assert.Equal("T:App.Widget", projected.Symbol.Id);
+        Assert.Equal(@"C:\repo\App\Source.cs:3:1", projected.Declarations[0].Loc);
+        Assert.Equal("public sealed class Widget { }", projected.Declarations[0].Text);
     }
 }

@@ -57,11 +57,15 @@ roslynkit symbols --target .\MySolution.slnx --query MyService --exact --kind cl
 roslynkit document-symbols --target .\MySolution.slnx --file .\src\MyApp\Program.cs
 roslynkit document-text --target .\MySolution.slnx --file .\src\MyApp\Service.cs
 roslynkit definition --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20
+roslynkit definition --target .\MySolution.slnx --symbol MyApp.MyService
 roslynkit references --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20
+roslynkit references --target .\MySolution.slnx --symbol MyApp.MyService.Execute
 roslynkit implementations --target .\src\MyApp\MyApp.csproj --file .\src\MyApp\Service.cs --line 23 --column 23
+roslynkit implementations --target .\MySolution.slnx --symbol MyApp.IMyService
 roslynkit quick-info --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20
 roslynkit type-definition --target .\src\MyApp\MyApp.csproj --file .\src\MyApp\Service.cs --line 27 --column 22
 roslynkit signature-help --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 42 --column 17
+roslynkit symbol-source --target .\MySolution.slnx --symbol "M:MyApp.MyService.Execute(System.String)"
 roslynkit document-text --target .\src\MyApp\MyApp.csproj --document-key doc_ABC123
 ```
 
@@ -71,7 +75,13 @@ Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-bas
 
 For document-oriented commands such as `document-symbols`, `document-text`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, and `signature-help`, pass `--target` plus exactly one of `--file <path>` or `--document-key <id>`. Use `workspace` first when the same file appears in multiple project contexts or when you need a generated document key. Semantic position commands operate on C# source or source-generated documents; `document-text` can read source, source-generated, additional, and analyzer-config documents. `document-text` always returns the entire resolved document, and `resolvedRange` covers that whole document.
 
-Every structured command accepts `--format <json|compact>` (default `json`). Both formats share the same envelope frame (`data` on success, `errors` on failure). `--format compact` emits that envelope on a single minified line and trims the payload: each source location collapses to a `path:line:column` string and verbose per-symbol metadata (`metadataName`, `displayName`, `declarations[]`, span end positions) is dropped. It is a token-efficient view for coding agents; the default `json` payload schema is unchanged.
+`definition`, `references`, and `implementations` also accept `--symbol <selector>` instead of the position selector. The selector is either a Roslyn documentation-comment ID (`T:`, `M:`, `P:`, `F:`, `E:`, or `N:` prefix, for example `M:MyApp.MyService.Execute(System.String)`) or a qualified symbol name such as `MyApp.MyService.Execute`. `--symbol` cannot be combined with `--file`, `--document-key`, `--line`, or `--column`. When a qualified name matches several declarations (for example method overloads), the command fails with a deterministic usage error listing the candidate documentation-comment IDs so the exact one can be retried. In symbol mode the result omits `document`, `line`, and `column` and echoes the input as `selector`. Constructors are addressable only through `M:...#ctor(...)` documentation-comment IDs.
+
+Every symbol payload includes a `symbolId` field carrying the symbol's documentation-comment ID, so results chain by identity: take `symbolId` from `symbols`, `definition`, or `references` output and pass it straight to the next `--symbol` command without copying line and column numbers. `symbolId` stays valid after files are edited; cached line numbers do not.
+
+`symbol-source` takes `--target` plus `--symbol` and returns the full declaration source text for the resolved symbol: one entry per declaring block with its document descriptor, true block range, and text. Partial types return every declaring block, including source-generated ones. The text covers the declaration node itself (attributes included); leading XML documentation comments are trivia and are not included.
+
+Every structured command accepts `--format <json|compact>` (default `json`). Both formats share the same envelope frame (`data` on success, `errors` on failure). `--format compact` emits that envelope on a single minified line and trims the payload: each source location collapses to a `path:line:column` string and verbose per-symbol metadata (`metadataName`, `displayName`, `declarations[]`, span end positions) is dropped, while the documentation-comment ID is kept as `id`. It is a token-efficient view for coding agents; the default `json` payload schema is unchanged.
 
 ```powershell
 roslynkit symbols --target .\MySolution.slnx --query MyType --format compact

@@ -275,13 +275,15 @@ public static class CliParser
         {
             case "document-text":
             case "document-symbols":
-            case "definition":
             case "type-definition":
-            case "references":
-            case "implementations":
             case "quick-info":
             case "signature-help":
                 ValidateDocumentSelector(commandName, options);
+                break;
+            case "definition":
+            case "references":
+            case "implementations":
+                ValidateSymbolOrPositionSelector(commandName, options);
                 break;
         }
     }
@@ -304,6 +306,29 @@ public static class CliParser
         if (hasFile == hasDocumentKey)
         {
             throw new CliUsageException(commandName, "Exactly one of '--file' or '--document-key' is required.");
+        }
+    }
+
+    private static void ValidateSymbolOrPositionSelector(string commandName, IReadOnlyDictionary<string, string> options)
+    {
+        if (options.ContainsKey("symbol"))
+        {
+            if (options.ContainsKey("file") || options.ContainsKey("document-key") || options.ContainsKey("line") || options.ContainsKey("column"))
+            {
+                throw new CliUsageException(commandName, "Option '--symbol' cannot be combined with '--file', '--document-key', '--line', or '--column'.");
+            }
+
+            return;
+        }
+
+        ValidateDocumentSelector(commandName, options);
+
+        foreach (var positionOption in (string[])["line", "column"])
+        {
+            if (!options.ContainsKey(positionOption))
+            {
+                throw new CliUsageException(commandName, $"Missing required option '--{positionOption}'.");
+            }
         }
     }
 

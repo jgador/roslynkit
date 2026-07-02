@@ -25,6 +25,21 @@ Use this skill for ordinary C# semantic inspection when the side-by-side prerele
 
 Do not default to `Get-Content`, `Select-String`, or grep-style file reads for questions that are really about C# declarations, symbol structure, definitions, references, implementations, types, signatures, or generated documents.
 
+## Selector Choice
+
+`definition`, `references`, and `implementations` accept either `--symbol <selector>` or a position (`--file`/`--document-key` plus `--line --column`), never both. Pick by what you already hold:
+
+- You know a declared name (type, method, property, field, event): use `--symbol` directly. Do not run `symbols` first just to obtain line and column numbers.
+- You hold a position from prior RoslynKit output (a reference location, a declaration location, a diagnostic) or from the user's cursor: use the position selector for the next hop at that spot.
+- The target has no global name (local variable, parameter, lambda parameter): position mode is the only way to address it.
+- `signature-help` and mid-expression `quick-info` are always position-based: they answer questions about a spot in the code, not about a declaration.
+
+`--symbol` takes a documentation-comment ID (`T:`, `M:`, `P:`, `F:`, `E:`, or `N:` prefix) or a qualified name such as `SomeNamespace.SomeType.SomeMethod`. An ambiguous qualified name (for example method overloads) fails with the candidate documentation-comment IDs; retry with the exact ID. Constructors need the `M:...#ctor(...)` ID form.
+
+Hard rule: coordinates must come from tool output, a diagnostic, or the user. If you would have to read or search a file to find a line number, use `--symbol` instead.
+
+Chain by identity: every symbol payload carries `symbolId` (`id` in compact format). Pass it straight to the next `--symbol` command. After editing a file, cached line and column values are stale; `symbolId` stays valid.
+
 ## Default File Scope
 
 RoslynKit is C#-only by default.
@@ -68,6 +83,8 @@ $roslynkitDev = Join-Path $roslynkitDev ($(if ($IsWindows) { "roslynkit.exe" } e
 
 ## Cursor Choice
 
+This section applies only when you are using position mode (see Selector Choice).
+
 When a line contains more than one semantic target, choose the cursor deliberately before you jump:
 
 - Prefer the most flow-bearing symbol on the current line.
@@ -80,21 +97,22 @@ When a line contains more than one semantic target, choose the cursor deliberate
 
 When the task is a semantic C# question, prefer this order and stop as soon as you have enough evidence:
 
-1. Pick the most flow-bearing symbol on the current line before you jump. For chained invocations, start with the rightmost invoked method or property, not the constructor or enclosing type, unless construction is the question.
-2. If the current `.cs` file and cursor are already known, start with a position-based `definition`, `references`, `implementations`, or `quick-info` on that location.
-3. Use `symbols` when only a declaration name is known and you expect that declaration to exist in the loaded target.
+1. If you know the declaration name, run `definition`, `references`, or `implementations` with `--symbol`, or `symbol-source` for the declaration body, in one command.
+2. If the current `.cs` file and cursor are already known, pick the most flow-bearing symbol on the current line and start with a position-based `definition`, `references`, `implementations`, or `quick-info` on that location. For chained invocations, start with the rightmost invoked method or property, not the constructor or enclosing type, unless construction is the question.
+3. Use `symbols` only for discovery: fuzzy name search, kind-filtered listing, or checking whether a declaration exists. Do not use it to convert a known name into coordinates.
 4. Use `quick-info` at the resolved position or location before reading source text when you need signature, type, or documentation context.
 5. If only a small literal snippet or comment block is needed after semantic resolution, let Codex CLI choose the terminal-native fallback for that narrow read instead of pulling the whole document through RoslynKit.
 6. Use `document-symbols` only when the file is already known and local structure is still needed to choose a member or range.
 7. Use `document-text` only when a full document read is still justified after the symbol or file is already resolved.
-8. Read a method or class body only when symbol locations, quick info, document structure, and targeted cross-references are still insufficient.
+8. Use `symbol-source` when exactly one declaration body is needed; read larger source regions only when symbol locations, quick info, document structure, and targeted cross-references are still insufficient.
 
 ## Token Discipline
 
 - Do not read an entire `.cs` file through `document-text` by default.
 - Do not read a whole class body by default.
-- If the current file and cursor are already known, prefer position-based commands over `symbols`.
-- Use `symbols` when you need to find a declaration by name inside the loaded target, not to inspect external Roslyn APIs or other non-declared implementation details.
+- Chain follow-up lookups with `symbolId` from previous output instead of re-resolving the same symbol through `symbols` or a fresh position lookup.
+- Prefer `symbol-source` over `document-text` or shell reads when exactly one declaration body is needed.
+- Use `symbols` for name discovery inside the loaded target, not to convert a known name into coordinates and not to inspect external Roslyn APIs or other non-declared implementation details.
 - Do not start with `document-symbols` unless you already know the file and still need local structure to choose a member or range.
 - Prefer a `definition` hop from a known call site over broad declaration search when tracing control flow.
 - Prefer `definition` plus `quick-info` over `document-symbols` or `document-text` when the next useful hop is already on the current line.
@@ -143,16 +161,34 @@ The following examples assume `$roslynkitDev` has already been set as shown abov
 & $roslynkitDev definition --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
 ```
 
-### Find references
+### Find references by declared name
+
+```powershell
+& $roslynkitDev references --target .\SomeSolution.slnx --symbol SomeNamespace.SomeType.SomeMethod --max-results 3
+```
+
+### Find references from a usage site
 
 ```powershell
 & $roslynkitDev references --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 32 --column 17 --max-results 3
 ```
 
-### Find implementations
+### Find implementations by declared name
+
+```powershell
+& $roslynkitDev implementations --target .\SomeSolution.slnx --symbol SomeNamespace.ISomeService --max-results 20
+```
+
+### Find implementations from a usage site
 
 ```powershell
 & $roslynkitDev implementations --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 12 --column 9 --max-results 20
+```
+
+### Read a declaration body
+
+```powershell
+& $roslynkitDev symbol-source --target .\SomeSolution.slnx --symbol "M:SomeNamespace.SomeType.SomeMethod(System.String)"
 ```
 
 ### Read quick info

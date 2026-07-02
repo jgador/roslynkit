@@ -53,6 +53,7 @@ Route command text from `Program.Main` through parse, help/version, and command 
 - Top-level `--version` rewrites to `version`.
 - One builtin registry owns command metadata.
 - Structured commands return JSON envelopes.
+- `definition`, `references`, and `implementations` validate `--symbol` and the position selector as mutually exclusive in `CliParser.ValidateSymbolOrPositionSelector`.
 
 ## Common pitfalls
 
@@ -74,4 +75,4 @@ Route command text from `Program.Main` through parse, help/version, and command 
 
 ## Last verified
 
-`2026-06-28`
+`2026-07-02`
