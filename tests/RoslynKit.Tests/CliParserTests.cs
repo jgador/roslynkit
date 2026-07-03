@@ -213,7 +213,7 @@ public sealed class CliParserTests
         ]));
 
         Assert.Equal("symbols", exception.CommandName);
-        Assert.Contains("Option '--format' must be 'json' or 'compact'.", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Option '--format' must be 'json', 'compact', or 'text'.", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

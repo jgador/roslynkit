@@ -15,6 +15,8 @@ public sealed class RoslynWorkspaceLoader : IDisposable
 {
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
+    private static readonly object MSBuildRegistrationLock = new();
+
     private readonly IReadOnlyDictionary<ProjectId, string?> _projectTargetFrameworks;
 
     private RoslynWorkspaceLoader(
@@ -300,12 +302,18 @@ public sealed class RoslynWorkspaceLoader : IDisposable
 
     private static void RegisterMSBuild()
     {
-        if (MSBuildLocator.IsRegistered)
+        // Registration must be serialized: with concurrent in-process callers (such as parallel tests),
+        // an unguarded check-then-register race lets the loser call RegisterDefaults after MSBuild
+        // assemblies are already loaded, which throws.
+        lock (MSBuildRegistrationLock)
         {
-            return;
-        }
+            if (MSBuildLocator.IsRegistered)
+            {
+                return;
+            }
 
-        MSBuildLocator.RegisterDefaults();
+            MSBuildLocator.RegisterDefaults();
+        }
     }
 }
 

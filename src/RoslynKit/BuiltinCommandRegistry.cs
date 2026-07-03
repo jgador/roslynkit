@@ -205,6 +205,6 @@ public static class BuiltinCommandRegistry
 
     private static OptionSpec FormatOption()
     {
-        return OptionSpec.String(null, "format", "format", "output format: json (default) or compact");
+        return OptionSpec.String(null, "format", "format", "output format: json (default), compact, or text");
     }
 }

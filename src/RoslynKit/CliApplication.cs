@@ -33,18 +33,23 @@ public sealed class CliApplication
     }
 
     /// <summary>
-    /// Parses arguments, dispatches help or command execution, and writes either a JSON envelope or the plain-text version response.
+    /// Parses arguments, dispatches help or command execution, and writes a JSON envelope, plain-text
+    /// command output for <c>--format text</c>, or the plain-text version response. Text-mode failures
+    /// still write the minified JSON errors envelope, so a zero exit code means stdout is plain text
+    /// and a non-zero exit code means stdout is JSON.
     /// </summary>
     public async Task<int> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken = default)
     {
         JsonEnvelope envelope;
         var exitCode = 0;
         var compact = false;
+        var text = false;
 
         try
         {
             var command = CliParser.Parse(args);
             compact = command.IsCompact;
+            text = command.IsText;
 
             if (command.IsHelp)
             {
@@ -57,6 +62,12 @@ public sealed class CliApplication
             else
             {
                 var data = await RoslynCommandExecutor.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
+                if (text)
+                {
+                    await _stdout.WriteLineAsync(TextProjection.Render(data)).ConfigureAwait(false);
+                    return 0;
+                }
+
                 envelope = JsonEnvelope.ForSuccess(compact ? CompactProjection.ProjectData(data) : data);
             }
         }
@@ -76,7 +87,7 @@ public sealed class CliApplication
             envelope = JsonEnvelope.Failure(ErrorInfo.Internal(ex.GetType().Name, ex.Message));
         }
 
-        await _stdout.WriteLineAsync(JsonSerializer.Serialize(envelope, compact ? CompactJsonOptions : JsonOptions)).ConfigureAwait(false);
+        await _stdout.WriteLineAsync(JsonSerializer.Serialize(envelope, compact || text ? CompactJsonOptions : JsonOptions)).ConfigureAwait(false);
         return exitCode;
     }
 

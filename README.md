@@ -81,11 +81,18 @@ Every symbol payload includes a `symbolId` field carrying the symbol's documenta
 
 `symbol-source` takes `--target` plus `--symbol` and returns the full declaration source text for the resolved symbol: one entry per declaring block with its document descriptor, true block range, and text. Partial types return every declaring block, including source-generated ones. The text covers the declaration node itself (attributes included); leading XML documentation comments are trivia and are not included.
 
-Every structured command accepts `--format <json|compact>` (default `json`). Both formats share the same envelope frame (`data` on success, `errors` on failure). `--format compact` emits that envelope on a single minified line and trims the payload: each source location collapses to a `path:line:column` string and verbose per-symbol metadata (`metadataName`, `displayName`, `declarations[]`, span end positions) is dropped, while the documentation-comment ID is kept as `id`. It is a token-efficient view for coding agents; the default `json` payload schema is unchanged.
+Every structured command accepts `--format <json|compact|text>` (default `json`). `json` and `compact` share the same envelope frame (`data` on success, `errors` on failure). `--format compact` emits that envelope on a single minified line and trims the payload: each source location collapses to a `path:line:column` string and verbose per-symbol metadata (`metadataName`, `displayName`, `declarations[]`, span end positions) is dropped, while the documentation-comment ID is kept as `id`. It is a token-efficient view for coding agents; the default `json` payload schema is unchanged.
 
 ```powershell
 roslynkit symbols --target .\MySolution.slnx --query MyType --format compact
 roslynkit definition --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20 --format compact
+```
+
+`--format text` drops the JSON envelope on success and emits deterministic line-oriented plain text: one header line per payload, one line per item, `path:line:column` locations, and raw payload text with no JSON string escaping. It is built for LLM and agent consumption where source text dominates token cost — `symbol-source`, `document-text`, and `quick-info` payloads stay verbatim, with real newlines and quotes. On failure the command still writes the minified JSON `errors` envelope and exits non-zero, so a zero exit code means stdout is plain text and a non-zero exit code means stdout is JSON. `help` and `version` output are unchanged by `--format text`.
+
+```powershell
+roslynkit symbol-source --target .\MySolution.slnx --symbol MyApp.MyService.Execute --format text
+roslynkit quick-info --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20 --format text
 ```
 
 See `docs/roslyn-lsp-commands.md` for the exhaustive Roslyn language-server method inventory used to compare RoslynKit's current command set with Roslyn's broader code intelligence surface.

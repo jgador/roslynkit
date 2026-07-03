@@ -292,9 +292,10 @@ public static class CliParser
     {
         if (options.TryGetValue("format", out var format)
             && !string.Equals(format, OutputFormat.Json, StringComparison.Ordinal)
-            && !string.Equals(format, OutputFormat.Compact, StringComparison.Ordinal))
+            && !string.Equals(format, OutputFormat.Compact, StringComparison.Ordinal)
+            && !string.Equals(format, OutputFormat.Text, StringComparison.Ordinal))
         {
-            throw new CliUsageException(commandName, $"Option '--format' must be '{OutputFormat.Json}' or '{OutputFormat.Compact}'.");
+            throw new CliUsageException(commandName, $"Option '--format' must be '{OutputFormat.Json}', '{OutputFormat.Compact}', or '{OutputFormat.Text}'.");
         }
     }
 
@@ -351,6 +352,8 @@ public sealed record ParsedCommand(
 
     public bool IsCompact => string.Equals(Optional("format"), OutputFormat.Compact, StringComparison.Ordinal);
 
+    public bool IsText => string.Equals(Optional("format"), OutputFormat.Text, StringComparison.Ordinal);
+
     public static ParsedCommand Help(BuiltinCommand? subject = null)
     {
         return new ParsedCommand("help", null, new Dictionary<string, string>(StringComparer.Ordinal), subject);
@@ -404,6 +407,7 @@ public static class OutputFormat
 {
     public const string Json = "json";
     public const string Compact = "compact";
+    public const string Text = "text";
 }
 
 /// <summary>
