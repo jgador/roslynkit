@@ -120,6 +120,7 @@ roslynkit symbols --help
 
 - `docs/dev-install.md`: side-by-side prerelease dev install for users who want a separate dev build.
 - `docs/dotnet-tool-release.md`: maintainer packaging and release workflow.
+- `docs/markdown-output-format.md`: planned token-saving Markdown rules for future CLI output.
 - `docs/roslyn-lsp-commands.md`: Roslyn language-server method inventory and coverage comparison.
 
 ## Repo-Local Skills

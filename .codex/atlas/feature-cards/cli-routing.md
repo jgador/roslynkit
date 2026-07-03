@@ -19,6 +19,7 @@ Route command text from `Program.Main` through parse, help/version, and command 
 - `src/RoslynKit/CliParser.cs`
 - `src/RoslynKit/BuiltinCommandRegistry.cs`
 - `src/RoslynKit/RoslynCommandExecutor.cs`
+- `docs/markdown-output-format.md`
 
 ## Important symbols
 
@@ -52,7 +53,8 @@ Route command text from `Program.Main` through parse, help/version, and command 
 
 - Top-level `--version` rewrites to `version`.
 - One builtin registry owns command metadata.
-- Structured commands return JSON envelopes.
+- Structured commands return JSON envelopes by default.
+- `--format text` stays line-oriented plain text; planned Markdown output is documented separately and should not silently change `text`.
 - `definition`, `references`, and `implementations` validate `--symbol` and the position selector as mutually exclusive in `CliParser.ValidateSymbolOrPositionSelector`.
 
 ## Common pitfalls
@@ -75,4 +77,4 @@ Route command text from `Program.Main` through parse, help/version, and command 
 
 ## Last verified
 
-`2026-07-02`
+`2026-07-03`
