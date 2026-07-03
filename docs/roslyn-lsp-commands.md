@@ -33,6 +33,7 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 | Implemented | `implementations` | `textDocument/implementation`, `FindImplementationsAsync` | Critical for interface, abstract member, and override navigation. |
 | Implemented | `quick-info` | `textDocument/hover`, QuickInfo services | Gives agents exact type, signature, and documentation context at a position. |
 | Implemented | `signature-help` | `textDocument/signatureHelp` | Helps agents call overloaded C# APIs correctly. |
+| Implemented | `symbol-source` | `SymbolFinder`, documentation-comment ID resolution, declaration syntax spans | Lets agents read the full declaration source for a symbol by stable ID without line/column bookkeeping. |
 | P1 | `completion` | `textDocument/completion`, `completionItem/resolve` | Useful for member discovery, importable symbols, and API exploration. |
 | P1 | `document-highlights` | `textDocument/documentHighlight` | Helps agents understand local symbol usage inside a file. |
 | P1 | `call-hierarchy` | `textDocument/prepareCallHierarchy`, `callHierarchy/incomingCalls`, `callHierarchy/outgoingCalls` | Useful for tracing call flow and impact in service-style C# code. |
@@ -68,8 +69,9 @@ RoslynKit currently registers these commands:
 - `quick-info`
 - `type-definition`
 - `signature-help`
+- `symbol-source`
 
-`version` is a Git-style tool metadata command and does not correspond to a Roslyn LSP method.
+`version` is a Git-style tool metadata command and does not correspond to a Roslyn LSP method. `symbol-source` is a RoslynKit-specific command built on `SymbolFinder` and declaration syntax spans rather than a single Roslyn LSP method.
 
 ## Implemented Roslyn LSP Methods
 
@@ -104,8 +106,8 @@ These method names have handlers in `C:\repo\GitHub\roslyn\src\LanguageServer\Pr
 ### Navigation And Symbols
 
 - `textDocument/definition` - `Implemented`
-- `textDocument/typeDefinition` - `P0`
-- `textDocument/implementation` - `P0`
+- `textDocument/typeDefinition` - `Implemented`
+- `textDocument/implementation` - `Implemented`
 - `textDocument/references` - `Implemented`
 - `textDocument/documentSymbol` - `Implemented`
 - `textDocument/documentHighlight` - `P1`
@@ -121,10 +123,10 @@ These method names have handlers in `C:\repo\GitHub\roslyn\src\LanguageServer\Pr
 
 ### Editor Intelligence
 
-- `textDocument/hover` - `P0`
+- `textDocument/hover` - `Implemented`
 - `textDocument/completion` - `P1`
 - `completionItem/resolve` - `P1`
-- `textDocument/signatureHelp` - `P0`
+- `textDocument/signatureHelp` - `Implemented`
 - `textDocument/codeAction` - `P2`
 - `codeAction/resolve` - `P2`
 - `codeAction/resolveFixAll` - `P2`
