@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-06-30T21:21:11.0504322Z",
+  "generatedAtUtc": "2026-07-03T03:00:34.7628686Z",
   "repoRoot": "C:\\repo\\GitHub\\roslynkit",
   "files": [
     {
@@ -208,6 +208,12 @@
       "category": "doc"
     },
     {
+      "path": "docs/markdown-output-format.md",
+      "extension": ".md",
+      "area": "docs",
+      "category": "doc"
+    },
+    {
       "path": "docs/roslyn-lsp-commands.md",
       "extension": ".md",
       "area": "docs",
@@ -298,6 +304,12 @@
       "category": "source"
     },
     {
+      "path": "src/RoslynKit/MarkdownProjection.cs",
+      "extension": ".cs",
+      "area": "src",
+      "category": "source"
+    },
+    {
       "path": "src/RoslynKit/PackageReadme.md",
       "extension": ".md",
       "area": "src",
@@ -346,6 +358,12 @@
       "category": "source"
     },
     {
+      "path": "src/RoslynKit/RoslynSymbolResolver.cs",
+      "extension": ".cs",
+      "area": "src",
+      "category": "source"
+    },
+    {
       "path": "src/RoslynKit/RoslynSymbolSearch.cs",
       "extension": ".cs",
       "area": "src",
@@ -353,6 +371,12 @@
     },
     {
       "path": "src/RoslynKit/RoslynWorkspaceLoader.cs",
+      "extension": ".cs",
+      "area": "src",
+      "category": "source"
+    },
+    {
+      "path": "src/RoslynKit/TextProjection.cs",
       "extension": ".cs",
       "area": "src",
       "category": "source"
@@ -406,6 +430,12 @@
       "category": "test"
     },
     {
+      "path": "tests/RoslynKit.Tests/CliOutputTests.cs",
+      "extension": ".cs",
+      "area": "tests",
+      "category": "test"
+    },
+    {
       "path": "tests/RoslynKit.Tests/CliParserTests.cs",
       "extension": ".cs",
       "area": "tests",
@@ -430,6 +460,12 @@
       "category": "test"
     },
     {
+      "path": "tests/RoslynKit.Tests/MarkdownFormatTests.cs",
+      "extension": ".cs",
+      "area": "tests",
+      "category": "test"
+    },
+    {
       "path": "tests/RoslynKit.Tests/RoslynKit.Tests.csproj",
       "extension": ".csproj",
       "area": "tests",
@@ -449,6 +485,12 @@
     },
     {
       "path": "tests/RoslynKit.Tests/TestPaths.cs",
+      "extension": ".cs",
+      "area": "tests",
+      "category": "test"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/TextFormatTests.cs",
       "extension": ".cs",
       "area": "tests",
       "category": "test"

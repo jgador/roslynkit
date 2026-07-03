@@ -449,7 +449,7 @@ internal static class RoslynSignatureHelpService
 }
 
 /// <summary>
-/// Captures the reflected Roslyn signature-help result before JSON projection.
+/// Captures the reflected Roslyn signature-help result before result projection.
 /// </summary>
 internal sealed record ReflectedSignatureHelp(
     TextSpan ApplicableSpan,

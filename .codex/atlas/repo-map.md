@@ -13,7 +13,7 @@
 ## Entrypoints
 
 - CLI entrypoint: `src/RoslynKit/Program.cs`
-- Top-level runtime and envelope flow: `src/RoslynKit/CliApplication.cs`
+- Top-level runtime and output flow: `src/RoslynKit/CliApplication.cs`
 - CLI parsing: `src/RoslynKit/CliParser.cs`
 - Command registry: `src/RoslynKit/BuiltinCommandRegistry.cs`
 - Command execution: `src/RoslynKit/RoslynCommandExecutor.cs`
@@ -30,7 +30,7 @@
 
 ## Conventions
 
-- .NET 10 CLI-first repo with deterministic JSON-first command output.
+- .NET 10 CLI-first repo with deterministic markdown-first command output.
 - `roslynkit-dev` is the repo-default semantic inspection route.
 - Prefer tests before implementation when available.
 - Prefer symbol and line-range reads over full-file reads.
@@ -43,7 +43,7 @@
 - workspace loading and document selection
 - symbol search and document symbols
 - navigation commands: definition, references, implementations, quick-info, type-definition, signature-help
-- JSON envelopes and result models
+- markdown output rendering and result models
 - packaging, install, and release flow
 - agent and skill routing
 - Atlas prompt caching and repeated route probes

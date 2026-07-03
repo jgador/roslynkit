@@ -41,7 +41,7 @@ Package, install, and maintain stable and dev RoslynKit tool flows plus checked-
 
 ## Nearest tests
 
-- `tests/RoslynKit.Tests/EnvelopeTests.cs`
+- `tests/RoslynKit.Tests/CliOutputTests.cs`
 
 ## Build/test commands
 
@@ -67,4 +67,4 @@ Package, install, and maintain stable and dev RoslynKit tool flows plus checked-
 
 ## Last verified
 
-`2026-06-27`
+`2026-07-03`

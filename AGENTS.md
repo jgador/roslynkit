@@ -4,7 +4,7 @@
 
 Use one source of truth per topic:
 
-- `README.md`: user-facing command list, JSON envelope shape, packaging, and quick-start commands.
+- `README.md`: user-facing command list, output format overview, packaging, and quick-start commands.
 - `docs/dev-install.md`: semi-manual side-by-side prerelease installation for RoslynKit development.
 - `docs/local-repository-reference.md`: local reference repositories for Roslyn APIs, Git CLI style, EF Core tooling conventions, and VS Code C# language-server wiring.
 - `docs/skill-maintenance.md`: ownership and synchronization rules for the checked-in RoslynKit skill files.
@@ -88,7 +88,7 @@ Before any commit or push:
 
 ## Coding Style & Naming Conventions
 
-Follow `.editorconfig`: UTF-8, spaces, final newline, 4-space indentation for C# and PowerShell, 2-space indentation for XML/JSON/YAML. C# uses file-scoped namespaces, nullable reference types, implicit usings, latest language version, and warnings as errors. Use `Cli`, not `CLI`, in C# identifiers. Keep command output deterministic and JSON-first.
+Follow `.editorconfig`: UTF-8, spaces, final newline, 4-space indentation for C# and PowerShell, 2-space indentation for XML/JSON/YAML. C# uses file-scoped namespaces, nullable reference types, implicit usings, latest language version, and warnings as errors. Use `Cli`, not `CLI`, in C# identifiers. Keep command output deterministic and markdown-first.
 
 ## C# Working Rules
 
@@ -99,9 +99,9 @@ Follow the existing style in touched files. Prefer clear names and structure ove
 - Prioritize read-only Roslyn intelligence: inspect, navigate, understand, and verify C# code before edit-producing workflows.
 - If formatting, rename, or code-action features are added, return deterministic proposed edits before adding any source-mutating apply mode.
 - Keep command execution separate from argument parsing.
-- Keep JSON contracts stable, deterministic, camelCase, and covered by parser/envelope tests when changed.
+- Keep the markdown output contract (`docs/markdown-output-format.md`) stable, deterministic, and covered by parser/renderer tests when changed.
 - Pass `CancellationToken` through async Roslyn operations when available.
-- If a public CLI option, command, JSON shape, package surface, or documented workflow changes, update `README.md` or the relevant docs in the same change.
+- If a public CLI option, command, output shape, package surface, or documented workflow changes, update `README.md` or the relevant docs in the same change.
 
 ## Post-Change Formatting
 
@@ -112,7 +112,7 @@ After C# coding work, run these commands before final build/test verification:
 
 ## Testing Guidelines
 
-Tests use xUnit through Microsoft Testing Platform in `tests/RoslynKit.Tests`. Name test methods as behavior statements, for example `Parse_RejectsDuplicateOption`. Add parser/envelope tests for CLI contract changes and focused Roslyn execution tests when command behavior changes. Run `dotnet test .\RoslynKit.slnx` before publishing changes.
+Tests use xUnit through Microsoft Testing Platform in `tests/RoslynKit.Tests`. Name test methods as behavior statements, for example `Parse_RejectsDuplicateOption`. Add parser/renderer tests for CLI contract changes and focused Roslyn execution tests when command behavior changes. Run `dotnet test .\RoslynKit.slnx` before publishing changes.
 
 ## Commit & Pull Request Guidelines
 
@@ -121,8 +121,8 @@ Recent history uses short imperative subjects and conventional prefixes such as 
 - Keep commits focused. Separate behavior changes, docs-only edits, generated output refreshes, and repo maintenance when practical.
 - Before committing, confirm the diff is real and relevant. Do not commit CRLF-only or stat-only churn just because `git status` mentions a file.
 - Pull requests should explain what command, parser behavior, Roslyn behavior, or docs surface changed.
-- Note JSON contract impacts explicitly and list the exact validation commands that were run.
-- For this CLI-first repo, command output snippets and JSON examples are usually more useful than screenshots.
+- Note output contract impacts explicitly and list the exact validation commands that were run.
+- For this CLI-first repo, command output snippets are usually more useful than screenshots.
 
 ## Security & Configuration Tips
 

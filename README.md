@@ -2,7 +2,7 @@
 
 RoslynKit is an unofficial Roslyn-powered C# code intelligence CLI for coding agents and terminal workflows.
 
-It is deliberately not an MCP server and not an LSP client. The CLI exposes Git-style subcommands for Roslyn/MSBuild-backed C# inspection. Structured commands return deterministic JSON on stdout, while `version` and top-level `--version` print a plain-text version line.
+It is deliberately not an MCP server and not an LSP client. The CLI exposes Git-style subcommands for Roslyn/MSBuild-backed C# inspection. Commands return deterministic markdown-flavored text on stdout, built to minimize token cost for coding agents, while `version` and top-level `--version` print a plain-text version line.
 
 RoslynKit prioritizes read-only Roslyn intelligence: inspect, navigate, understand, and verify C# code without changing source files or project state.
 
@@ -13,28 +13,30 @@ This guide assumes `roslynkit` is already installed and available on `PATH`. For
 - Use Roslyn APIs directly instead of shelling out to an editor, language server, or IDE.
 - Prioritize read-only code intelligence before edit-producing refactor or formatting features.
 - Keep commands deterministic and scriptable for agents and terminal workflows.
-- Emit one JSON envelope for every structured command result, including usage and error responses. A response carries `data` on success or `errors` on failure; the absence of `errors` is an implicit success. The Git-style `version` command prints plain text.
+- Emit one deterministic markdown-flavored text shape for every command result: key-value header lines, labeled compact bullets, inline code spans, and fenced code blocks for source text. Failures print a two-line plain-text error and exit non-zero.
 - Support solution-level and project-level inspection with stable sorting and one-based source positions.
 
 ## Commands
 
-Most commands write a JSON envelope. A successful result carries only `data`:
+Commands write markdown-flavored text described by `docs/markdown-output-format.md`. A successful result starts with key-value header lines and lists repeated items as compact bullets:
 
-```json
-{
-  "data": {}
-}
+```markdown
+command: symbols
+query: `MyService`
+returned: 2/2
+truncated: false
+
+- kind: NamedType name: `MyApp.MyService` loc: `src/MyApp/MyService.cs:8:14-8:23` id: `T:MyApp.MyService`
 ```
 
-A failed result carries only `errors` (and the process exits non-zero):
+A failed result prints two plain-text lines and the process exits non-zero:
 
-```json
-{
-  "errors": [
-    { "code": "usage", "message": "..." }
-  ]
-}
+```text
+error: usage
+message: Missing required option '--target'.
 ```
+
+Exit codes: `0` success, `2` usage error, `130` canceled, `1` any other failure. The `error:` value is `usage`, `canceled`, or the exception type name.
 
 `version` and top-level `--version` print a plain-text version line instead:
 
@@ -73,27 +75,15 @@ Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-bas
 
 `workspace` defaults to repo-relevant source documents only. Add `--include-generated`, `--include-additional`, and `--include-analyzer-config` when you need source-generated files, `AdditionalFiles`, or analyzer config documents. Distinct project and target-framework contexts stay separate through `documentKey`.
 
-For document-oriented commands such as `document-symbols`, `document-text`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, and `signature-help`, pass `--target` plus exactly one of `--file <path>` or `--document-key <id>`. Use `workspace` first when the same file appears in multiple project contexts or when you need a generated document key. Semantic position commands operate on C# source or source-generated documents; `document-text` can read source, source-generated, additional, and analyzer-config documents. `document-text` always returns the entire resolved document, and `resolvedRange` covers that whole document.
+For document-oriented commands such as `document-symbols`, `document-text`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, and `signature-help`, pass `--target` plus exactly one of `--file <path>` or `--document-key <id>`. Use `workspace` first when the same file appears in multiple project contexts or when you need a generated document key. Semantic position commands operate on C# source or source-generated documents; `document-text` can read source, source-generated, additional, and analyzer-config documents and always returns the entire resolved document.
 
-`definition`, `references`, and `implementations` also accept `--symbol <selector>` instead of the position selector. The selector is either a Roslyn documentation-comment ID (`T:`, `M:`, `P:`, `F:`, `E:`, or `N:` prefix, for example `M:MyApp.MyService.Execute(System.String)`) or a qualified symbol name such as `MyApp.MyService.Execute`. `--symbol` cannot be combined with `--file`, `--document-key`, `--line`, or `--column`. When a qualified name matches several declarations (for example method overloads), the command fails with a deterministic usage error listing the candidate documentation-comment IDs so the exact one can be retried. In symbol mode the result omits `document`, `line`, and `column` and echoes the input as `selector`. Constructors are addressable only through `M:...#ctor(...)` documentation-comment IDs.
+`definition`, `references`, and `implementations` also accept `--symbol <selector>` instead of the position selector. The selector is either a Roslyn documentation-comment ID (`T:`, `M:`, `P:`, `F:`, `E:`, or `N:` prefix, for example `M:MyApp.MyService.Execute(System.String)`) or a qualified symbol name such as `MyApp.MyService.Execute`. `--symbol` cannot be combined with `--file`, `--document-key`, `--line`, or `--column`. When a qualified name matches several declarations (for example method overloads), the command fails with a deterministic usage error listing the candidate documentation-comment IDs so the exact one can be retried. In symbol mode the result echoes the input as `selector:`. Constructors are addressable only through `M:...#ctor(...)` documentation-comment IDs.
 
-Every symbol payload includes a `symbolId` field carrying the symbol's documentation-comment ID, so results chain by identity: take `symbolId` from `symbols`, `definition`, or `references` output and pass it straight to the next `--symbol` command without copying line and column numbers. `symbolId` stays valid after files are edited; cached line numbers do not.
+Every symbol bullet includes an `id:` field carrying the symbol's documentation-comment ID, so results chain by identity: take `id:` from `symbols`, `definition`, or `references` output and pass it straight to the next `--symbol` command without copying line and column numbers. The ID stays valid after files are edited; cached line numbers do not.
 
 `symbol-source` takes `--target` plus `--symbol` and returns the full declaration source text for the resolved symbol: one entry per declaring block with its document descriptor, true block range, and text. Partial types return every declaring block, including source-generated ones. The text covers the declaration node itself (attributes included); leading XML documentation comments are trivia and are not included.
 
-Every structured command accepts `--format <json|compact|text>` (default `json`). `json` and `compact` share the same envelope frame (`data` on success, `errors` on failure). `--format compact` emits that envelope on a single minified line and trims the payload: each source location collapses to a `path:line:column` string and verbose per-symbol metadata (`metadataName`, `displayName`, `declarations[]`, span end positions) is dropped, while the documentation-comment ID is kept as `id`. It is a token-efficient view for coding agents; the default `json` payload schema is unchanged.
-
-```powershell
-roslynkit symbols --target .\MySolution.slnx --query MyType --format compact
-roslynkit definition --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20 --format compact
-```
-
-`--format text` drops the JSON envelope on success and emits deterministic line-oriented plain text: one header line per payload, one line per item, `path:line:column` locations, and raw payload text with no JSON string escaping. It is built for LLM and agent consumption where source text dominates token cost — `symbol-source`, `document-text`, and `quick-info` payloads stay verbatim, with real newlines and quotes. On failure the command still writes the minified JSON `errors` envelope and exits non-zero, so a zero exit code means stdout is plain text and a non-zero exit code means stdout is JSON. `help` and `version` output are unchanged by `--format text`.
-
-```powershell
-roslynkit symbol-source --target .\MySolution.slnx --symbol MyApp.MyService.Execute --format text
-roslynkit quick-info --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20 --format text
-```
+The markdown output is the only format; there is no `--format` option. Locations render as one-based `path:line:column-endLine:endColumn` ranges, and `symbol-source`, `document-text`, and `quick-info` payloads stay verbatim inside fenced code blocks — real newlines and quotes, no string escaping. A zero exit code means stdout is command output; a non-zero exit code means stdout is the two-line error. See `docs/markdown-output-format.md` for the full per-command output contract.
 
 See `docs/roslyn-lsp-commands.md` for the exhaustive Roslyn language-server method inventory used to compare RoslynKit's current command set with Roslyn's broader code intelligence surface.
 
@@ -120,7 +110,7 @@ roslynkit symbols --help
 
 - `docs/dev-install.md`: side-by-side prerelease dev install for users who want a separate dev build.
 - `docs/dotnet-tool-release.md`: maintainer packaging and release workflow.
-- `docs/markdown-output-format.md`: planned token-saving Markdown rules for future CLI output.
+- `docs/markdown-output-format.md`: the markdown output contract for all CLI command results.
 - `docs/roslyn-lsp-commands.md`: Roslyn language-server method inventory and coverage comparison.
 
 ## Repo-Local Skills

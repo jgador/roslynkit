@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.Text;
 namespace RoslynKit;
 
 /// <summary>
-/// Executes parsed RoslynKit semantic commands by loading workspaces, resolving documents, and projecting JSON results.
+/// Executes parsed RoslynKit semantic commands by loading workspaces, resolving documents, and projecting command results.
 /// </summary>
 public static class RoslynCommandExecutor
 {

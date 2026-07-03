@@ -109,6 +109,14 @@ function Get-FileCategory {
 }
 
 function Resolve-RoslynKitCommand {
+    $repoBuild = Join-Path (Join-Path (Join-Path (Join-Path $PSScriptRoot '..\..\..') 'artifacts\bin\RoslynKit') 'debug') ($(if ($IsWindows) { 'roslynkit.exe' } else { 'roslynkit' }))
+    if (Test-Path -LiteralPath $repoBuild) {
+        return [PSCustomObject]@{
+            Name = 'roslynkit-repo-build'
+            Path = (Resolve-Path -LiteralPath $repoBuild).Path
+        }
+    }
+
     $stable = Get-Command roslynkit -ErrorAction SilentlyContinue
     if ($stable) {
         return [PSCustomObject]@{
@@ -260,7 +268,8 @@ try {
                 $category = switch -Wildcard ($path) {
                     'tests/RoslynKit.Tests/CliParserTests.cs' { 'parser' ; break }
                     'tests/RoslynKit.Tests/CommandExecutionTests.cs' { 'execution' ; break }
-                    'tests/RoslynKit.Tests/EnvelopeTests.cs' { 'envelope' ; break }
+                    'tests/RoslynKit.Tests/CliOutputTests.cs' { 'cli-output' ; break }
+                    'tests/RoslynKit.Tests/MarkdownFormatTests.cs' { 'markdown-output' ; break }
                     'tests/RoslynKit.Tests/SymbolsCommandTests.cs' { 'symbols' ; break }
                     'tests/RoslynKit.Tests/TestPaths.cs' { 'support' ; break }
                     default { 'test' }
@@ -290,15 +299,30 @@ try {
         Write-Host 'RoslynKit not available. Skipping symbol-index.json.'
     }
     else {
-        $workspaceJson = & $roslynKit.Path workspace --target .\RoslynKit.slnx | ConvertFrom-Json -Depth 100
-        if (-not $workspaceJson.success) {
+        $workspaceLines = & $roslynKit.Path workspace --target .\RoslynKit.slnx
+        if ($LASTEXITCODE -ne 0) {
             throw "RoslynKit workspace failed. Symbol indexing skipped."
+        }
+
+        $parsedDocuments = @(
+            foreach ($line in $workspaceLines) {
+                if ($line -match '^- project: `(?<project>[^`]+)`(?: tfm: `(?<tfm>[^`]+)`)? kind: (?<kind>\S+) path: `(?<path>[^`]+)` key: `(?<key>[^`]+)`$') {
+                    [PSCustomObject]@{
+                        projectName = $Matches['project']
+                        documentKind = $Matches['kind']
+                        path = $Matches['path']
+                    }
+                }
+            }
+        )
+        if ($parsedDocuments.Count -eq 0) {
+            throw "RoslynKit workspace output contained no parsable document bullets. The resolved tool ($($roslynKit.Path)) may predate the markdown output contract."
         }
 
         $symbolDocuments = New-Object System.Collections.Generic.List[object]
         $skippedDocuments = New-Object System.Collections.Generic.List[object]
         $documents = @(
-            $workspaceJson.data.documents |
+            $parsedDocuments |
                 Where-Object { $_.documentKind -eq 'source' } |
                 Where-Object {
                     $relative = Normalize-RepoPath -RepoRoot $repoRoot -Path $_.path
@@ -311,21 +335,31 @@ try {
             $commandPath = ".\$($relativePath.Replace('/', '\'))"
 
             try {
-                $documentJson = & $roslynKit.Path document-symbols --target .\RoslynKit.slnx --file $commandPath | ConvertFrom-Json -Depth 100
-                if (-not $documentJson.success) {
-                    throw "RoslynKit returned success=false."
+                $documentLines = & $roslynKit.Path document-symbols --target .\RoslynKit.slnx --file $commandPath
+                if ($LASTEXITCODE -ne 0) {
+                    throw "RoslynKit document-symbols exited with code $LASTEXITCODE."
                 }
 
                 $symbols = @(
-                    foreach ($symbol in $documentJson.data.symbols) {
-                        [PSCustomObject]@{
-                            name = [string]$symbol.name
-                            kind = [string]$symbol.kind
-                            displayName = [string]$symbol.displayName
-                            line = [int]$symbol.primaryLocation.line
-                            column = [int]$symbol.primaryLocation.column
-                            containingType = if ($symbol.PSObject.Properties.Match('containingType').Count -gt 0 -and $null -ne $symbol.containingType) { [string]$symbol.containingType } else { $null }
-                            containingNamespace = if ($symbol.PSObject.Properties.Match('containingNamespace').Count -gt 0 -and $null -ne $symbol.containingNamespace) { [string]$symbol.containingNamespace } else { $null }
+                    foreach ($line in $documentLines) {
+                        if ($line -match '^- kind: (?<kind>\S+) name: `(?<name>[^`]+)`(?: loc: `(?<loc>[^`]+)`)?(?: id: `(?<id>[^`]+)`)?$') {
+                            $symbolKind = $Matches['kind']
+                            $symbolName = $Matches['name']
+                            $symbolLocation = $Matches['loc']
+                            $symbolLine = 0
+                            $symbolColumn = 0
+                            if ($symbolLocation -and $symbolLocation -match ':(?<line>\d+):(?<column>\d+)-\d+:\d+$') {
+                                $symbolLine = [int]$Matches['line']
+                                $symbolColumn = [int]$Matches['column']
+                            }
+
+                            [PSCustomObject]@{
+                                name = $symbolName
+                                kind = $symbolKind
+                                displayName = $symbolName
+                                line = $symbolLine
+                                column = $symbolColumn
+                            }
                         }
                     }
                 )
@@ -347,7 +381,7 @@ try {
         }
 
         $symbolIndex = [PSCustomObject]@{
-            schemaVersion = 1
+            schemaVersion = 2
             generatedAtUtc = $generatedAtUtc
             targetPath = 'RoslynKit.slnx'
             toolName = $roslynKit.Name

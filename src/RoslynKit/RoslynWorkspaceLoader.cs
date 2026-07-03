@@ -318,7 +318,7 @@ public sealed class RoslynWorkspaceLoader : IDisposable
 }
 
 /// <summary>
-/// Pairs a resolved Roslyn text document with the JSON descriptor RoslynKit returns in command payloads.
+/// Pairs a resolved Roslyn text document with the document descriptor RoslynKit returns in command payloads.
 /// </summary>
 public sealed class WorkspaceDocumentContext
 {

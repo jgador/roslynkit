@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.Text;
 namespace RoslynKit;
 
 /// <summary>
-/// Converts one-based CLI coordinates into Roslyn positions and projects Roslyn spans into JSON document ranges.
+/// Converts one-based CLI coordinates into Roslyn positions and projects Roslyn spans into one-based document ranges.
 /// </summary>
 public static class PositionResolver
 {

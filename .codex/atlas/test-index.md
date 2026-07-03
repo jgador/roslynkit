@@ -25,6 +25,7 @@
 - command parsing and option validation -> `tests/RoslynKit.Tests/CliParserTests.cs`
 - command execution and navigation flows -> `tests/RoslynKit.Tests/CommandExecutionTests.cs`
 - Atlas prompt-cache probe helpers and request shaping -> `tests/RoslynKit.Tests/AtlasPromptCacheProbeTests.cs`
-- JSON envelopes, help, and version output -> `tests/RoslynKit.Tests/EnvelopeTests.cs`
+- CLI output, help, version, and error shape -> `tests/RoslynKit.Tests/CliOutputTests.cs`
+- markdown renderer output -> `tests/RoslynKit.Tests/MarkdownFormatTests.cs`
 - symbol search behavior -> `tests/RoslynKit.Tests/SymbolsCommandTests.cs`
 - repo and fixture path helpers -> `tests/RoslynKit.Tests/TestPaths.cs`

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-06-30T21:21:11.0504322Z",
+  "generatedAtUtc": "2026-07-03T03:00:34.7628686Z",
   "testProjects": [
     {
       "name": "RoslynKit.AtlasPromptCacheProbe",
@@ -24,6 +24,10 @@
       "category": "test"
     },
     {
+      "path": "tests/RoslynKit.Tests/CliOutputTests.cs",
+      "category": "cli-output"
+    },
+    {
       "path": "tests/RoslynKit.Tests/CliParserTests.cs",
       "category": "parser"
     },
@@ -37,7 +41,11 @@
     },
     {
       "path": "tests/RoslynKit.Tests/EnvelopeTests.cs",
-      "category": "envelope"
+      "category": "test"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/MarkdownFormatTests.cs",
+      "category": "markdown-output"
     },
     {
       "path": "tests/RoslynKit.Tests/SymbolsCommandTests.cs",
@@ -46,6 +54,10 @@
     {
       "path": "tests/RoslynKit.Tests/TestPaths.cs",
       "category": "support"
+    },
+    {
+      "path": "tests/RoslynKit.Tests/TextFormatTests.cs",
+      "category": "test"
     },
     {
       "path": "tests/RoslynKit.Tests/XunitOutputProbeTests.cs",

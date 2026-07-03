@@ -9,7 +9,7 @@ Route command text from `Program.Main` through parse, help/version, and command 
 - command execution
 - command routing
 - help and version
-- usage and envelope
+- usage and error output
 - parser validation
 
 ## Entrypoints
@@ -42,7 +42,8 @@ Route command text from `Program.Main` through parse, help/version, and command 
 
 - `tests/RoslynKit.Tests/CliParserTests.cs`
 - `tests/RoslynKit.Tests/CommandExecutionTests.cs`
-- `tests/RoslynKit.Tests/EnvelopeTests.cs`
+- `tests/RoslynKit.Tests/CliOutputTests.cs`
+- `tests/RoslynKit.Tests/MarkdownFormatTests.cs`
 
 ## Build/test commands
 
@@ -53,8 +54,8 @@ Route command text from `Program.Main` through parse, help/version, and command 
 
 - Top-level `--version` rewrites to `version`.
 - One builtin registry owns command metadata.
-- Structured commands return JSON envelopes by default.
-- `--format text` stays line-oriented plain text; planned Markdown output is documented separately and should not silently change `text`.
+- Commands emit markdown-flavored text only (`MarkdownProjection`); there is no `--format` option and passing it is a usage error.
+- Failures write a two-line plain-text error (`error:` code, `message:` text) to stdout with exit codes 2 (usage), 130 (canceled), or 1 (internal); success is exit 0.
 - `definition`, `references`, and `implementations` validate `--symbol` and the position selector as mutually exclusive in `CliParser.ValidateSymbolOrPositionSelector`.
 
 ## Common pitfalls

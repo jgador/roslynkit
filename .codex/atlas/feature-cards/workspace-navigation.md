@@ -47,7 +47,7 @@ Load targets, resolve documents and positions, and answer Roslyn-backed navigati
 
 - `tests/RoslynKit.Tests/CommandExecutionTests.cs`
 - `tests/RoslynKit.Tests/SymbolsCommandTests.cs`
-- `tests/RoslynKit.Tests/EnvelopeTests.cs`
+- `tests/RoslynKit.Tests/CliOutputTests.cs`
 - `tests/RoslynKit.WorkspaceGraphDump/Program.cs`
 
 ## Build/test commands
@@ -78,4 +78,4 @@ Load targets, resolve documents and positions, and answer Roslyn-backed navigati
 
 ## Last verified
 
-`2026-07-02`
+`2026-07-03`

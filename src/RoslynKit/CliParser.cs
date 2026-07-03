@@ -44,7 +44,6 @@ public static class CliParser
         var options = ParseOptions(builtin, args, firstOptionIndex: 1);
         ValidateRequiredOptions(builtin, options);
         ValidateCommandOptions(builtin.Name, options);
-        ValidateFormatOption(builtin.Name, options);
 
         return new ParsedCommand(builtin.Name, builtin, options, HelpSubject: null);
     }
@@ -288,17 +287,6 @@ public static class CliParser
         }
     }
 
-    private static void ValidateFormatOption(string commandName, IReadOnlyDictionary<string, string> options)
-    {
-        if (options.TryGetValue("format", out var format)
-            && !string.Equals(format, OutputFormat.Json, StringComparison.Ordinal)
-            && !string.Equals(format, OutputFormat.Compact, StringComparison.Ordinal)
-            && !string.Equals(format, OutputFormat.Text, StringComparison.Ordinal))
-        {
-            throw new CliUsageException(commandName, $"Option '--format' must be '{OutputFormat.Json}', '{OutputFormat.Compact}', or '{OutputFormat.Text}'.");
-        }
-    }
-
     private static void ValidateDocumentSelector(string commandName, IReadOnlyDictionary<string, string> options)
     {
         var hasFile = options.ContainsKey("file");
@@ -350,10 +338,6 @@ public sealed record ParsedCommand(
 {
     public bool IsHelp => Name == "help";
 
-    public bool IsCompact => string.Equals(Optional("format"), OutputFormat.Compact, StringComparison.Ordinal);
-
-    public bool IsText => string.Equals(Optional("format"), OutputFormat.Text, StringComparison.Ordinal);
-
     public static ParsedCommand Help(BuiltinCommand? subject = null)
     {
         return new ParsedCommand("help", null, new Dictionary<string, string>(StringComparer.Ordinal), subject);
@@ -401,17 +385,7 @@ public sealed record ParsedCommand(
 }
 
 /// <summary>
-/// Names the supported <c>--format</c> output formats.
-/// </summary>
-public static class OutputFormat
-{
-    public const string Json = "json";
-    public const string Compact = "compact";
-    public const string Text = "text";
-}
-
-/// <summary>
-/// Represents a user-facing CLI usage failure that should be returned as a usage envelope.
+/// Represents a user-facing CLI usage failure reported as a plain-text error with a non-zero exit code.
 /// </summary>
 public sealed class CliUsageException : Exception
 {

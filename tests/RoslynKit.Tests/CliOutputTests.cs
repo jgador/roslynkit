@@ -1,0 +1,140 @@
+using System.Reflection;
+
+namespace RoslynKit.Tests;
+
+/// <summary>
+/// Verifies the top-level CLI output contracts: markdown help, plain-text version output, and the
+/// two-line plain-text error shape with non-zero exit codes.
+/// </summary>
+public sealed class CliOutputTests
+{
+    [Fact]
+    public async Task RunAsync_WritesMarkdownHelp_ForHelpCommand()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(["help"], TestContext.Current.CancellationToken);
+
+        var output = writer.ToString();
+
+        Assert.Equal(0, exitCode);
+        Assert.StartsWith("tool: roslynkit", output, StringComparison.Ordinal);
+        Assert.Contains("- command: `version` description: ", output, StringComparison.Ordinal);
+        Assert.Contains("- command: `symbols` description: ", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"data\"", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesCommandHelp_ForHelpWithCommandArgument()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(["help", "symbols"], TestContext.Current.CancellationToken);
+
+        var output = writer.ToString();
+
+        Assert.Equal(0, exitCode);
+        Assert.StartsWith("command: symbols\ndescription: ", output.Replace("\r\n", "\n", StringComparison.Ordinal), StringComparison.Ordinal);
+        Assert.Contains("usage: `roslynkit symbols ", output, StringComparison.Ordinal);
+        Assert.Contains("- option: `--query` short: `-q` value: text required: true description: ", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("--format", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesCommandHelp_ForTopLevelVersionHelp()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(["--version", "--help"], TestContext.Current.CancellationToken);
+
+        var output = writer.ToString();
+
+        Assert.Equal(0, exitCode);
+        Assert.StartsWith("command: version", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesPlainText_ForVersionCommand()
+    {
+        await AssertVersionOutputAsync("version");
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesPlainText_ForTopLevelVersionFlag()
+    {
+        await AssertVersionOutputAsync("--version");
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesPlainTextUsageError_ForInvalidSymbolKind()
+    {
+        var output = await AssertUsageErrorAsync(["symbols", "--target", "missing.slnx", "--query", "Foo", "--kind", "banana"]);
+
+        Assert.Contains("Unknown symbol kind 'banana'", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesPlainTextUsageError_ForVersionCommandWithUnexpectedPositional()
+    {
+        var output = await AssertUsageErrorAsync(["version", "extra"]);
+
+        Assert.Contains("Unexpected positional argument 'extra'", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesPlainTextUsageError_ForMissingDocumentSelector()
+    {
+        var output = await AssertUsageErrorAsync(["document-text", "--target", "missing.slnx"]);
+
+        Assert.Contains("Exactly one of '--file' or '--document-key' is required.", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesPlainTextUsageError_ForDocumentTextLegacyRangeOption()
+    {
+        var output = await AssertUsageErrorAsync(["document-text", "--target", "missing.slnx", "--file", "Program.cs", "--start-line", "999"]);
+
+        Assert.Contains("Option '--start-line' is no longer supported.", output, StringComparison.Ordinal);
+        Assert.Contains("reads the entire resolved document only", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesPlainTextUsageError_ForFormatOption()
+    {
+        var output = await AssertUsageErrorAsync(["symbols", "--target", "missing.slnx", "--query", "Foo", "--format", "text"]);
+
+        Assert.Contains("Unknown option '--format' for command 'symbols'.", output, StringComparison.Ordinal);
+    }
+
+    private static async Task<string> AssertUsageErrorAsync(string[] args)
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(args, TestContext.Current.CancellationToken);
+
+        var output = writer.ToString();
+        var lines = output.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd('\n').Split('\n');
+
+        Assert.Equal(2, exitCode);
+        Assert.Equal(2, lines.Length);
+        Assert.Equal("error: usage", lines[0]);
+        Assert.StartsWith("message: ", lines[1], StringComparison.Ordinal);
+        Assert.DoesNotContain("{", output, StringComparison.Ordinal);
+        return output;
+    }
+
+    private static async Task AssertVersionOutputAsync(params string[] args)
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(args, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(GetExpectedVersionOutput() + Environment.NewLine, writer.ToString());
+    }
+
+    private static string GetExpectedVersionOutput()
+    {
+        var assembly = typeof(CliApplication).Assembly;
+        var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        var version = !string.IsNullOrWhiteSpace(informationalVersion)
+            ? informationalVersion
+            : assembly.GetName().Version?.ToString() ?? "unknown";
+        return $"roslynkit version {version}";
+    }
+}
