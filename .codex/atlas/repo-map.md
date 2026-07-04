@@ -56,7 +56,4 @@
 - `Visual Studio 18/`
 - `bin/`
 - `obj/`
-- `.synapse/graph.json`
-- `.synapse/memories.md`
-- `.synapse/synapse-memory.json`
 - `*.nupkg`

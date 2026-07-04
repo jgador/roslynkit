@@ -26,7 +26,7 @@ RoslynKit is a .NET 10 command-line tool. Production code lives under `src/Rosly
 
 ## Agent Workflow
 
-Use Repository Synapse first when available, then verify all conclusions against current files, tests, and command output. Treat Synapse as recall only, not source of truth.
+Verify conclusions against current files, tests, docs, and command output.
 
 ### RoslynKit Default Semantic Inspection
 
@@ -126,6 +126,6 @@ Recent history uses short imperative subjects and conventional prefixes such as 
 
 ## Security & Configuration Tips
 
-Do not commit secrets, local credentials, generated caches, package outputs, or accidental binaries. Keep only `.synapse/ignored.json` tracked under `.synapse/`; generated Synapse files such as `graph.json`, `memories.md`, and `synapse-memory.json` must remain local-only.
+Do not commit secrets, local credentials, generated caches, package outputs, or accidental binaries.
 
 Treat every repository listed in `docs/local-repository-reference.md` as a strict read-only reference while working in RoslynKit. Never suggest making changes in any of those reference repositories as part of a RoslynKit task, even when issues, gaps, or possible improvements are noticed there. Keep all recommended changes scoped to RoslynKit unless the user explicitly changes the task to one of those repositories.

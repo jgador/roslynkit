@@ -148,12 +148,6 @@
       "category": "other"
     },
     {
-      "path": ".synapse/ignored.json",
-      "extension": ".json",
-      "area": ".synapse",
-      "category": "config"
-    },
-    {
       "path": ".vscode/settings.json",
       "extension": ".json",
       "area": ".vscode",

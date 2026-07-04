@@ -52,10 +52,6 @@ function Should-IgnorePath {
         return $true
     }
 
-    if ($path -match '^\.synapse/(graph\.json|memories\.md|synapse-memory\.json)$') {
-        return $true
-    }
-
     if ($path -match '^\.codex/atlas/indexes/.*\.json$') {
         return $true
     }
