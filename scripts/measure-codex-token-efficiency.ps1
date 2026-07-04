@@ -76,6 +76,33 @@ function Test-RoslynKitExecutable {
     return $null -ne (Get-Command $CommandOrPath -ErrorAction SilentlyContinue)
 }
 
+function ConvertTo-BenchmarkPromptPath {
+    param(
+        [string] $Path,
+        [string] $RepoRoot
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $Path
+    }
+
+    $normalizedPath = $Path.Replace("/", "\")
+    $normalizedRepoRoot = $RepoRoot.Replace("/", "\").TrimEnd("\")
+    if ($normalizedPath.StartsWith($normalizedRepoRoot + "\", [StringComparison]::OrdinalIgnoreCase)) {
+        $relative = $normalizedPath.Substring($normalizedRepoRoot.Length + 1)
+        return ".\$relative"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
+        $normalizedUserProfile = $env:USERPROFILE.Replace("/", "\").TrimEnd("\")
+        if ($normalizedPath.StartsWith($normalizedUserProfile + "\", [StringComparison]::OrdinalIgnoreCase)) {
+            return ('${env:USERPROFILE}' + $normalizedPath.Substring($normalizedUserProfile.Length))
+        }
+    }
+
+    return $Path
+}
+
 function Get-CodexHome {
     if (-not [string]::IsNullOrWhiteSpace($env:CODEX_HOME)) {
         return $env:CODEX_HOME
@@ -236,6 +263,89 @@ function Get-CodexShellCommands {
     return @($eventCommands)
 }
 
+function Get-ForbiddenExternalCommandViolations {
+    param([string] $Command)
+
+    $violations = New-Object System.Collections.Generic.List[string]
+    if ([string]::IsNullOrWhiteSpace($Command)) {
+        return @($violations)
+    }
+
+    $normalizedCommand = $Command.Replace("/", "\")
+    $repoLocalMemoryDirectoryPattern = ('\.' + 'syn' + 'apse(\\|$|[\s"`''])')
+    $repoLocalMemoryToolPattern = ('(?i)(^|[\s;&|"`''])' + 'syn' + 'apse' + '([\s;&|"`'']|$)')
+    $memoryOrSessionPattern = '(?i)(\.codex\\memories(\\|$|[\s"`''])|\\memories\\MEMORY\.md|(^|[\\\s"`''])MEMORY\.md([\\\s"`'']|$)|rollout_summaries|\.codex\\sessions(\\|$|[\s"`''])|\.codex\\archived_sessions(\\|$|[\s"`''])|(^|[\\\s"`''])history\.jsonl([\\\s"`'']|$)|rollout-[^\\\s"`'']+\.jsonl)'
+    $atlasPattern = '(?i)(\.codex\\atlas(\\|$|[\s"`''])|tests\\RoslynKit\.AtlasPromptCacheProbe|RoslynKit\.AtlasPromptCacheProbe|(^|[\s;&|"`''])(atlas-router|atlas-csharp-mapper)([\s;&|"`'']|$))'
+    $subagentPattern = '(?i)(^|[\s;&|"`''])(scout|explorer|worker)([\s;&|"`'']|$)'
+
+    if ($normalizedCommand -match $memoryOrSessionPattern) {
+        $violations.Add("used forbidden memory/session artifact: $Command")
+    }
+
+    if ($normalizedCommand -match $repoLocalMemoryDirectoryPattern -or $Command -match $repoLocalMemoryToolPattern) {
+        $violations.Add("used forbidden repo-local memory/cache artifact or tool: $Command")
+    }
+
+    if ($normalizedCommand -match $atlasPattern) {
+        $violations.Add("used forbidden Atlas artifact/tool: $Command")
+    }
+
+    if ($Command -match $subagentPattern) {
+        $violations.Add("used forbidden subagent/tool: $Command")
+    }
+
+    return @($violations)
+}
+
+function Test-ForbiddenExternalToolName {
+    param([string] $Name)
+
+    if ([string]::IsNullOrWhiteSpace($Name)) {
+        return $false
+    }
+
+    $repoLocalMemoryToolName = 'syn' + 'apse'
+    return $Name -match '(?i)(^|[._:-])(scout|explorer|worker)($|[._:-])|atlas-router|atlas-csharp-mapper' -or
+        $Name -match "(?i)(^|[._:-])$repoLocalMemoryToolName($|[._:-])"
+}
+
+function Get-ForbiddenExternalToolViolations {
+    param([string[]] $Paths)
+
+    $violations = New-Object System.Collections.Generic.List[string]
+    foreach ($path in $Paths) {
+        foreach ($record in Read-JsonLines -Path $path) {
+            if ($record.type -eq "response_item" -and
+                $null -ne $record.payload -and
+                $record.payload.type -eq "function_call") {
+                $toolName = [string] $record.payload.name
+                if (Test-ForbiddenExternalToolName -Name $toolName) {
+                    $violations.Add("used forbidden external tool: $toolName")
+                }
+
+                if (@("shell_command", "exec_command", "shell") -notcontains $toolName) {
+                    $arguments = [string] $record.payload.arguments
+                    $repoLocalMemoryToolName = 'syn' + 'apse'
+                    if ($arguments -match '(?i)\b(scout|explorer|worker|atlas-router|atlas-csharp-mapper)\b' -or
+                        $arguments -match "(?i)\b$repoLocalMemoryToolName\b") {
+                        $violations.Add("used forbidden external tool arguments: $toolName")
+                    }
+                }
+            }
+
+            if (($record.type -eq "item.started" -or $record.type -eq "item.completed") -and
+                $null -ne $record.item) {
+                $itemName = [string] $record.item.name
+                if (Test-ForbiddenExternalToolName -Name $itemName) {
+                    $violations.Add("used forbidden external tool: $itemName")
+                }
+            }
+        }
+    }
+
+    return @($violations | Select-Object -Unique)
+}
+
 function Get-RoslynKitSemanticCommandFailures {
     param([string[]] $Paths)
 
@@ -270,7 +380,8 @@ function Get-RoslynKitSemanticCommandFailures {
                 $failed = $true
             }
 
-            if ($output -match "(?i)(UnauthorizedAccessException|RemoteInvocationException|Access to the path .* is denied|MSBuild workspace load failed|error:)") {
+            if ($output -match "(?i)(UnauthorizedAccessException|RemoteInvocationException|Access to the path .* is denied|MSBuild workspace load failed)" -or
+                $output -match "(?im)^error:\s") {
                 $failed = $true
             }
 
@@ -357,6 +468,8 @@ function Get-CommandViolations {
     $usesRoslynKit = $false
 
     foreach ($command in $Commands) {
+        $violations.AddRange([string[]] @(Get-ForbiddenExternalCommandViolations -Command $command))
+
         if ($command -match "(?i)(roslynkit-dev|\.roslynkit|roslynkit\.exe|(^|[\s;&|])roslynkit(\s|$)|`$roslynkit)") {
             $usesRoslynKit = $true
         }
@@ -403,6 +516,10 @@ Read-only token benchmark run.
 Goal: In this repository, explain what FixtureApp.Consumer.Run returns and identify which concrete type implements FixtureApp.IMessageSource.
 Constraints:
 - Do not edit files.
+- Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
+- Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
+- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use subagents such as scout, explorer, or worker.
 - Do not use RoslynKit, roslynkit-dev, dotnet run, dotnet test, Atlas scripts, subagents, or web search.
 - Use only native shell/text inspection such as rg, Get-Content, Select-String, and ordinary PowerShell.
 - Stop as soon as you have enough evidence.
@@ -414,7 +531,11 @@ Read-only token benchmark run.
 Goal: In this repository, explain what FixtureApp.Consumer.Run returns and identify which concrete type implements FixtureApp.IMessageSource.
 Constraints:
 - Do not edit files.
-- Before C# inspection, read the repo-local RoslynKit dev skill once: {ROSLYNKIT_SKILL_PATH}
+- Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
+- Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
+- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use subagents such as scout, explorer, or worker.
+- Before C# inspection, read the repo-local RoslynKit dev skill once using exactly this PowerShell command: Get-Content -Raw -LiteralPath '{ROSLYNKIT_SKILL_PATH}'
 - Follow that skill's command and token-discipline guidance.
 - Apart from that one skill read, do not use rg, Get-Content, Select-String, cat, type, grep, more, [System.IO.File]::ReadAllText, [System.IO.File]::ReadAllLines, Atlas scripts, subagents, or web search.
 - Do not read AGENTS.md, memory files, docs, or any other skill file.
@@ -432,6 +553,10 @@ Read-only token benchmark run.
 Goal: Identify where RoslynKit dispatches the symbol-source command from RoslynCommandExecutor.ExecuteAsync and summarize the smallest relevant flow.
 Constraints:
 - Do not edit files.
+- Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
+- Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
+- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use subagents such as scout, explorer, or worker.
 - Do not use RoslynKit, roslynkit-dev, dotnet run, dotnet test, Atlas scripts, subagents, or web search.
 - Use only native shell/text inspection such as rg, Get-Content, Select-String, and ordinary PowerShell.
 - Stop as soon as you have enough evidence.
@@ -443,7 +568,11 @@ Read-only token benchmark run.
 Goal: Identify where RoslynKit dispatches the symbol-source command from RoslynCommandExecutor.ExecuteAsync and summarize the smallest relevant flow.
 Constraints:
 - Do not edit files.
-- Before C# inspection, read the repo-local RoslynKit dev skill once: {ROSLYNKIT_SKILL_PATH}
+- Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
+- Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
+- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use subagents such as scout, explorer, or worker.
+- Before C# inspection, read the repo-local RoslynKit dev skill once using exactly this PowerShell command: Get-Content -Raw -LiteralPath '{ROSLYNKIT_SKILL_PATH}'
 - Follow that skill's command and token-discipline guidance.
 - Apart from that one skill read, do not use rg, Get-Content, Select-String, cat, type, grep, more, [System.IO.File]::ReadAllText, [System.IO.File]::ReadAllLines, Atlas scripts, subagents, or web search.
 - Do not read AGENTS.md, memory files, docs, or any other skill file.
@@ -460,6 +589,10 @@ Read-only token benchmark run.
 Goal: Find callers or references of RoslynKit.PositionResolver.GetPositionAsync and report the smallest relevant evidence.
 Constraints:
 - Do not edit files.
+- Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
+- Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
+- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use subagents such as scout, explorer, or worker.
 - Do not use RoslynKit, roslynkit-dev, dotnet run, dotnet test, Atlas scripts, subagents, or web search.
 - Use only native shell/text inspection such as rg, Get-Content, Select-String, and ordinary PowerShell.
 - Stop as soon as you have enough evidence.
@@ -471,7 +604,11 @@ Read-only token benchmark run.
 Goal: Find callers or references of RoslynKit.PositionResolver.GetPositionAsync and report the smallest relevant evidence.
 Constraints:
 - Do not edit files.
-- Before C# inspection, read the repo-local RoslynKit dev skill once: {ROSLYNKIT_SKILL_PATH}
+- Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
+- Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
+- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use subagents such as scout, explorer, or worker.
+- Before C# inspection, read the repo-local RoslynKit dev skill once using exactly this PowerShell command: Get-Content -Raw -LiteralPath '{ROSLYNKIT_SKILL_PATH}'
 - Follow that skill's command and token-discipline guidance.
 - Apart from that one skill read, do not use rg, Get-Content, Select-String, cat, type, grep, more, [System.IO.File]::ReadAllText, [System.IO.File]::ReadAllLines, Atlas scripts, subagents, or web search.
 - Do not read AGENTS.md, memory files, docs, or any other skill file.
@@ -488,6 +625,10 @@ Read-only token benchmark run.
 Goal: Trace the full flow for `references --symbol RoslynKit.PositionResolver.GetPositionAsync`, from command registration/parsing through RoslynCommandExecutor.ReferencesAsync, symbol/document resolution, markdown rendering, and relevant test coverage.
 Constraints:
 - Do not edit files.
+- Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
+- Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
+- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use subagents such as scout, explorer, or worker.
 - Do not use RoslynKit, roslynkit-dev, dotnet run, dotnet test, Atlas scripts, subagents, or web search.
 - Use only native PowerShell/text inspection such as Get-ChildItem, Select-String, Get-Content, and ordinary PowerShell.
 - Prefer narrow line ranges and stop as soon as you have enough evidence.
@@ -499,7 +640,11 @@ Read-only token benchmark run.
 Goal: Trace the full flow for `references --symbol RoslynKit.PositionResolver.GetPositionAsync`, from command registration/parsing through RoslynCommandExecutor.ReferencesAsync, symbol/document resolution, markdown rendering, and relevant test coverage.
 Constraints:
 - Do not edit files.
-- Before C# inspection, read the repo-local RoslynKit dev skill once: {ROSLYNKIT_SKILL_PATH}
+- Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
+- Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
+- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use subagents such as scout, explorer, or worker.
+- Before C# inspection, read the repo-local RoslynKit dev skill once using exactly this PowerShell command: Get-Content -Raw -LiteralPath '{ROSLYNKIT_SKILL_PATH}'
 - Follow that skill's command and token-discipline guidance.
 - Apart from that one skill read, do not use rg, Get-Content, Select-String, cat, type, grep, more, [System.IO.File]::ReadAllText, [System.IO.File]::ReadAllLines, Atlas scripts, subagents, or web search.
 - Do not read AGENTS.md, memory files, docs, or any other skill file.
@@ -624,9 +769,10 @@ function Invoke-CodexBenchmarkRun {
     $commands = @(Get-CodexShellCommands -Paths $parsePaths | Select-Object -Unique)
     $commands | Set-Content -LiteralPath $commandsPath -Encoding UTF8
     $violations = @(Get-CommandViolations -Arm $Arm -Commands $commands -RoslynKitSkillPath $RoslynKitSkillPath)
+    $externalToolViolations = @(Get-ForbiddenExternalToolViolations -Paths $parsePaths)
     $semanticFailures = @(Get-RoslynKitSemanticCommandFailures -Paths $parsePaths)
     $answerFailures = @(Get-AnswerFailureSignals -AnswerPath $answerPath)
-    $issues = @($violations + $semanticFailures + $answerFailures)
+    $issues = @($violations + $externalToolViolations + $semanticFailures + $answerFailures)
 
     $inputTokens = $null
     $cachedInputTokens = $null
@@ -842,7 +988,10 @@ if (-not $DryRun -and -not (Test-RoslynKitExecutable -CommandOrPath $resolvedRos
     throw "RoslynKit dev tool was not found at '$resolvedRoslynKitPath'. Pass -RoslynKitPath or install roslynkit-dev."
 }
 
-$cases = @(Get-BenchmarkCases -RepoRoot $repoRoot -RoslynKitPath $resolvedRoslynKitPath -RoslynKitSkillPath $resolvedRoslynKitSkillPath)
+$promptRoslynKitPath = ConvertTo-BenchmarkPromptPath -Path $resolvedRoslynKitPath -RepoRoot $repoRoot
+$promptRoslynKitSkillPath = ConvertTo-BenchmarkPromptPath -Path $resolvedRoslynKitSkillPath -RepoRoot $repoRoot
+
+$cases = @(Get-BenchmarkCases -RepoRoot $repoRoot -RoslynKitPath $promptRoslynKitPath -RoslynKitSkillPath $promptRoslynKitSkillPath)
 if ($BenchmarkSet -ne "all") {
     $cases = @($cases | Where-Object { $_.Set -eq $BenchmarkSet })
 }
@@ -858,8 +1007,8 @@ if ($cases.Count -eq 0) {
 if ($DryRun) {
     Write-Host "Dry run only. No Codex sessions will be started."
     Write-Host "Repo: $repoRoot"
-    Write-Host "RoslynKit: $resolvedRoslynKitPath"
-    Write-Host "RoslynKit skill: $resolvedRoslynKitSkillPath"
+    Write-Host "RoslynKit: $promptRoslynKitPath"
+    Write-Host "RoslynKit skill: $promptRoslynKitSkillPath"
     foreach ($trial in 1..$Trials) {
         foreach ($case in $cases) {
             foreach ($arm in Get-RunOrder -Trial $trial) {

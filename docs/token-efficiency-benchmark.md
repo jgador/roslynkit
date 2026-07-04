@@ -6,10 +6,10 @@ The benchmark uses actual Codex accounting. Each trial starts paired `codex -m g
 
 ## What It Compares
 
-- Baseline arm: `rg`, `Get-Content`, `Select-String`, and native PowerShell only.
+- Baseline arm: native repo inspection with `rg`, `Get-Content`, `Select-String`, and ordinary PowerShell only.
 - RoslynKit arm: the side-by-side `roslynkit-dev` executable plus one required read of `.agents/skills/roslynkit-dev/SKILL.md` before C# inspection.
 
-Both arms run under the same Codex full-access mode so MSBuild/Roslyn workspace loading can create temporary files if needed. The prompts still forbid repository edits. Benchmark artifacts are written under ignored `artifacts/token-efficiency/<timestamp>/`.
+Both arms run under the same Codex full-access mode so MSBuild/Roslyn workspace loading can create temporary files if needed. The prompts still forbid repository edits. Both arms also forbid Codex memory, prior session artifacts, repo-local memory/cache tools, Atlas files/tools/cache, subagents, and web search. Benchmark artifacts are written under ignored `artifacts/token-efficiency/<timestamp>/`.
 
 ## Run
 
@@ -80,6 +80,10 @@ Treat a run as invalid when:
 - `codex exec` exits non-zero.
 - no token accounting is found.
 - the baseline arm uses RoslynKit.
+- either arm reads Codex memory or prior-session artifacts such as `.codex/memories`, `.codex/sessions`, `.codex/archived_sessions`, `history.jsonl`, `MEMORY.md`, `rollout_summaries`, or `rollout-*.jsonl`.
+- either arm uses repo-local memory/cache tools or generated repo-local memory/cache directories.
+- either arm uses Atlas files, tools, or caches such as `.codex/atlas`, `tests/RoslynKit.AtlasPromptCacheProbe`, `atlas-router`, `atlas-csharp-mapper`, or Atlas scripts.
+- either arm uses subagents such as `scout`, `explorer`, or `worker`.
 - the RoslynKit arm uses text/source inspection commands such as `rg`, `Get-Content`, or `Select-String`, except for the exact `.agents/skills/roslynkit-dev/SKILL.md` read required by the prompt.
 - the RoslynKit arm does not issue a RoslynKit command.
 - a RoslynKit semantic command exits non-zero or reports a workspace/remote invocation error.
