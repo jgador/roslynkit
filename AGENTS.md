@@ -98,6 +98,7 @@ Follow the existing style in touched files. Prefer clear names and structure ove
 
 Navigation comments should help RoslynKit documentation-enabled navigation output guide the next hop. Add or refine public-method summaries only for entrypoints, orchestration points, cross-boundary adapters, Roslyn workspace/symbol/position resolution boundaries, or helpers whose name alone does not explain when to jump there. Keep summaries architectural and specific; avoid generic comments such as "Executes the method" and avoid documenting every public member for coverage.
 
+- Keep C# files under 1000 lines of code when practical. This is guidance, not a hard rule: when a `.cs` file grows beyond 1000 lines, consider whether it mixes concerns or has a natural refactor seam before splitting it.
 - Preserve the CLI-first architecture: no MCP server, no LSP client, no background daemon, and no editor-specific protocol coupling.
 - Prefer direct Roslyn/MSBuild APIs over shelling out to editors, language servers, or IDEs.
 - Prioritize read-only Roslyn intelligence: inspect, navigate, understand, and verify C# code before edit-producing workflows.

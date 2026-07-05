@@ -22,16 +22,16 @@ Resident architecture context for first-pass navigation. Atlas stores durable ro
 
 ## Domains
 
-- CLI routing: `Program.cs`, `CliApplication.cs`, `CliParser.cs`, `BuiltinCommandRegistry.cs`, `RoslynCommandExecutor.cs`; start symbols `Program.Main`, `CliApplication.RunAsync`, `CliParser.Parse`, `RoslynCommandExecutor.ExecuteAsync`; tests `CliParserTests.cs`, `CliOutputTests.cs`, `CommandExecutionTests.cs`, `MarkdownFormatTests.cs`.
-- Workspace/navigation: `RoslynCommandExecutor.cs`, `RoslynWorkspaceLoader.cs`, `PositionResolver.cs`, `RoslynSymbolResolver.cs`, `RoslynDocumentFilters.cs`, `RoslynSymbolSearch.cs`, `RoslynSignatureHelpService.cs`; start symbols `RoslynWorkspaceLoader.LoadAsync`, `PositionResolver.GetPositionAsync`, `RoslynSymbolResolver.ResolveAsync`, `RoslynSymbolSearch.EnumerateSourceSymbols`; tests `CommandExecutionTests.cs`, `SymbolsCommandTests.cs`, `CliOutputTests.cs`.
-- Markdown output: `MarkdownProjection.cs`, result model types, `docs/markdown-output-format.md`; tests `MarkdownFormatTests.cs`, `CliOutputTests.cs`.
+- CLI routing: `Program.cs`, `CliApplication.cs`, `CliParser.cs`, `BuiltinCommandRegistry.cs`, `RoslynCommandExecutor.cs`; start symbols `Program.Main`, `CliApplication.RunAsync`, `CliParser.Parse`, `RoslynCommandExecutor.ExecuteAsync`; tests `CliParserTests.cs`, `CliOutputTests.cs`, `CommandExecution/`, `MarkdownFormatTests.cs`.
+- Workspace/navigation: `RoslynCommandExecutor.cs`, `RoslynWorkspaceLoader.cs`, `PositionResolver.cs`, `RoslynSymbolResolver.cs`, `RoslynDocumentFilters.cs`, `RoslynSymbolSearch.cs`, `RoslynSignatureHelpService.cs`; start symbols `RoslynWorkspaceLoader.LoadAsync`, `PositionResolver.GetPositionAsync`, `RoslynSymbolResolver.ResolveAsync`, `RoslynSymbolSearch.EnumerateSourceSymbols`; tests `CommandExecution/`, `SymbolsCommandTests.cs`, `CliOutputTests.cs`.
+- Markdown output: `MarkdownProjection.cs`, result model types under `Output/`, `docs/markdown-output-format.md`; tests `MarkdownFormatTests.cs`, `CliOutputTests.cs`.
 - Tooling/packaging: `RoslynKit.csproj`, `scripts/prepare-roslynkit-package.ps1`, `scripts/install-roslynkit-dev.ps1`, `scripts/RoslynKit.Packaging.ps1`, `docs/dev-install.md`, `docs/dotnet-tool-release.md`, `docs/skill-maintenance.md`; tests usually start with `CliOutputTests.cs` plus build/pack smoke commands.
 - Agent/navigation policy: `AGENTS.md`, `.agents/skills/roslynkit*/SKILL.md`, `.codex/agents/*.toml`, this map.
 
 ## Test Routing
 
 - Parser and option validation -> `tests/RoslynKit.Tests/CliParserTests.cs`
-- Command execution and Roslyn navigation flows -> `tests/RoslynKit.Tests/CommandExecutionTests.cs`
+- Command execution and Roslyn navigation flows -> `tests/RoslynKit.Tests/CommandExecution/`
 - Help/version/error output -> `tests/RoslynKit.Tests/CliOutputTests.cs`
 - Markdown rendering contract -> `tests/RoslynKit.Tests/MarkdownFormatTests.cs`
 - Symbol search and document-symbol behavior -> `tests/RoslynKit.Tests/SymbolsCommandTests.cs`
