@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-07-03T03:00:34.7628686Z",
+  "generatedAtUtc": "2026-07-05T07:26:29.3926205Z",
   "repoRoot": "C:\\repo\\GitHub\\roslynkit",
   "files": [
     {
@@ -50,12 +50,6 @@
       "extension": ".toml",
       "area": "codex",
       "category": "agent"
-    },
-    {
-      "path": ".codex/atlas/feature-cards/atlas-prompt-caching.md",
-      "extension": ".md",
-      "area": "atlas",
-      "category": "atlas"
     },
     {
       "path": ".codex/atlas/feature-cards/cli-routing.md",
@@ -220,6 +214,12 @@
       "category": "doc"
     },
     {
+      "path": "docs/token-efficiency-benchmark.md",
+      "extension": ".md",
+      "area": "docs",
+      "category": "doc"
+    },
+    {
       "path": "global.json",
       "extension": ".json",
       "area": "global.json",
@@ -245,6 +245,12 @@
     },
     {
       "path": "scripts/install-roslynkit-dev.ps1",
+      "extension": ".ps1",
+      "area": "scripts",
+      "category": "script"
+    },
+    {
+      "path": "scripts/measure-codex-token-efficiency.ps1",
       "extension": ".ps1",
       "area": "scripts",
       "category": "script"
@@ -281,18 +287,6 @@
     },
     {
       "path": "src/RoslynKit/CliParser.cs",
-      "extension": ".cs",
-      "area": "src",
-      "category": "source"
-    },
-    {
-      "path": "src/RoslynKit/CompactModels.cs",
-      "extension": ".cs",
-      "area": "src",
-      "category": "source"
-    },
-    {
-      "path": "src/RoslynKit/CompactProjection.cs",
       "extension": ".cs",
       "area": "src",
       "category": "source"
@@ -370,12 +364,6 @@
       "category": "source"
     },
     {
-      "path": "src/RoslynKit/TextProjection.cs",
-      "extension": ".cs",
-      "area": "src",
-      "category": "source"
-    },
-    {
       "path": "tests/FixtureWorkspace/App/.editorconfig",
       "extension": ".editorconfig",
       "area": "tests",
@@ -400,30 +388,6 @@
       "category": "fixture"
     },
     {
-      "path": "tests/RoslynKit.AtlasPromptCacheProbe/AtlasPromptProbe.cs",
-      "extension": ".cs",
-      "area": "tests",
-      "category": "other"
-    },
-    {
-      "path": "tests/RoslynKit.AtlasPromptCacheProbe/Program.cs",
-      "extension": ".cs",
-      "area": "tests",
-      "category": "other"
-    },
-    {
-      "path": "tests/RoslynKit.AtlasPromptCacheProbe/RoslynKit.AtlasPromptCacheProbe.csproj",
-      "extension": ".csproj",
-      "area": "tests",
-      "category": "config"
-    },
-    {
-      "path": "tests/RoslynKit.Tests/AtlasPromptCacheProbeTests.cs",
-      "extension": ".cs",
-      "area": "tests",
-      "category": "test"
-    },
-    {
       "path": "tests/RoslynKit.Tests/CliOutputTests.cs",
       "extension": ".cs",
       "area": "tests",
@@ -437,18 +401,6 @@
     },
     {
       "path": "tests/RoslynKit.Tests/CommandExecutionTests.cs",
-      "extension": ".cs",
-      "area": "tests",
-      "category": "test"
-    },
-    {
-      "path": "tests/RoslynKit.Tests/CompactFormatTests.cs",
-      "extension": ".cs",
-      "area": "tests",
-      "category": "test"
-    },
-    {
-      "path": "tests/RoslynKit.Tests/EnvelopeTests.cs",
       "extension": ".cs",
       "area": "tests",
       "category": "test"
@@ -479,12 +431,6 @@
     },
     {
       "path": "tests/RoslynKit.Tests/TestPaths.cs",
-      "extension": ".cs",
-      "area": "tests",
-      "category": "test"
-    },
-    {
-      "path": "tests/RoslynKit.Tests/TextFormatTests.cs",
       "extension": ".cs",
       "area": "tests",
       "category": "test"

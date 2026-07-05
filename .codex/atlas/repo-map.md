@@ -5,7 +5,7 @@
 - Solution: `RoslynKit.slnx`
 - Source project: `src/RoslynKit/RoslynKit.csproj`
 - Test project: `tests/RoslynKit.Tests/RoslynKit.Tests.csproj`
-- Test-side utilities: `tests/RoslynKit.WorkspaceGraphDump/RoslynKit.WorkspaceGraphDump.csproj` and `tests/RoslynKit.AtlasPromptCacheProbe/RoslynKit.AtlasPromptCacheProbe.csproj`
+- Test-side utility: `tests/RoslynKit.WorkspaceGraphDump/RoslynKit.WorkspaceGraphDump.csproj`
 - Docs: `docs/`
 - Scripts: `scripts/`
 - Agent assets: `.agents/skills/`, `.codex/agents/`, `.codex/atlas/`
@@ -26,7 +26,6 @@
 - Test: `dotnet test .\RoslynKit.slnx`
 - Run locally: `dotnet run --project .\src\RoslynKit -- help`
 - Pack: `dotnet pack .\src\RoslynKit\RoslynKit.csproj`
-- Atlas prompt-cache probe: `dotnet run --project .\tests\RoslynKit.AtlasPromptCacheProbe`
 
 ## Conventions
 
@@ -46,7 +45,6 @@
 - markdown output rendering and result models
 - packaging, install, and release flow
 - agent and skill routing
-- Atlas prompt caching and repeated route probes
 
 ## Ignore First
 

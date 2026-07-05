@@ -3,7 +3,6 @@
     <Project Path="src/RoslynKit/RoslynKit.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/RoslynKit.AtlasPromptCacheProbe/RoslynKit.AtlasPromptCacheProbe.csproj" />
     <Project Path="tests/RoslynKit.Tests/RoslynKit.Tests.csproj" />
     <Project Path="tests/RoslynKit.WorkspaceGraphDump/RoslynKit.WorkspaceGraphDump.csproj" />
   </Folder>

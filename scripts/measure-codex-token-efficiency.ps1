@@ -275,7 +275,7 @@ function Get-ForbiddenExternalCommandViolations {
     $repoLocalMemoryDirectoryPattern = ('\.' + 'syn' + 'apse(\\|$|[\s"`''])')
     $repoLocalMemoryToolPattern = ('(?i)(^|[\s;&|"`''])' + 'syn' + 'apse' + '([\s;&|"`'']|$)')
     $memoryOrSessionPattern = '(?i)(\.codex\\memories(\\|$|[\s"`''])|\\memories\\MEMORY\.md|(^|[\\\s"`''])MEMORY\.md([\\\s"`'']|$)|rollout_summaries|\.codex\\sessions(\\|$|[\s"`''])|\.codex\\archived_sessions(\\|$|[\s"`''])|(^|[\\\s"`''])history\.jsonl([\\\s"`'']|$)|rollout-[^\\\s"`'']+\.jsonl)'
-    $atlasPattern = '(?i)(\.codex\\atlas(\\|$|[\s"`''])|tests\\RoslynKit\.AtlasPromptCacheProbe|RoslynKit\.AtlasPromptCacheProbe|(^|[\s;&|"`''])(atlas-router|atlas-csharp-mapper)([\s;&|"`'']|$))'
+    $atlasPattern = '(?i)(\.codex\\atlas(\\|$|[\s"`''])|(^|[\s;&|"`''])(atlas-router|atlas-csharp-mapper)([\s;&|"`'']|$))'
     $subagentPattern = '(?i)(^|[\s;&|"`''])(scout|explorer|worker)([\s;&|"`'']|$)'
 
     if ($normalizedCommand -match $memoryOrSessionPattern) {
@@ -546,7 +546,7 @@ Constraints:
 - Do not edit files.
 - Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
 - Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
-- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use Atlas files or tools: .codex\atlas, atlas-router, atlas-csharp-mapper, or Atlas scripts.
 - Do not use subagents such as scout, explorer, or worker.
 - Do not use RoslynKit, roslynkit-dev, dotnet run, dotnet test, Atlas scripts, subagents, or web search.
 - Use only native shell/text inspection such as rg, Get-Content, Select-String, and ordinary PowerShell.
@@ -561,7 +561,7 @@ Constraints:
 - Do not edit files.
 - Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
 - Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
-- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use Atlas files or tools: .codex\atlas, atlas-router, atlas-csharp-mapper, or Atlas scripts.
 - Do not use subagents such as scout, explorer, or worker.
 - Before C# inspection, read the repo-local RoslynKit dev skill once using exactly this PowerShell command: Get-Content -Raw -LiteralPath '{ROSLYNKIT_SKILL_PATH}'
 - Follow that skill's command and token-discipline guidance.
@@ -583,7 +583,7 @@ Constraints:
 - Do not edit files.
 - Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
 - Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
-- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use Atlas files or tools: .codex\atlas, atlas-router, atlas-csharp-mapper, or Atlas scripts.
 - Do not use subagents such as scout, explorer, or worker.
 - Do not use RoslynKit, roslynkit-dev, dotnet run, dotnet test, Atlas scripts, subagents, or web search.
 - Use only native shell/text inspection such as rg, Get-Content, Select-String, and ordinary PowerShell.
@@ -598,7 +598,7 @@ Constraints:
 - Do not edit files.
 - Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
 - Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
-- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use Atlas files or tools: .codex\atlas, atlas-router, atlas-csharp-mapper, or Atlas scripts.
 - Do not use subagents such as scout, explorer, or worker.
 - Before C# inspection, read the repo-local RoslynKit dev skill once using exactly this PowerShell command: Get-Content -Raw -LiteralPath '{ROSLYNKIT_SKILL_PATH}'
 - Follow that skill's command and token-discipline guidance.
@@ -619,7 +619,7 @@ Constraints:
 - Do not edit files.
 - Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
 - Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
-- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use Atlas files or tools: .codex\atlas, atlas-router, atlas-csharp-mapper, or Atlas scripts.
 - Do not use subagents such as scout, explorer, or worker.
 - Do not use RoslynKit, roslynkit-dev, dotnet run, dotnet test, Atlas scripts, subagents, or web search.
 - Use only native shell/text inspection such as rg, Get-Content, Select-String, and ordinary PowerShell.
@@ -634,7 +634,7 @@ Constraints:
 - Do not edit files.
 - Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
 - Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
-- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use Atlas files or tools: .codex\atlas, atlas-router, atlas-csharp-mapper, or Atlas scripts.
 - Do not use subagents such as scout, explorer, or worker.
 - Before C# inspection, read the repo-local RoslynKit dev skill once using exactly this PowerShell command: Get-Content -Raw -LiteralPath '{ROSLYNKIT_SKILL_PATH}'
 - Follow that skill's command and token-discipline guidance.
@@ -655,7 +655,7 @@ Constraints:
 - Do not edit files.
 - Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
 - Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
-- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use Atlas files or tools: .codex\atlas, atlas-router, atlas-csharp-mapper, or Atlas scripts.
 - Do not use subagents such as scout, explorer, or worker.
 - Do not use RoslynKit, roslynkit-dev, dotnet run, dotnet test, Atlas scripts, subagents, or web search.
 - Use only native PowerShell/text inspection such as Get-ChildItem, Select-String, Get-Content, and ordinary PowerShell.
@@ -670,7 +670,7 @@ Constraints:
 - Do not edit files.
 - Do not read Codex memory or prior-session artifacts: ${env:USERPROFILE}\.codex\memories, .codex\memories, .codex\sessions, .codex\archived_sessions, history.jsonl, MEMORY.md, rollout_summaries, or rollout-*.jsonl.
 - Do not use repo-local memory/cache tools or generated repo-local memory/cache directories.
-- Do not use Atlas files, tools, or caches: .codex\atlas, tests\RoslynKit.AtlasPromptCacheProbe, atlas-router, atlas-csharp-mapper, or Atlas scripts.
+- Do not use Atlas files or tools: .codex\atlas, atlas-router, atlas-csharp-mapper, or Atlas scripts.
 - Do not use subagents such as scout, explorer, or worker.
 - Before C# inspection, read the repo-local RoslynKit dev skill once using exactly this PowerShell command: Get-Content -Raw -LiteralPath '{ROSLYNKIT_SKILL_PATH}'
 - Follow that skill's command and token-discipline guidance.

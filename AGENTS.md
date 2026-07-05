@@ -68,7 +68,6 @@ Every scout prompt must include `assigned_scope`, `search_goal`, known keywords 
 - Stop after five source files and state a hypothesis before reading more.
 - Feature cards are the only hand-maintained Atlas routing layer.
 - Update feature cards only with durable discoveries.
-- Atlas prompt caching lives in `tests/RoslynKit.AtlasPromptCacheProbe/`; use it for repeated Atlas queries that reuse the same lane and durable Atlas context, and keep volatile route output, selected index slices, and raw source dumps out of the cached prefix.
 - When a task changes durable Atlas facts for a covered feature or domain, update the matching feature card and refresh `Last verified` before finishing.
 - When durable repo shape or source-to-test mapping facts change, update `.codex/atlas/repo-map.md` or `.codex/atlas/test-index.md` in the same change.
 - When Atlas workflow, routing scripts, feature-card schema, or generated index expectations change, update `.codex/atlas/README.md`, `.codex/atlas/USAGE.md`, `.codex/atlas/feature-cards/README.md`, or `.codex/atlas/indexes/README.md` in the same change.

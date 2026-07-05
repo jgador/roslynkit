@@ -155,6 +155,7 @@ try {
         & git ls-files --cached --others --exclude-standard 2>$null |
             ForEach-Object { $_.Trim() } |
             Where-Object { $_ -and -not (Should-IgnorePath $_) } |
+            Where-Object { Test-Path -LiteralPath (Join-Path $repoRoot $_) } |
             Sort-Object -Unique
     )
 

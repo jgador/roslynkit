@@ -1,12 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-07-03T03:00:34.7628686Z",
+  "generatedAtUtc": "2026-07-05T07:26:29.3926205Z",
   "testProjects": [
-    {
-      "name": "RoslynKit.AtlasPromptCacheProbe",
-      "path": "tests/RoslynKit.AtlasPromptCacheProbe/RoslynKit.AtlasPromptCacheProbe.csproj",
-      "category": "test-support"
-    },
     {
       "name": "RoslynKit.Tests",
       "path": "tests/RoslynKit.Tests/RoslynKit.Tests.csproj",
@@ -20,10 +15,6 @@
   ],
   "testFiles": [
     {
-      "path": "tests/RoslynKit.Tests/AtlasPromptCacheProbeTests.cs",
-      "category": "test"
-    },
-    {
       "path": "tests/RoslynKit.Tests/CliOutputTests.cs",
       "category": "cli-output"
     },
@@ -36,14 +27,6 @@
       "category": "execution"
     },
     {
-      "path": "tests/RoslynKit.Tests/CompactFormatTests.cs",
-      "category": "test"
-    },
-    {
-      "path": "tests/RoslynKit.Tests/EnvelopeTests.cs",
-      "category": "test"
-    },
-    {
       "path": "tests/RoslynKit.Tests/MarkdownFormatTests.cs",
       "category": "markdown-output"
     },
@@ -54,10 +37,6 @@
     {
       "path": "tests/RoslynKit.Tests/TestPaths.cs",
       "category": "support"
-    },
-    {
-      "path": "tests/RoslynKit.Tests/TextFormatTests.cs",
-      "category": "test"
     },
     {
       "path": "tests/RoslynKit.Tests/XunitOutputProbeTests.cs",

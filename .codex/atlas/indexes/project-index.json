@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAtUtc": "2026-07-03T03:00:34.7628686Z",
+  "generatedAtUtc": "2026-07-05T07:26:29.3926205Z",
   "solutionPath": "RoslynKit.slnx",
   "projects": [
     {
@@ -16,13 +16,6 @@
       "category": "fixture",
       "isTestProject": false,
       "includedInSolution": false
-    },
-    {
-      "name": "RoslynKit.AtlasPromptCacheProbe",
-      "path": "tests/RoslynKit.AtlasPromptCacheProbe/RoslynKit.AtlasPromptCacheProbe.csproj",
-      "category": "test-support",
-      "isTestProject": false,
-      "includedInSolution": true
     },
     {
       "name": "RoslynKit.Tests",

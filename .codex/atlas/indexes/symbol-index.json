@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAtUtc": "2026-07-03T03:00:34.7628686Z",
+  "generatedAtUtc": "2026-07-05T07:26:29.3926205Z",
   "targetPath": "RoslynKit.slnx",
   "toolName": "roslynkit-repo-build",
   "toolPath": "C:\\repo\\GitHub\\roslynkit\\artifacts\\bin\\RoslynKit\\debug\\roslynkit.exe",
@@ -80,7 +80,7 @@
       "path": "src/RoslynKit/BuiltinCommandRegistry.cs",
       "projectName": "RoslynKit",
       "documentKind": "source",
-      "symbolCount": 12,
+      "symbolCount": 14,
       "symbols": [
         {
           "name": "RoslynKit.BuiltinCommandRegistry",
@@ -100,70 +100,84 @@
           "name": "Lookup",
           "kind": "Field",
           "displayName": "Lookup",
-          "line": 155,
+          "line": 166,
           "column": 73
         },
         {
           "name": "Commands",
           "kind": "Property",
           "displayName": "Commands",
-          "line": 158,
+          "line": 169,
           "column": 49
         },
         {
           "name": "GetBuiltin",
           "kind": "Method",
           "displayName": "GetBuiltin",
-          "line": 160,
+          "line": 171,
           "column": 35
         },
         {
           "name": "TargetOption",
           "kind": "Method",
           "displayName": "TargetOption",
-          "line": 165,
+          "line": 176,
           "column": 31
         },
         {
           "name": "FileOption",
           "kind": "Method",
           "displayName": "FileOption",
-          "line": 170,
+          "line": 181,
           "column": 31
         },
         {
           "name": "DocumentKeyOption",
           "kind": "Method",
           "displayName": "DocumentKeyOption",
-          "line": 175,
+          "line": 186,
           "column": 31
         },
         {
           "name": "LineOption",
           "kind": "Method",
           "displayName": "LineOption",
-          "line": 180,
+          "line": 191,
+          "column": 31
+        },
+        {
+          "name": "StartLineOption",
+          "kind": "Method",
+          "displayName": "StartLineOption",
+          "line": 196,
+          "column": 31
+        },
+        {
+          "name": "EndLineOption",
+          "kind": "Method",
+          "displayName": "EndLineOption",
+          "line": 201,
           "column": 31
         },
         {
           "name": "ColumnOption",
           "kind": "Method",
           "displayName": "ColumnOption",
-          "line": 185,
+          "line": 206,
           "column": 31
         },
         {
           "name": "SymbolOption",
           "kind": "Method",
           "displayName": "SymbolOption",
-          "line": 190,
+          "line": 211,
           "column": 31
         },
         {
           "name": "MaxResultsOption",
           "kind": "Method",
           "displayName": "MaxResultsOption",
-          "line": 195,
+          "line": 216,
           "column": 31
         }
       ]
@@ -206,7 +220,7 @@
           "name": "ResolveDisplayVersion",
           "kind": "Method",
           "displayName": "ResolveDisplayVersion",
-          "line": 73,
+          "line": 81,
           "column": 27
         }
       ]
@@ -215,7 +229,7 @@
       "path": "src/RoslynKit/CliParser.cs",
       "projectName": "RoslynKit",
       "documentKind": "source",
-      "symbolCount": 26,
+      "symbolCount": 27,
       "symbols": [
         {
           "name": "RoslynKit.CliParser",
@@ -312,92 +326,99 @@
           "name": "ValidateDocumentSelector",
           "kind": "Method",
           "displayName": "ValidateDocumentSelector",
-          "line": 290,
+          "line": 291,
           "column": 25
         },
         {
           "name": "ValidateSymbolOrPositionSelector",
           "kind": "Method",
           "displayName": "ValidateSymbolOrPositionSelector",
-          "line": 301,
+          "line": 302,
           "column": 25
         },
         {
           "name": "IsHelpToken",
           "kind": "Method",
           "displayName": "IsHelpToken",
-          "line": 324,
+          "line": 325,
           "column": 25
         },
         {
           "name": "RoslynKit.ParsedCommand",
           "kind": "NamedType",
           "displayName": "RoslynKit.ParsedCommand",
-          "line": 333,
+          "line": 334,
           "column": 22
         },
         {
           "name": "IsHelp",
           "kind": "Property",
           "displayName": "IsHelp",
-          "line": 339,
+          "line": 340,
           "column": 17
         },
         {
           "name": "Help",
           "kind": "Method",
           "displayName": "Help",
-          "line": 341,
+          "line": 342,
           "column": 33
         },
         {
           "name": "Required",
           "kind": "Method",
           "displayName": "Required",
-          "line": 346,
+          "line": 347,
           "column": 19
         },
         {
           "name": "Optional",
           "kind": "Method",
           "displayName": "Optional",
-          "line": 356,
+          "line": 357,
           "column": 20
         },
         {
           "name": "Flag",
           "kind": "Method",
           "displayName": "Flag",
-          "line": 361,
+          "line": 362,
           "column": 17
         },
         {
           "name": "OptionalInt",
           "kind": "Method",
           "displayName": "OptionalInt",
-          "line": 366,
+          "line": 367,
           "column": 17
         },
         {
           "name": "OptionalInt",
           "kind": "Method",
           "displayName": "OptionalInt",
-          "line": 381,
+          "line": 382,
           "column": 16
         },
         {
           "name": "RoslynKit.CliUsageException",
           "kind": "NamedType",
           "displayName": "RoslynKit.CliUsageException",
-          "line": 390,
+          "line": 391,
           "column": 21
         },
         {
           "name": "CommandName",
           "kind": "Property",
           "displayName": "CommandName",
-          "line": 398,
+          "line": 400,
           "column": 19
+        },
+        {
+          "name": "Hint",
+          "kind": "Property",
+          "displayName": "Hint",
+          "line": 402,
+          "column": 20
         }
       ]
     },
@@ -405,7 +426,7 @@
       "path": "src/RoslynKit/MarkdownProjection.cs",
       "projectName": "RoslynKit",
       "documentKind": "source",
-      "symbolCount": 29,
+      "symbolCount": 30,
       "symbols": [
         {
           "name": "RoslynKit.MarkdownProjection",
@@ -425,189 +446,196 @@
           "name": "RenderHelp",
           "kind": "Method",
           "displayName": "RenderHelp",
-          "line": 33,
+          "line": 34,
           "column": 26
         },
         {
           "name": "RenderHelpOverview",
           "kind": "Method",
           "displayName": "RenderHelpOverview",
-          "line": 38,
+          "line": 39,
           "column": 27
         },
         {
           "name": "RenderCommandHelp",
           "kind": "Method",
           "displayName": "RenderCommandHelp",
-          "line": 52,
+          "line": 53,
           "column": 27
         },
         {
           "name": "RenderSymbols",
           "kind": "Method",
           "displayName": "RenderSymbols",
-          "line": 90,
+          "line": 91,
           "column": 27
         },
         {
           "name": "RenderDefinition",
           "kind": "Method",
           "displayName": "RenderDefinition",
-          "line": 101,
+          "line": 102,
           "column": 27
         },
         {
           "name": "RenderTypeDefinition",
           "kind": "Method",
           "displayName": "RenderTypeDefinition",
-          "line": 111,
+          "line": 112,
           "column": 27
         },
         {
           "name": "RenderReferences",
           "kind": "Method",
           "displayName": "RenderReferences",
-          "line": 121,
+          "line": 122,
           "column": 27
         },
         {
           "name": "RenderImplementations",
           "kind": "Method",
           "displayName": "RenderImplementations",
-          "line": 145,
+          "line": 146,
           "column": 27
         },
         {
           "name": "RenderQuickInfo",
           "kind": "Method",
           "displayName": "RenderQuickInfo",
-          "line": 157,
+          "line": 158,
           "column": 27
         },
         {
           "name": "RenderSignatureHelp",
           "kind": "Method",
           "displayName": "RenderSignatureHelp",
-          "line": 189,
+          "line": 190,
           "column": 27
         },
         {
           "name": "RenderSymbolSource",
           "kind": "Method",
           "displayName": "RenderSymbolSource",
-          "line": 209,
+          "line": 210,
           "column": 27
         },
         {
           "name": "RenderDocumentSymbols",
           "kind": "Method",
           "displayName": "RenderDocumentSymbols",
-          "line": 225,
+          "line": 226,
           "column": 27
         },
         {
           "name": "RenderDocumentText",
           "kind": "Method",
           "displayName": "RenderDocumentText",
-          "line": 235,
+          "line": 236,
+          "column": 27
+        },
+        {
+          "name": "RenderDocumentLines",
+          "kind": "Method",
+          "displayName": "RenderDocumentLines",
+          "line": 252,
           "column": 27
         },
         {
           "name": "RenderDiagnostics",
           "kind": "Method",
           "displayName": "RenderDiagnostics",
-          "line": 251,
+          "line": 264,
           "column": 27
         },
         {
           "name": "RenderWorkspace",
           "kind": "Method",
           "displayName": "RenderWorkspace",
-          "line": 276,
+          "line": 289,
           "column": 27
         },
         {
           "name": "AppendSelector",
           "kind": "Method",
           "displayName": "AppendSelector",
-          "line": 313,
+          "line": 326,
           "column": 25
         },
         {
           "name": "AppendSymbolBullets",
           "kind": "Method",
           "displayName": "AppendSymbolBullets",
-          "line": 325,
+          "line": 338,
           "column": 25
         },
         {
           "name": "AppendCounts",
           "kind": "Method",
           "displayName": "AppendCounts",
-          "line": 357,
+          "line": 370,
           "column": 25
         },
         {
           "name": "AppendWorkspaceDiagnostics",
           "kind": "Method",
           "displayName": "AppendWorkspaceDiagnostics",
-          "line": 363,
+          "line": 376,
           "column": 25
         },
         {
           "name": "AppendFence",
           "kind": "Method",
           "displayName": "AppendFence",
-          "line": 377,
+          "line": 390,
           "column": 25
         },
         {
           "name": "CodeSpan",
           "kind": "Method",
           "displayName": "CodeSpan",
-          "line": 390,
+          "line": 403,
           "column": 27
         },
         {
           "name": "LongestBacktickRun",
           "kind": "Method",
           "displayName": "LongestBacktickRun",
-          "line": 397,
+          "line": 410,
           "column": 24
         },
         {
           "name": "Location",
           "kind": "Method",
           "displayName": "Location",
-          "line": 410,
+          "line": 423,
           "column": 27
         },
         {
           "name": "Location",
           "kind": "Method",
           "displayName": "Location",
-          "line": 415,
+          "line": 428,
           "column": 27
         },
         {
           "name": "Location",
           "kind": "Method",
           "displayName": "Location",
-          "line": 420,
+          "line": 433,
           "column": 27
         },
         {
           "name": "FenceInfo",
           "kind": "Method",
           "displayName": "FenceInfo",
-          "line": 425,
+          "line": 438,
           "column": 27
         },
         {
           "name": "DocumentPath",
           "kind": "Method",
           "displayName": "DocumentPath",
-          "line": 430,
+          "line": 443,
           "column": 27
         }
       ]
@@ -674,7 +702,7 @@
       "path": "src/RoslynKit/RoslynCommandExecutor.cs",
       "projectName": "RoslynKit",
       "documentKind": "source",
-      "symbolCount": 25,
+      "symbolCount": 26,
       "symbols": [
         {
           "name": "RoslynKit.RoslynCommandExecutor",
@@ -701,154 +729,161 @@
           "name": "WorkspaceAsync",
           "kind": "Method",
           "displayName": "WorkspaceAsync",
-          "line": 52,
+          "line": 53,
           "column": 39
         },
         {
           "name": "DiagnosticsAsync",
           "kind": "Method",
           "displayName": "DiagnosticsAsync",
-          "line": 90,
+          "line": 91,
           "column": 39
         },
         {
           "name": "SymbolsAsync",
           "kind": "Method",
           "displayName": "SymbolsAsync",
-          "line": 134,
+          "line": 135,
           "column": 39
         },
         {
           "name": "DocumentTextAsync",
           "kind": "Method",
           "displayName": "DocumentTextAsync",
-          "line": 170,
+          "line": 171,
+          "column": 39
+        },
+        {
+          "name": "DocumentLinesAsync",
+          "kind": "Method",
+          "displayName": "DocumentLinesAsync",
+          "line": 186,
           "column": 39
         },
         {
           "name": "DocumentSymbolsAsync",
           "kind": "Method",
           "displayName": "DocumentSymbolsAsync",
-          "line": 185,
+          "line": 217,
           "column": 39
         },
         {
           "name": "DefinitionAsync",
           "kind": "Method",
           "displayName": "DefinitionAsync",
-          "line": 212,
+          "line": 244,
           "column": 39
         },
         {
           "name": "TypeDefinitionAsync",
           "kind": "Method",
           "displayName": "TypeDefinitionAsync",
-          "line": 227,
+          "line": 259,
           "column": 39
         },
         {
           "name": "ReferencesAsync",
           "kind": "Method",
           "displayName": "ReferencesAsync",
-          "line": 247,
+          "line": 279,
           "column": 39
         },
         {
           "name": "ImplementationsAsync",
           "kind": "Method",
           "displayName": "ImplementationsAsync",
-          "line": 278,
+          "line": 310,
           "column": 39
         },
         {
           "name": "QuickInfoAsync",
           "kind": "Method",
           "displayName": "QuickInfoAsync",
-          "line": 323,
+          "line": 355,
           "column": 39
         },
         {
           "name": "SignatureHelpAsync",
           "kind": "Method",
           "displayName": "SignatureHelpAsync",
-          "line": 350,
+          "line": 382,
           "column": 39
         },
         {
           "name": "SymbolSourceAsync",
           "kind": "Method",
           "displayName": "SymbolSourceAsync",
-          "line": 379,
+          "line": 411,
           "column": 39
         },
         {
           "name": "ResolveDeclaringDocumentAsync",
           "kind": "Method",
           "displayName": "ResolveDeclaringDocumentAsync",
-          "line": 440,
+          "line": 472,
           "column": 58
         },
         {
           "name": "RoslynKit.RoslynCommandExecutor.ResolvedSymbolTarget",
           "kind": "NamedType",
           "displayName": "RoslynKit.RoslynCommandExecutor.ResolvedSymbolTarget",
-          "line": 470,
+          "line": 502,
           "column": 27
         },
         {
           "name": "ResolveCommandSymbolAsync",
           "kind": "Method",
           "displayName": "ResolveCommandSymbolAsync",
-          "line": 475,
+          "line": 507,
           "column": 53
         },
         {
           "name": "ResolveSemanticDocumentAsync",
           "kind": "Method",
           "displayName": "ResolveSemanticDocumentAsync",
-          "line": 497,
+          "line": 529,
           "column": 57
         },
         {
           "name": "SymbolAtPositionAsync",
           "kind": "Method",
           "displayName": "SymbolAtPositionAsync",
-          "line": 511,
+          "line": 543,
           "column": 40
         },
         {
           "name": "SymbolMatches",
           "kind": "Method",
           "displayName": "SymbolMatches",
-          "line": 540,
+          "line": 572,
           "column": 25
         },
         {
           "name": "GetSymbolFilter",
           "kind": "Method",
           "displayName": "GetSymbolFilter",
-          "line": 547,
+          "line": 579,
           "column": 33
         },
         {
           "name": "IsSpecificSymbolKindMatch",
           "kind": "Method",
           "displayName": "IsSpecificSymbolKindMatch",
-          "line": 559,
+          "line": 591,
           "column": 25
         },
         {
           "name": "GetTypeDefinitionSymbol",
           "kind": "Method",
           "displayName": "GetTypeDefinitionSymbol",
-          "line": 580,
+          "line": 612,
           "column": 33
         },
         {
           "name": "GetProjectName",
           "kind": "Method",
           "displayName": "GetProjectName",
-          "line": 594,
+          "line": 626,
           "column": 27
         }
       ]
@@ -998,7 +1033,7 @@
       "path": "src/RoslynKit/RoslynModels.cs",
       "projectName": "RoslynKit",
       "documentKind": "source",
-      "symbolCount": 184,
+      "symbolCount": 189,
       "symbols": [
         {
           "name": "RoslynKit.DocumentKindNames",
@@ -1225,9 +1260,9 @@
           "column": 51
         },
         {
-          "name": "RoslynKit.DocumentSymbolsResult",
+          "name": "RoslynKit.DocumentLinesResult",
           "kind": "NamedType",
-          "displayName": "RoslynKit.DocumentSymbolsResult",
+          "displayName": "RoslynKit.DocumentLinesResult",
           "line": 152,
           "column": 21
         },
@@ -1235,1057 +1270,1092 @@
           "name": "Document",
           "kind": "Property",
           "displayName": "Document",
-          "line": 164,
-          "column": 31
-        },
-        {
-          "name": "Symbols",
-          "kind": "Property",
-          "displayName": "Symbols",
           "line": 166,
-          "column": 38
-        },
-        {
-          "name": "WorkspaceDiagnostics",
-          "kind": "Property",
-          "displayName": "WorkspaceDiagnostics",
-          "line": 168,
-          "column": 51
-        },
-        {
-          "name": "RoslynKit.DefinitionResult",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.DefinitionResult",
-          "line": 174,
-          "column": 21
-        },
-        {
-          "name": "Document",
-          "kind": "Property",
-          "displayName": "Document",
-          "line": 192,
-          "column": 32
-        },
-        {
-          "name": "Line",
-          "kind": "Property",
-          "displayName": "Line",
-          "line": 194,
-          "column": 17
-        },
-        {
-          "name": "Column",
-          "kind": "Property",
-          "displayName": "Column",
-          "line": 196,
-          "column": 17
-        },
-        {
-          "name": "Selector",
-          "kind": "Property",
-          "displayName": "Selector",
-          "line": 198,
-          "column": 20
-        },
-        {
-          "name": "Symbol",
-          "kind": "Property",
-          "displayName": "Symbol",
-          "line": 200,
-          "column": 23
-        },
-        {
-          "name": "WorkspaceDiagnostics",
-          "kind": "Property",
-          "displayName": "WorkspaceDiagnostics",
-          "line": 202,
-          "column": 51
-        },
-        {
-          "name": "RoslynKit.TypeDefinitionResult",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.TypeDefinitionResult",
-          "line": 208,
-          "column": 21
-        },
-        {
-          "name": "Document",
-          "kind": "Property",
-          "displayName": "Document",
-          "line": 224,
-          "column": 31
-        },
-        {
-          "name": "Line",
-          "kind": "Property",
-          "displayName": "Line",
-          "line": 226,
-          "column": 16
-        },
-        {
-          "name": "Column",
-          "kind": "Property",
-          "displayName": "Column",
-          "line": 228,
-          "column": 16
-        },
-        {
-          "name": "Symbol",
-          "kind": "Property",
-          "displayName": "Symbol",
-          "line": 230,
-          "column": 23
-        },
-        {
-          "name": "WorkspaceDiagnostics",
-          "kind": "Property",
-          "displayName": "WorkspaceDiagnostics",
-          "line": 232,
-          "column": 51
-        },
-        {
-          "name": "RoslynKit.QuickInfoResult",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.QuickInfoResult",
-          "line": 238,
-          "column": 21
-        },
-        {
-          "name": "Document",
-          "kind": "Property",
-          "displayName": "Document",
-          "line": 258,
-          "column": 31
-        },
-        {
-          "name": "Line",
-          "kind": "Property",
-          "displayName": "Line",
-          "line": 260,
-          "column": 16
-        },
-        {
-          "name": "Column",
-          "kind": "Property",
-          "displayName": "Column",
-          "line": 262,
-          "column": 16
-        },
-        {
-          "name": "ResolvedRange",
-          "kind": "Property",
-          "displayName": "ResolvedRange",
-          "line": 264,
-          "column": 26
-        },
-        {
-          "name": "Tags",
-          "kind": "Property",
-          "displayName": "Tags",
-          "line": 266,
-          "column": 34
-        },
-        {
-          "name": "Sections",
-          "kind": "Property",
-          "displayName": "Sections",
-          "line": 268,
-          "column": 48
-        },
-        {
-          "name": "WorkspaceDiagnostics",
-          "kind": "Property",
-          "displayName": "WorkspaceDiagnostics",
-          "line": 270,
-          "column": 51
-        },
-        {
-          "name": "RoslynKit.ReferencesResult",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.ReferencesResult",
-          "line": 276,
-          "column": 21
-        },
-        {
-          "name": "Document",
-          "kind": "Property",
-          "displayName": "Document",
-          "line": 302,
-          "column": 32
-        },
-        {
-          "name": "Line",
-          "kind": "Property",
-          "displayName": "Line",
-          "line": 304,
-          "column": 17
-        },
-        {
-          "name": "Column",
-          "kind": "Property",
-          "displayName": "Column",
-          "line": 306,
-          "column": 17
-        },
-        {
-          "name": "Selector",
-          "kind": "Property",
-          "displayName": "Selector",
-          "line": 308,
-          "column": 20
-        },
-        {
-          "name": "Symbol",
-          "kind": "Property",
-          "displayName": "Symbol",
-          "line": 310,
-          "column": 23
-        },
-        {
-          "name": "TotalCount",
-          "kind": "Property",
-          "displayName": "TotalCount",
-          "line": 312,
-          "column": 16
-        },
-        {
-          "name": "ReturnedCount",
-          "kind": "Property",
-          "displayName": "ReturnedCount",
-          "line": 314,
-          "column": 16
-        },
-        {
-          "name": "Truncated",
-          "kind": "Property",
-          "displayName": "Truncated",
-          "line": 316,
-          "column": 17
-        },
-        {
-          "name": "Locations",
-          "kind": "Property",
-          "displayName": "Locations",
-          "line": 318,
-          "column": 41
-        },
-        {
-          "name": "WorkspaceDiagnostics",
-          "kind": "Property",
-          "displayName": "WorkspaceDiagnostics",
-          "line": 320,
-          "column": 51
-        },
-        {
-          "name": "RoslynKit.ImplementationsResult",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.ImplementationsResult",
-          "line": 326,
-          "column": 21
-        },
-        {
-          "name": "Document",
-          "kind": "Property",
-          "displayName": "Document",
-          "line": 352,
-          "column": 32
-        },
-        {
-          "name": "Line",
-          "kind": "Property",
-          "displayName": "Line",
-          "line": 354,
-          "column": 17
-        },
-        {
-          "name": "Column",
-          "kind": "Property",
-          "displayName": "Column",
-          "line": 356,
-          "column": 17
-        },
-        {
-          "name": "Selector",
-          "kind": "Property",
-          "displayName": "Selector",
-          "line": 358,
-          "column": 20
-        },
-        {
-          "name": "Symbol",
-          "kind": "Property",
-          "displayName": "Symbol",
-          "line": 360,
-          "column": 23
-        },
-        {
-          "name": "TotalCount",
-          "kind": "Property",
-          "displayName": "TotalCount",
-          "line": 362,
-          "column": 16
-        },
-        {
-          "name": "ReturnedCount",
-          "kind": "Property",
-          "displayName": "ReturnedCount",
-          "line": 364,
-          "column": 16
-        },
-        {
-          "name": "Truncated",
-          "kind": "Property",
-          "displayName": "Truncated",
-          "line": 366,
-          "column": 17
-        },
-        {
-          "name": "Symbols",
-          "kind": "Property",
-          "displayName": "Symbols",
-          "line": 368,
-          "column": 38
-        },
-        {
-          "name": "WorkspaceDiagnostics",
-          "kind": "Property",
-          "displayName": "WorkspaceDiagnostics",
-          "line": 370,
-          "column": 51
-        },
-        {
-          "name": "RoslynKit.SymbolSourceResult",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.SymbolSourceResult",
-          "line": 376,
-          "column": 21
-        },
-        {
-          "name": "TargetPath",
-          "kind": "Property",
-          "displayName": "TargetPath",
-          "line": 392,
-          "column": 19
-        },
-        {
-          "name": "Selector",
-          "kind": "Property",
-          "displayName": "Selector",
-          "line": 394,
-          "column": 19
-        },
-        {
-          "name": "Symbol",
-          "kind": "Property",
-          "displayName": "Symbol",
-          "line": 396,
-          "column": 23
-        },
-        {
-          "name": "Declarations",
-          "kind": "Property",
-          "displayName": "Declarations",
-          "line": 398,
-          "column": 51
-        },
-        {
-          "name": "WorkspaceDiagnostics",
-          "kind": "Property",
-          "displayName": "WorkspaceDiagnostics",
-          "line": 400,
-          "column": 51
-        },
-        {
-          "name": "RoslynKit.SymbolSourceDeclaration",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.SymbolSourceDeclaration",
-          "line": 406,
-          "column": 21
-        },
-        {
-          "name": "Document",
-          "kind": "Property",
-          "displayName": "Document",
-          "line": 415,
           "column": 31
         },
         {
           "name": "Range",
           "kind": "Property",
           "displayName": "Range",
-          "line": 417,
+          "line": 168,
           "column": 26
         },
         {
           "name": "Text",
           "kind": "Property",
           "displayName": "Text",
-          "line": 419,
+          "line": 170,
           "column": 19
         },
         {
-          "name": "RoslynKit.SignatureHelpResult",
+          "name": "WorkspaceDiagnostics",
+          "kind": "Property",
+          "displayName": "WorkspaceDiagnostics",
+          "line": 172,
+          "column": 51
+        },
+        {
+          "name": "RoslynKit.DocumentSymbolsResult",
           "kind": "NamedType",
-          "displayName": "RoslynKit.SignatureHelpResult",
-          "line": 425,
+          "displayName": "RoslynKit.DocumentSymbolsResult",
+          "line": 178,
           "column": 21
         },
         {
           "name": "Document",
           "kind": "Property",
           "displayName": "Document",
-          "line": 447,
+          "line": 190,
+          "column": 31
+        },
+        {
+          "name": "Symbols",
+          "kind": "Property",
+          "displayName": "Symbols",
+          "line": 192,
+          "column": 38
+        },
+        {
+          "name": "WorkspaceDiagnostics",
+          "kind": "Property",
+          "displayName": "WorkspaceDiagnostics",
+          "line": 194,
+          "column": 51
+        },
+        {
+          "name": "RoslynKit.DefinitionResult",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.DefinitionResult",
+          "line": 200,
+          "column": 21
+        },
+        {
+          "name": "Document",
+          "kind": "Property",
+          "displayName": "Document",
+          "line": 218,
+          "column": 32
+        },
+        {
+          "name": "Line",
+          "kind": "Property",
+          "displayName": "Line",
+          "line": 220,
+          "column": 17
+        },
+        {
+          "name": "Column",
+          "kind": "Property",
+          "displayName": "Column",
+          "line": 222,
+          "column": 17
+        },
+        {
+          "name": "Selector",
+          "kind": "Property",
+          "displayName": "Selector",
+          "line": 224,
+          "column": 20
+        },
+        {
+          "name": "Symbol",
+          "kind": "Property",
+          "displayName": "Symbol",
+          "line": 226,
+          "column": 23
+        },
+        {
+          "name": "WorkspaceDiagnostics",
+          "kind": "Property",
+          "displayName": "WorkspaceDiagnostics",
+          "line": 228,
+          "column": 51
+        },
+        {
+          "name": "RoslynKit.TypeDefinitionResult",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.TypeDefinitionResult",
+          "line": 234,
+          "column": 21
+        },
+        {
+          "name": "Document",
+          "kind": "Property",
+          "displayName": "Document",
+          "line": 250,
           "column": 31
         },
         {
           "name": "Line",
           "kind": "Property",
           "displayName": "Line",
-          "line": 449,
+          "line": 252,
           "column": 16
         },
         {
           "name": "Column",
           "kind": "Property",
           "displayName": "Column",
-          "line": 451,
+          "line": 254,
+          "column": 16
+        },
+        {
+          "name": "Symbol",
+          "kind": "Property",
+          "displayName": "Symbol",
+          "line": 256,
+          "column": 23
+        },
+        {
+          "name": "WorkspaceDiagnostics",
+          "kind": "Property",
+          "displayName": "WorkspaceDiagnostics",
+          "line": 258,
+          "column": 51
+        },
+        {
+          "name": "RoslynKit.QuickInfoResult",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.QuickInfoResult",
+          "line": 264,
+          "column": 21
+        },
+        {
+          "name": "Document",
+          "kind": "Property",
+          "displayName": "Document",
+          "line": 284,
+          "column": 31
+        },
+        {
+          "name": "Line",
+          "kind": "Property",
+          "displayName": "Line",
+          "line": 286,
+          "column": 16
+        },
+        {
+          "name": "Column",
+          "kind": "Property",
+          "displayName": "Column",
+          "line": 288,
           "column": 16
         },
         {
           "name": "ResolvedRange",
           "kind": "Property",
           "displayName": "ResolvedRange",
-          "line": 453,
+          "line": 290,
+          "column": 26
+        },
+        {
+          "name": "Tags",
+          "kind": "Property",
+          "displayName": "Tags",
+          "line": 292,
+          "column": 34
+        },
+        {
+          "name": "Sections",
+          "kind": "Property",
+          "displayName": "Sections",
+          "line": 294,
+          "column": 48
+        },
+        {
+          "name": "WorkspaceDiagnostics",
+          "kind": "Property",
+          "displayName": "WorkspaceDiagnostics",
+          "line": 296,
+          "column": 51
+        },
+        {
+          "name": "RoslynKit.ReferencesResult",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.ReferencesResult",
+          "line": 302,
+          "column": 21
+        },
+        {
+          "name": "Document",
+          "kind": "Property",
+          "displayName": "Document",
+          "line": 328,
+          "column": 32
+        },
+        {
+          "name": "Line",
+          "kind": "Property",
+          "displayName": "Line",
+          "line": 330,
+          "column": 17
+        },
+        {
+          "name": "Column",
+          "kind": "Property",
+          "displayName": "Column",
+          "line": 332,
+          "column": 17
+        },
+        {
+          "name": "Selector",
+          "kind": "Property",
+          "displayName": "Selector",
+          "line": 334,
+          "column": 20
+        },
+        {
+          "name": "Symbol",
+          "kind": "Property",
+          "displayName": "Symbol",
+          "line": 336,
+          "column": 23
+        },
+        {
+          "name": "TotalCount",
+          "kind": "Property",
+          "displayName": "TotalCount",
+          "line": 338,
+          "column": 16
+        },
+        {
+          "name": "ReturnedCount",
+          "kind": "Property",
+          "displayName": "ReturnedCount",
+          "line": 340,
+          "column": 16
+        },
+        {
+          "name": "Truncated",
+          "kind": "Property",
+          "displayName": "Truncated",
+          "line": 342,
+          "column": 17
+        },
+        {
+          "name": "Locations",
+          "kind": "Property",
+          "displayName": "Locations",
+          "line": 344,
+          "column": 41
+        },
+        {
+          "name": "WorkspaceDiagnostics",
+          "kind": "Property",
+          "displayName": "WorkspaceDiagnostics",
+          "line": 346,
+          "column": 51
+        },
+        {
+          "name": "RoslynKit.ImplementationsResult",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.ImplementationsResult",
+          "line": 352,
+          "column": 21
+        },
+        {
+          "name": "Document",
+          "kind": "Property",
+          "displayName": "Document",
+          "line": 378,
+          "column": 32
+        },
+        {
+          "name": "Line",
+          "kind": "Property",
+          "displayName": "Line",
+          "line": 380,
+          "column": 17
+        },
+        {
+          "name": "Column",
+          "kind": "Property",
+          "displayName": "Column",
+          "line": 382,
+          "column": 17
+        },
+        {
+          "name": "Selector",
+          "kind": "Property",
+          "displayName": "Selector",
+          "line": 384,
+          "column": 20
+        },
+        {
+          "name": "Symbol",
+          "kind": "Property",
+          "displayName": "Symbol",
+          "line": 386,
+          "column": 23
+        },
+        {
+          "name": "TotalCount",
+          "kind": "Property",
+          "displayName": "TotalCount",
+          "line": 388,
+          "column": 16
+        },
+        {
+          "name": "ReturnedCount",
+          "kind": "Property",
+          "displayName": "ReturnedCount",
+          "line": 390,
+          "column": 16
+        },
+        {
+          "name": "Truncated",
+          "kind": "Property",
+          "displayName": "Truncated",
+          "line": 392,
+          "column": 17
+        },
+        {
+          "name": "Symbols",
+          "kind": "Property",
+          "displayName": "Symbols",
+          "line": 394,
+          "column": 38
+        },
+        {
+          "name": "WorkspaceDiagnostics",
+          "kind": "Property",
+          "displayName": "WorkspaceDiagnostics",
+          "line": 396,
+          "column": 51
+        },
+        {
+          "name": "RoslynKit.SymbolSourceResult",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.SymbolSourceResult",
+          "line": 402,
+          "column": 21
+        },
+        {
+          "name": "TargetPath",
+          "kind": "Property",
+          "displayName": "TargetPath",
+          "line": 418,
+          "column": 19
+        },
+        {
+          "name": "Selector",
+          "kind": "Property",
+          "displayName": "Selector",
+          "line": 420,
+          "column": 19
+        },
+        {
+          "name": "Symbol",
+          "kind": "Property",
+          "displayName": "Symbol",
+          "line": 422,
+          "column": 23
+        },
+        {
+          "name": "Declarations",
+          "kind": "Property",
+          "displayName": "Declarations",
+          "line": 424,
+          "column": 51
+        },
+        {
+          "name": "WorkspaceDiagnostics",
+          "kind": "Property",
+          "displayName": "WorkspaceDiagnostics",
+          "line": 426,
+          "column": 51
+        },
+        {
+          "name": "RoslynKit.SymbolSourceDeclaration",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.SymbolSourceDeclaration",
+          "line": 432,
+          "column": 21
+        },
+        {
+          "name": "Document",
+          "kind": "Property",
+          "displayName": "Document",
+          "line": 441,
+          "column": 31
+        },
+        {
+          "name": "Range",
+          "kind": "Property",
+          "displayName": "Range",
+          "line": 443,
+          "column": 26
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "displayName": "Text",
+          "line": 445,
+          "column": 19
+        },
+        {
+          "name": "RoslynKit.SignatureHelpResult",
+          "kind": "NamedType",
+          "displayName": "RoslynKit.SignatureHelpResult",
+          "line": 451,
+          "column": 21
+        },
+        {
+          "name": "Document",
+          "kind": "Property",
+          "displayName": "Document",
+          "line": 473,
+          "column": 31
+        },
+        {
+          "name": "Line",
+          "kind": "Property",
+          "displayName": "Line",
+          "line": 475,
+          "column": 16
+        },
+        {
+          "name": "Column",
+          "kind": "Property",
+          "displayName": "Column",
+          "line": 477,
+          "column": 16
+        },
+        {
+          "name": "ResolvedRange",
+          "kind": "Property",
+          "displayName": "ResolvedRange",
+          "line": 479,
           "column": 26
         },
         {
           "name": "ActiveSignature",
           "kind": "Property",
           "displayName": "ActiveSignature",
-          "line": 455,
+          "line": 481,
           "column": 16
         },
         {
           "name": "ActiveParameter",
           "kind": "Property",
           "displayName": "ActiveParameter",
-          "line": 457,
+          "line": 483,
           "column": 16
         },
         {
           "name": "Signatures",
           "kind": "Property",
           "displayName": "Signatures",
-          "line": 459,
+          "line": 485,
           "column": 54
         },
         {
           "name": "WorkspaceDiagnostics",
           "kind": "Property",
           "displayName": "WorkspaceDiagnostics",
-          "line": 461,
+          "line": 487,
           "column": 51
         },
         {
           "name": "RoslynKit.DocumentDescriptor",
           "kind": "NamedType",
           "displayName": "RoslynKit.DocumentDescriptor",
-          "line": 467,
+          "line": 493,
           "column": 21
         },
         {
           "name": "DocumentKey",
           "kind": "Property",
           "displayName": "DocumentKey",
-          "line": 487,
+          "line": 513,
           "column": 19
         },
         {
           "name": "ProjectName",
           "kind": "Property",
           "displayName": "ProjectName",
-          "line": 489,
+          "line": 515,
           "column": 19
         },
         {
           "name": "ProjectPath",
           "kind": "Property",
           "displayName": "ProjectPath",
-          "line": 491,
+          "line": 517,
           "column": 20
         },
         {
           "name": "TargetFramework",
           "kind": "Property",
           "displayName": "TargetFramework",
-          "line": 493,
+          "line": 519,
           "column": 20
         },
         {
           "name": "DocumentKind",
           "kind": "Property",
           "displayName": "DocumentKind",
-          "line": 495,
+          "line": 521,
           "column": 19
         },
         {
           "name": "Name",
           "kind": "Property",
           "displayName": "Name",
-          "line": 497,
+          "line": 523,
           "column": 19
         },
         {
           "name": "Path",
           "kind": "Property",
           "displayName": "Path",
-          "line": 499,
+          "line": 525,
           "column": 20
         },
         {
           "name": "RoslynKit.DocumentRange",
           "kind": "NamedType",
           "displayName": "RoslynKit.DocumentRange",
-          "line": 505,
+          "line": 531,
           "column": 21
         },
         {
           "name": "Line",
           "kind": "Property",
           "displayName": "Line",
-          "line": 515,
+          "line": 541,
           "column": 16
         },
         {
           "name": "Column",
           "kind": "Property",
           "displayName": "Column",
-          "line": 517,
+          "line": 543,
           "column": 16
         },
         {
           "name": "EndLine",
           "kind": "Property",
           "displayName": "EndLine",
-          "line": 519,
+          "line": 545,
           "column": 16
         },
         {
           "name": "EndColumn",
           "kind": "Property",
           "displayName": "EndColumn",
-          "line": 521,
+          "line": 547,
           "column": 16
         },
         {
           "name": "RoslynKit.WorkspaceProject",
           "kind": "NamedType",
           "displayName": "RoslynKit.WorkspaceProject",
-          "line": 527,
+          "line": 553,
           "column": 21
         },
         {
           "name": "Name",
           "kind": "Property",
           "displayName": "Name",
-          "line": 545,
+          "line": 571,
           "column": 19
         },
         {
           "name": "Path",
           "kind": "Property",
           "displayName": "Path",
-          "line": 547,
+          "line": 573,
           "column": 20
         },
         {
           "name": "TargetFramework",
           "kind": "Property",
           "displayName": "TargetFramework",
-          "line": 549,
+          "line": 575,
           "column": 20
         },
         {
           "name": "Language",
           "kind": "Property",
           "displayName": "Language",
-          "line": 551,
+          "line": 577,
           "column": 19
         },
         {
           "name": "DocumentCount",
           "kind": "Property",
           "displayName": "DocumentCount",
-          "line": 553,
+          "line": 579,
           "column": 16
         },
         {
           "name": "ProjectReferences",
           "kind": "Property",
           "displayName": "ProjectReferences",
-          "line": 555,
+          "line": 581,
           "column": 34
         },
         {
           "name": "RoslynKit.WorkspaceLoadDiagnostic",
           "kind": "NamedType",
           "displayName": "RoslynKit.WorkspaceLoadDiagnostic",
-          "line": 561,
+          "line": 587,
           "column": 21
         },
         {
           "name": "Kind",
           "kind": "Property",
           "displayName": "Kind",
-          "line": 569,
+          "line": 595,
           "column": 19
         },
         {
           "name": "Message",
           "kind": "Property",
           "displayName": "Message",
-          "line": 571,
+          "line": 597,
           "column": 19
         },
         {
           "name": "RoslynKit.DiagnosticItem",
           "kind": "NamedType",
           "displayName": "RoslynKit.DiagnosticItem",
-          "line": 577,
+          "line": 603,
           "column": 21
         },
         {
           "name": "ProjectName",
           "kind": "Property",
           "displayName": "ProjectName",
-          "line": 601,
+          "line": 627,
           "column": 19
         },
         {
           "name": "Id",
           "kind": "Property",
           "displayName": "Id",
-          "line": 603,
+          "line": 629,
           "column": 19
         },
         {
           "name": "Severity",
           "kind": "Property",
           "displayName": "Severity",
-          "line": 605,
+          "line": 631,
           "column": 19
         },
         {
           "name": "Message",
           "kind": "Property",
           "displayName": "Message",
-          "line": 607,
+          "line": 633,
           "column": 19
         },
         {
           "name": "Path",
           "kind": "Property",
           "displayName": "Path",
-          "line": 609,
+          "line": 635,
           "column": 20
         },
         {
           "name": "Line",
           "kind": "Property",
           "displayName": "Line",
-          "line": 611,
+          "line": 637,
           "column": 17
         },
         {
           "name": "Column",
           "kind": "Property",
           "displayName": "Column",
-          "line": 613,
+          "line": 639,
           "column": 17
         },
         {
           "name": "EndLine",
           "kind": "Property",
           "displayName": "EndLine",
-          "line": 615,
+          "line": 641,
           "column": 17
         },
         {
           "name": "EndColumn",
           "kind": "Property",
           "displayName": "EndColumn",
-          "line": 617,
+          "line": 643,
           "column": 17
         },
         {
           "name": "FromDiagnostic",
           "kind": "Method",
           "displayName": "FromDiagnostic",
-          "line": 619,
+          "line": 645,
           "column": 34
         },
         {
           "name": "NormalizePath",
           "kind": "Method",
           "displayName": "NormalizePath",
-          "line": 634,
+          "line": 660,
           "column": 28
         },
         {
           "name": "RoslynKit.SymbolItem",
           "kind": "NamedType",
           "displayName": "RoslynKit.SymbolItem",
-          "line": 643,
+          "line": 669,
           "column": 21
         },
         {
           "name": "ProjectName",
           "kind": "Property",
           "displayName": "ProjectName",
-          "line": 673,
+          "line": 699,
           "column": 19
         },
         {
           "name": "Name",
           "kind": "Property",
           "displayName": "Name",
-          "line": 675,
+          "line": 701,
           "column": 19
         },
         {
           "name": "MetadataName",
           "kind": "Property",
           "displayName": "MetadataName",
-          "line": 677,
+          "line": 703,
           "column": 19
         },
         {
           "name": "DisplayName",
           "kind": "Property",
           "displayName": "DisplayName",
-          "line": 679,
+          "line": 705,
           "column": 19
         },
         {
           "name": "Kind",
           "kind": "Property",
           "displayName": "Kind",
-          "line": 681,
+          "line": 707,
           "column": 19
         },
         {
           "name": "Accessibility",
           "kind": "Property",
           "displayName": "Accessibility",
-          "line": 683,
+          "line": 709,
           "column": 19
         },
         {
           "name": "IsStatic",
           "kind": "Property",
           "displayName": "IsStatic",
-          "line": 685,
+          "line": 711,
           "column": 17
         },
         {
           "name": "ContainingType",
           "kind": "Property",
           "displayName": "ContainingType",
-          "line": 687,
+          "line": 713,
           "column": 20
         },
         {
           "name": "ContainingNamespace",
           "kind": "Property",
           "displayName": "ContainingNamespace",
-          "line": 689,
+          "line": 715,
           "column": 20
         },
         {
           "name": "PrimaryLocation",
           "kind": "Property",
           "displayName": "PrimaryLocation",
-          "line": 691,
+          "line": 717,
           "column": 25
         },
         {
           "name": "Declarations",
           "kind": "Property",
           "displayName": "Declarations",
-          "line": 693,
+          "line": 719,
           "column": 39
         },
         {
           "name": "SymbolId",
           "kind": "Property",
           "displayName": "SymbolId",
-          "line": 695,
+          "line": 721,
           "column": 20
         },
         {
           "name": "FromSymbol",
           "kind": "Method",
           "displayName": "FromSymbol",
-          "line": 697,
+          "line": 723,
           "column": 30
         },
         {
           "name": "FromSymbol",
           "kind": "Method",
           "displayName": "FromSymbol",
-          "line": 702,
+          "line": 728,
           "column": 30
         },
         {
           "name": "FromSymbol",
           "kind": "Method",
           "displayName": "FromSymbol",
-          "line": 710,
+          "line": 736,
           "column": 30
         },
         {
           "name": "FromSymbol",
           "kind": "Method",
           "displayName": "FromSymbol",
-          "line": 718,
+          "line": 744,
           "column": 30
         },
         {
           "name": "FromSymbol",
           "kind": "Method",
           "displayName": "FromSymbol",
-          "line": 726,
+          "line": 752,
           "column": 31
         },
         {
           "name": "RoslynKit.SourceRange",
           "kind": "NamedType",
           "displayName": "RoslynKit.SourceRange",
-          "line": 756,
+          "line": 782,
           "column": 21
         },
         {
           "name": "Path",
           "kind": "Property",
           "displayName": "Path",
-          "line": 767,
+          "line": 793,
           "column": 20
         },
         {
           "name": "Line",
           "kind": "Property",
           "displayName": "Line",
-          "line": 769,
+          "line": 795,
           "column": 16
         },
         {
           "name": "Column",
           "kind": "Property",
           "displayName": "Column",
-          "line": 771,
+          "line": 797,
           "column": 16
         },
         {
           "name": "EndLine",
           "kind": "Property",
           "displayName": "EndLine",
-          "line": 773,
+          "line": 799,
           "column": 16
         },
         {
           "name": "EndColumn",
           "kind": "Property",
           "displayName": "EndColumn",
-          "line": 775,
+          "line": 801,
           "column": 16
         },
         {
           "name": "FromLocation",
           "kind": "Method",
           "displayName": "FromLocation",
-          "line": 777,
+          "line": 803,
           "column": 31
         },
         {
           "name": "NormalizePath",
           "kind": "Method",
           "displayName": "NormalizePath",
-          "line": 788,
+          "line": 814,
           "column": 28
         },
         {
           "name": "RoslynKit.ReferenceItem",
           "kind": "NamedType",
           "displayName": "RoslynKit.ReferenceItem",
-          "line": 803,
+          "line": 829,
           "column": 21
         },
         {
           "name": "Path",
           "kind": "Property",
           "displayName": "Path",
-          "line": 823,
+          "line": 849,
           "column": 20
         },
         {
           "name": "Line",
           "kind": "Property",
           "displayName": "Line",
-          "line": 825,
+          "line": 851,
           "column": 16
         },
         {
           "name": "Column",
           "kind": "Property",
           "displayName": "Column",
-          "line": 827,
+          "line": 853,
           "column": 16
         },
         {
           "name": "EndLine",
           "kind": "Property",
           "displayName": "EndLine",
-          "line": 829,
+          "line": 855,
           "column": 16
         },
         {
           "name": "EndColumn",
           "kind": "Property",
           "displayName": "EndColumn",
-          "line": 831,
+          "line": 857,
           "column": 16
         },
         {
           "name": "IsImplicit",
           "kind": "Property",
           "displayName": "IsImplicit",
-          "line": 833,
+          "line": 859,
           "column": 17
         },
         {
           "name": "Definition",
           "kind": "Property",
           "displayName": "Definition",
-          "line": 835,
+          "line": 861,
           "column": 19
         },
         {
           "name": "FromReferenceLocation",
           "kind": "Method",
           "displayName": "FromReferenceLocation",
-          "line": 837,
+          "line": 863,
           "column": 33
         },
         {
           "name": "RoslynKit.QuickInfoSectionItem",
           "kind": "NamedType",
           "displayName": "RoslynKit.QuickInfoSectionItem",
-          "line": 854,
+          "line": 880,
           "column": 21
         },
         {
           "name": "Kind",
           "kind": "Property",
           "displayName": "Kind",
-          "line": 862,
+          "line": 888,
           "column": 19
         },
         {
           "name": "Text",
           "kind": "Property",
           "displayName": "Text",
-          "line": 864,
+          "line": 890,
           "column": 19
         },
         {
           "name": "RoslynKit.SignatureHelpSignatureItem",
           "kind": "NamedType",
           "displayName": "RoslynKit.SignatureHelpSignatureItem",
-          "line": 870,
+          "line": 896,
           "column": 21
         },
         {
           "name": "Label",
           "kind": "Property",
           "displayName": "Label",
-          "line": 884,
+          "line": 910,
           "column": 19
         },
         {
           "name": "Documentation",
           "kind": "Property",
           "displayName": "Documentation",
-          "line": 886,
+          "line": 912,
           "column": 19
         },
         {
           "name": "IsVariadic",
           "kind": "Property",
           "displayName": "IsVariadic",
-          "line": 888,
+          "line": 914,
           "column": 17
         },
         {
           "name": "Parameters",
           "kind": "Property",
           "displayName": "Parameters",
-          "line": 890,
+          "line": 916,
           "column": 54
         },
         {
           "name": "RoslynKit.SignatureHelpParameterItem",
           "kind": "NamedType",
           "displayName": "RoslynKit.SignatureHelpParameterItem",
-          "line": 896,
+          "line": 922,
           "column": 21
         },
         {
           "name": "Name",
           "kind": "Property",
           "displayName": "Name",
-          "line": 910,
+          "line": 936,
           "column": 19
         },
         {
           "name": "Label",
           "kind": "Property",
           "displayName": "Label",
-          "line": 912,
+          "line": 938,
           "column": 19
         },
         {
           "name": "Documentation",
           "kind": "Property",
           "displayName": "Documentation",
-          "line": 914,
+          "line": 940,
           "column": 19
         },
         {
           "name": "IsOptional",
           "kind": "Property",
           "displayName": "IsOptional",
-          "line": 916,
+          "line": 942,
           "column": 17
         },
         {
           "name": "RoslynKit.SymbolDisplayFormats",
           "kind": "NamedType",
           "displayName": "RoslynKit.SymbolDisplayFormats",
-          "line": 922,
+          "line": 948,
           "column": 21
         },
         {
           "name": "Qualified",
           "kind": "Field",
           "displayName": "Qualified",
-          "line": 924,
+          "line": 950,
           "column": 48
         },
         {
           "name": "QualifiedMember",
           "kind": "Field",
           "displayName": "QualifiedMember",
-          "line": 928,
+          "line": 954,
           "column": 48
         }
       ]
@@ -2820,1210 +2890,10 @@
       ]
     },
     {
-      "path": "tests/RoslynKit.AtlasPromptCacheProbe/AtlasPromptProbe.cs",
-      "projectName": "RoslynKit.AtlasPromptCacheProbe",
-      "documentKind": "source",
-      "symbolCount": 158,
-      "symbols": [
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLane",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLane",
-          "line": 12,
-          "column": 13
-        },
-        {
-          "name": "Router",
-          "kind": "Field",
-          "displayName": "Router",
-          "line": 14,
-          "column": 5
-        },
-        {
-          "name": "CSharpMapper",
-          "kind": "Field",
-          "displayName": "CSharpMapper",
-          "line": 15,
-          "column": 5
-        },
-        {
-          "name": "DocMapper",
-          "kind": "Field",
-          "displayName": "DocMapper",
-          "line": 16,
-          "column": 5
-        },
-        {
-          "name": "TestMapper",
-          "kind": "Field",
-          "displayName": "TestMapper",
-          "line": 17,
-          "column": 5
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeOptions",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeOptions",
-          "line": 23,
-          "column": 21
-        },
-        {
-          "name": "Task",
-          "kind": "Property",
-          "displayName": "Task",
-          "line": 39,
-          "column": 19
-        },
-        {
-          "name": "Lane",
-          "kind": "Property",
-          "displayName": "Lane",
-          "line": 41,
-          "column": 33
-        },
-        {
-          "name": "Model",
-          "kind": "Property",
-          "displayName": "Model",
-          "line": 43,
-          "column": 19
-        },
-        {
-          "name": "PromptCacheKey",
-          "kind": "Property",
-          "displayName": "PromptCacheKey",
-          "line": 45,
-          "column": 19
-        },
-        {
-          "name": "PromptCacheRetention",
-          "kind": "Property",
-          "displayName": "PromptCacheRetention",
-          "line": 47,
-          "column": 19
-        },
-        {
-          "name": "Parse",
-          "kind": "Method",
-          "displayName": "Parse",
-          "line": 49,
-          "column": 43
-        },
-        {
-          "name": "ReadSingleValue",
-          "kind": "Method",
-          "displayName": "ReadSingleValue",
-          "line": 104,
-          "column": 27
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeDefaults",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeDefaults",
-          "line": 123,
-          "column": 21
-        },
-        {
-          "name": "DefaultModel",
-          "kind": "Field",
-          "displayName": "DefaultModel",
-          "line": 125,
-          "column": 25
-        },
-        {
-          "name": "DefaultPromptCacheRetention",
-          "kind": "Field",
-          "displayName": "DefaultPromptCacheRetention",
-          "line": 126,
-          "column": 25
-        },
-        {
-          "name": "DefaultTask",
-          "kind": "Field",
-          "displayName": "DefaultTask",
-          "line": 127,
-          "column": 25
-        },
-        {
-          "name": "GetPromptCacheKey",
-          "kind": "Method",
-          "displayName": "GetPromptCacheKey",
-          "line": 129,
-          "column": 26
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRunner",
-          "line": 138,
-          "column": 21
-        },
-        {
-          "name": "OpenAiResponsesEndpoint",
-          "kind": "Field",
-          "displayName": "OpenAiResponsesEndpoint",
-          "line": 140,
-          "column": 26
-        },
-        {
-          "name": "PromptJsonOptions",
-          "kind": "Field",
-          "displayName": "PromptJsonOptions",
-          "line": 142,
-          "column": 51
-        },
-        {
-          "name": "RunAsync",
-          "kind": "Method",
-          "displayName": "RunAsync",
-          "line": 149,
-          "column": 54
-        },
-        {
-          "name": "BuildStablePrefix",
-          "kind": "Method",
-          "displayName": "BuildStablePrefix",
-          "line": 194,
-          "column": 26
-        },
-        {
-          "name": "BuildDynamicSuffix",
-          "kind": "Method",
-          "displayName": "BuildDynamicSuffix",
-          "line": 226,
-          "column": 26
-        },
-        {
-          "name": "LoadSelectedIndexes",
-          "kind": "Method",
-          "displayName": "LoadSelectedIndexes",
-          "line": 267,
-          "column": 51
-        },
-        {
-          "name": "ReadUsage",
-          "kind": "Method",
-          "displayName": "ReadUsage",
-          "line": 338,
-          "column": 41
-        },
-        {
-          "name": "CreateResponseAsync",
-          "kind": "Method",
-          "displayName": "CreateResponseAsync",
-          "line": 357,
-          "column": 45
-        },
-        {
-          "name": "<anonymous type: System.String model, System.String prompt_cache_key, System.String prompt_cache_retention, System.String instructions, System.String input>",
-          "kind": "NamedType",
-          "displayName": "<anonymous type: System.String model, System.String prompt_cache_key, System.String prompt_cache_retention, System.String instructions, System.String input>",
-          "line": 364,
-          "column": 23
-        },
-        {
-          "name": "model",
-          "kind": "Property",
-          "displayName": "model",
-          "line": 366,
-          "column": 13
-        },
-        {
-          "name": "prompt_cache_key",
-          "kind": "Property",
-          "displayName": "prompt_cache_key",
-          "line": 367,
-          "column": 13
-        },
-        {
-          "name": "prompt_cache_retention",
-          "kind": "Property",
-          "displayName": "prompt_cache_retention",
-          "line": 368,
-          "column": 13
-        },
-        {
-          "name": "instructions",
-          "kind": "Property",
-          "displayName": "instructions",
-          "line": 369,
-          "column": 13
-        },
-        {
-          "name": "input",
-          "kind": "Property",
-          "displayName": "input",
-          "line": 370,
-          "column": 13
-        },
-        {
-          "name": "LoadStableFiles",
-          "kind": "Method",
-          "displayName": "LoadStableFiles",
-          "line": 392,
-          "column": 60
-        },
-        {
-          "name": "LoadTextFile",
-          "kind": "Method",
-          "displayName": "LoadTextFile",
-          "line": 418,
-          "column": 45
-        },
-        {
-          "name": "RunRouteAsync",
-          "kind": "Method",
-          "displayName": "RunRouteAsync",
-          "line": 424,
-          "column": 61
-        },
-        {
-          "name": "ParseRouteOutput",
-          "kind": "Method",
-          "displayName": "ParseRouteOutput",
-          "line": 468,
-          "column": 49
-        },
-        {
-          "name": "IsProjectRelevant",
-          "kind": "Method",
-          "displayName": "IsProjectRelevant",
-          "line": 552,
-          "column": 25
-        },
-        {
-          "name": "ExtractResponseText",
-          "kind": "Method",
-          "displayName": "ExtractResponseText",
-          "line": 564,
-          "column": 27
-        },
-        {
-          "name": "GetOptionalInt64",
-          "kind": "Method",
-          "displayName": "GetOptionalInt64",
-          "line": 615,
-          "column": 26
-        },
-        {
-          "name": "GetNestedOptionalInt64",
-          "kind": "Method",
-          "displayName": "GetNestedOptionalInt64",
-          "line": 622,
-          "column": 26
-        },
-        {
-          "name": "GetOptionalString",
-          "kind": "Method",
-          "displayName": "GetOptionalString",
-          "line": 629,
-          "column": 28
-        },
-        {
-          "name": "ResolveRepositoryRoot",
-          "kind": "Method",
-          "displayName": "ResolveRepositoryRoot",
-          "line": 636,
-          "column": 27
-        },
-        {
-          "name": "NormalizeRelativePath",
-          "kind": "Method",
-          "displayName": "NormalizeRelativePath",
-          "line": 650,
-          "column": 27
-        },
-        {
-          "name": "NormalizeDirectory",
-          "kind": "Method",
-          "displayName": "NormalizeDirectory",
-          "line": 662,
-          "column": 27
-        },
-        {
-          "name": "AppendList",
-          "kind": "Method",
-          "displayName": "AppendList",
-          "line": 667,
-          "column": 25
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLaneExtensions",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeLaneExtensions",
-          "line": 686,
-          "column": 21
-        },
-        {
-          "name": "Parse",
-          "kind": "Method",
-          "displayName": "Parse",
-          "line": 688,
-          "column": 40
-        },
-        {
-          "name": "ToAgentConfigName",
-          "kind": "Method",
-          "displayName": "ToAgentConfigName",
-          "line": 700,
-          "column": 26
-        },
-        {
-          "name": "ToOptionValue",
-          "kind": "Method",
-          "displayName": "ToOptionValue",
-          "line": 712,
-          "column": 26
-        },
-        {
-          "name": "ToCliValue",
-          "kind": "Method",
-          "displayName": "ToCliValue",
-          "line": 724,
-          "column": 26
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTextFile",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTextFile",
-          "line": 733,
-          "column": 21
-        },
-        {
-          "name": "Path",
-          "kind": "Property",
-          "displayName": "Path",
-          "line": 741,
-          "column": 19
-        },
-        {
-          "name": "Content",
-          "kind": "Property",
-          "displayName": "Content",
-          "line": 743,
-          "column": 19
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRouteSummary",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeRouteSummary",
-          "line": 749,
-          "column": 21
-        },
-        {
-          "name": "Task",
-          "kind": "Property",
-          "displayName": "Task",
-          "line": 768,
-          "column": 19
-        },
-        {
-          "name": "RawOutput",
-          "kind": "Property",
-          "displayName": "RawOutput",
-          "line": 771,
-          "column": 19
-        },
-        {
-          "name": "FeatureCards",
-          "kind": "Property",
-          "displayName": "FeatureCards",
-          "line": 774,
-          "column": 34
-        },
-        {
-          "name": "MatchingFiles",
-          "kind": "Property",
-          "displayName": "MatchingFiles",
-          "line": 777,
-          "column": 34
-        },
-        {
-          "name": "MatchingTests",
-          "kind": "Property",
-          "displayName": "MatchingTests",
-          "line": 780,
-          "column": 34
-        },
-        {
-          "name": "SuggestedReadOrder",
-          "kind": "Property",
-          "displayName": "SuggestedReadOrder",
-          "line": 783,
-          "column": 34
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSelectedIndexes",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSelectedIndexes",
-          "line": 789,
-          "column": 21
-        },
-        {
-          "name": "Empty",
-          "kind": "Field",
-          "displayName": "Empty",
-          "line": 791,
-          "column": 60
-        },
-        {
-          "name": "FileEntries",
-          "kind": "Property",
-          "displayName": "FileEntries",
-          "line": 816,
-          "column": 58
-        },
-        {
-          "name": "ProjectEntries",
-          "kind": "Property",
-          "displayName": "ProjectEntries",
-          "line": 819,
-          "column": 61
-        },
-        {
-          "name": "TestProjects",
-          "kind": "Property",
-          "displayName": "TestProjects",
-          "line": 822,
-          "column": 60
-        },
-        {
-          "name": "TestFiles",
-          "kind": "Property",
-          "displayName": "TestFiles",
-          "line": 825,
-          "column": 60
-        },
-        {
-          "name": "SupportFiles",
-          "kind": "Property",
-          "displayName": "SupportFiles",
-          "line": 828,
-          "column": 60
-        },
-        {
-          "name": "SymbolDocuments",
-          "kind": "Property",
-          "displayName": "SymbolDocuments",
-          "line": 831,
-          "column": 58
-        },
-        {
-          "name": "HasAnyData",
-          "kind": "Property",
-          "displayName": "HasAnyData",
-          "line": 834,
-          "column": 17
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeIndexLoadResult",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeIndexLoadResult",
-          "line": 846,
-          "column": 21
-        },
-        {
-          "name": "SelectedIndexes",
-          "kind": "Property",
-          "displayName": "SelectedIndexes",
-          "line": 854,
-          "column": 44
-        },
-        {
-          "name": "Warnings",
-          "kind": "Property",
-          "displayName": "Warnings",
-          "line": 856,
-          "column": 34
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResult",
-          "line": 862,
-          "column": 21
-        },
-        {
-          "name": "Lane",
-          "kind": "Property",
-          "displayName": "Lane",
-          "line": 893,
-          "column": 19
-        },
-        {
-          "name": "Model",
-          "kind": "Property",
-          "displayName": "Model",
-          "line": 896,
-          "column": 19
-        },
-        {
-          "name": "PromptCacheKey",
-          "kind": "Property",
-          "displayName": "PromptCacheKey",
-          "line": 899,
-          "column": 19
-        },
-        {
-          "name": "PromptCacheRetention",
-          "kind": "Property",
-          "displayName": "PromptCacheRetention",
-          "line": 902,
-          "column": 19
-        },
-        {
-          "name": "StableFiles",
-          "kind": "Property",
-          "displayName": "StableFiles",
-          "line": 905,
-          "column": 34
-        },
-        {
-          "name": "StablePrefixLength",
-          "kind": "Property",
-          "displayName": "StablePrefixLength",
-          "line": 908,
-          "column": 16
-        },
-        {
-          "name": "DynamicSuffixLength",
-          "kind": "Property",
-          "displayName": "DynamicSuffixLength",
-          "line": 911,
-          "column": 16
-        },
-        {
-          "name": "DynamicRoute",
-          "kind": "Property",
-          "displayName": "DynamicRoute",
-          "line": 914,
-          "column": 41
-        },
-        {
-          "name": "SelectedIndexes",
-          "kind": "Property",
-          "displayName": "SelectedIndexes",
-          "line": 917,
-          "column": 44
-        },
-        {
-          "name": "Response",
-          "kind": "Property",
-          "displayName": "Response",
-          "line": 920,
-          "column": 37
-        },
-        {
-          "name": "Usage",
-          "kind": "Property",
-          "displayName": "Usage",
-          "line": 923,
-          "column": 34
-        },
-        {
-          "name": "Warnings",
-          "kind": "Property",
-          "displayName": "Warnings",
-          "line": 926,
-          "column": 34
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResponse",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeResponse",
-          "line": 932,
-          "column": 21
-        },
-        {
-          "name": "Id",
-          "kind": "Property",
-          "displayName": "Id",
-          "line": 942,
-          "column": 20
-        },
-        {
-          "name": "Status",
-          "kind": "Property",
-          "displayName": "Status",
-          "line": 945,
-          "column": 20
-        },
-        {
-          "name": "OutputText",
-          "kind": "Property",
-          "displayName": "OutputText",
-          "line": 948,
-          "column": 19
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeUsage",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeUsage",
-          "line": 954,
-          "column": 21
-        },
-        {
-          "name": "InputTokens",
-          "kind": "Property",
-          "displayName": "InputTokens",
-          "line": 965,
-          "column": 18
-        },
-        {
-          "name": "OutputTokens",
-          "kind": "Property",
-          "displayName": "OutputTokens",
-          "line": 968,
-          "column": 18
-        },
-        {
-          "name": "TotalTokens",
-          "kind": "Property",
-          "displayName": "TotalTokens",
-          "line": 971,
-          "column": 18
-        },
-        {
-          "name": "CachedTokens",
-          "kind": "Property",
-          "displayName": "CachedTokens",
-          "line": 974,
-          "column": 18
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeFileIndexEntry",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeFileIndexEntry",
-          "line": 980,
-          "column": 21
-        },
-        {
-          "name": "Path",
-          "kind": "Property",
-          "displayName": "Path",
-          "line": 983,
-          "column": 19
-        },
-        {
-          "name": "Extension",
-          "kind": "Property",
-          "displayName": "Extension",
-          "line": 986,
-          "column": 19
-        },
-        {
-          "name": "Area",
-          "kind": "Property",
-          "displayName": "Area",
-          "line": 989,
-          "column": 19
-        },
-        {
-          "name": "Category",
-          "kind": "Property",
-          "displayName": "Category",
-          "line": 992,
-          "column": 19
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeProjectIndexEntry",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeProjectIndexEntry",
-          "line": 998,
-          "column": 21
-        },
-        {
-          "name": "Name",
-          "kind": "Property",
-          "displayName": "Name",
-          "line": 1001,
-          "column": 19
-        },
-        {
-          "name": "Path",
-          "kind": "Property",
-          "displayName": "Path",
-          "line": 1004,
-          "column": 19
-        },
-        {
-          "name": "Category",
-          "kind": "Property",
-          "displayName": "Category",
-          "line": 1007,
-          "column": 19
-        },
-        {
-          "name": "IsTestProject",
-          "kind": "Property",
-          "displayName": "IsTestProject",
-          "line": 1010,
-          "column": 17
-        },
-        {
-          "name": "IncludedInSolution",
-          "kind": "Property",
-          "displayName": "IncludedInSolution",
-          "line": 1013,
-          "column": 17
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestProjectEntry",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestProjectEntry",
-          "line": 1019,
-          "column": 21
-        },
-        {
-          "name": "Name",
-          "kind": "Property",
-          "displayName": "Name",
-          "line": 1022,
-          "column": 19
-        },
-        {
-          "name": "Path",
-          "kind": "Property",
-          "displayName": "Path",
-          "line": 1025,
-          "column": 19
-        },
-        {
-          "name": "Category",
-          "kind": "Property",
-          "displayName": "Category",
-          "line": 1028,
-          "column": 19
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeIndexedPathEntry",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeIndexedPathEntry",
-          "line": 1034,
-          "column": 21
-        },
-        {
-          "name": "Path",
-          "kind": "Property",
-          "displayName": "Path",
-          "line": 1037,
-          "column": 19
-        },
-        {
-          "name": "Category",
-          "kind": "Property",
-          "displayName": "Category",
-          "line": 1040,
-          "column": 19
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbolDocument",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbolDocument",
-          "line": 1046,
-          "column": 21
-        },
-        {
-          "name": "Path",
-          "kind": "Property",
-          "displayName": "Path",
-          "line": 1049,
-          "column": 19
-        },
-        {
-          "name": "ProjectName",
-          "kind": "Property",
-          "displayName": "ProjectName",
-          "line": 1052,
-          "column": 19
-        },
-        {
-          "name": "DocumentKind",
-          "kind": "Property",
-          "displayName": "DocumentKind",
-          "line": 1055,
-          "column": 19
-        },
-        {
-          "name": "SymbolCount",
-          "kind": "Property",
-          "displayName": "SymbolCount",
-          "line": 1058,
-          "column": 16
-        },
-        {
-          "name": "Symbols",
-          "kind": "Property",
-          "displayName": "Symbols",
-          "line": 1061,
-          "column": 50
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbol",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbol",
-          "line": 1067,
-          "column": 21
-        },
-        {
-          "name": "Name",
-          "kind": "Property",
-          "displayName": "Name",
-          "line": 1070,
-          "column": 19
-        },
-        {
-          "name": "Kind",
-          "kind": "Property",
-          "displayName": "Kind",
-          "line": 1073,
-          "column": 19
-        },
-        {
-          "name": "DisplayName",
-          "kind": "Property",
-          "displayName": "DisplayName",
-          "line": 1076,
-          "column": 19
-        },
-        {
-          "name": "Line",
-          "kind": "Property",
-          "displayName": "Line",
-          "line": 1079,
-          "column": 16
-        },
-        {
-          "name": "Column",
-          "kind": "Property",
-          "displayName": "Column",
-          "line": 1082,
-          "column": 16
-        },
-        {
-          "name": "ContainingType",
-          "kind": "Property",
-          "displayName": "ContainingType",
-          "line": 1085,
-          "column": 20
-        },
-        {
-          "name": "ContainingNamespace",
-          "kind": "Property",
-          "displayName": "ContainingNamespace",
-          "line": 1088,
-          "column": 20
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.ProbeEnvelope",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.ProbeEnvelope",
-          "line": 1094,
-          "column": 21
-        },
-        {
-          "name": "SchemaVersion",
-          "kind": "Property",
-          "displayName": "SchemaVersion",
-          "line": 1107,
-          "column": 16
-        },
-        {
-          "name": "Tool",
-          "kind": "Property",
-          "displayName": "Tool",
-          "line": 1110,
-          "column": 19
-        },
-        {
-          "name": "Command",
-          "kind": "Property",
-          "displayName": "Command",
-          "line": 1113,
-          "column": 19
-        },
-        {
-          "name": "Success",
-          "kind": "Property",
-          "displayName": "Success",
-          "line": 1116,
-          "column": 17
-        },
-        {
-          "name": "Data",
-          "kind": "Property",
-          "displayName": "Data",
-          "line": 1119,
-          "column": 20
-        },
-        {
-          "name": "Errors",
-          "kind": "Property",
-          "displayName": "Errors",
-          "line": 1122,
-          "column": 42
-        },
-        {
-          "name": "ForSuccess",
-          "kind": "Method",
-          "displayName": "ForSuccess",
-          "line": 1124,
-          "column": 33
-        },
-        {
-          "name": "Failure",
-          "kind": "Method",
-          "displayName": "Failure",
-          "line": 1129,
-          "column": 33
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.ProbeErrorInfo",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.ProbeErrorInfo",
-          "line": 1138,
-          "column": 21
-        },
-        {
-          "name": "Kind",
-          "kind": "Property",
-          "displayName": "Kind",
-          "line": 1148,
-          "column": 19
-        },
-        {
-          "name": "Message",
-          "kind": "Property",
-          "displayName": "Message",
-          "line": 1151,
-          "column": 19
-        },
-        {
-          "name": "Code",
-          "kind": "Property",
-          "displayName": "Code",
-          "line": 1154,
-          "column": 20
-        },
-        {
-          "name": "Usage",
-          "kind": "Method",
-          "displayName": "Usage",
-          "line": 1156,
-          "column": 34
-        },
-        {
-          "name": "Canceled",
-          "kind": "Method",
-          "displayName": "Canceled",
-          "line": 1161,
-          "column": 34
-        },
-        {
-          "name": "Internal",
-          "kind": "Method",
-          "displayName": "Internal",
-          "line": 1166,
-          "column": 34
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeUsageException",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeUsageException",
-          "line": 1175,
-          "column": 21
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeFileIndexDocument",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeFileIndexDocument",
-          "line": 1183,
-          "column": 23
-        },
-        {
-          "name": "Files",
-          "kind": "Property",
-          "displayName": "Files",
-          "line": 1186,
-          "column": 58
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeProjectIndexDocument",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeProjectIndexDocument",
-          "line": 1189,
-          "column": 23
-        },
-        {
-          "name": "Projects",
-          "kind": "Property",
-          "displayName": "Projects",
-          "line": 1192,
-          "column": 61
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestIndexDocument",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestIndexDocument",
-          "line": 1195,
-          "column": 23
-        },
-        {
-          "name": "TestProjects",
-          "kind": "Property",
-          "displayName": "TestProjects",
-          "line": 1198,
-          "column": 60
-        },
-        {
-          "name": "TestFiles",
-          "kind": "Property",
-          "displayName": "TestFiles",
-          "line": 1201,
-          "column": 60
-        },
-        {
-          "name": "SupportFiles",
-          "kind": "Property",
-          "displayName": "SupportFiles",
-          "line": 1204,
-          "column": 60
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestIndexSelection",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeTestIndexSelection",
-          "line": 1207,
-          "column": 23
-        },
-        {
-          "name": "TestProjects",
-          "kind": "Property",
-          "displayName": "TestProjects",
-          "line": 1219,
-          "column": 60
-        },
-        {
-          "name": "TestFiles",
-          "kind": "Property",
-          "displayName": "TestFiles",
-          "line": 1221,
-          "column": 60
-        },
-        {
-          "name": "SupportFiles",
-          "kind": "Property",
-          "displayName": "SupportFiles",
-          "line": 1223,
-          "column": 60
-        },
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbolIndexDocument",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.AtlasPromptProbeSymbolIndexDocument",
-          "line": 1226,
-          "column": 23
-        },
-        {
-          "name": "Documents",
-          "kind": "Property",
-          "displayName": "Documents",
-          "line": 1229,
-          "column": 58
-        }
-      ]
-    },
-    {
-      "path": "tests/RoslynKit.AtlasPromptCacheProbe/Program.cs",
-      "projectName": "RoslynKit.AtlasPromptCacheProbe",
-      "documentKind": "source",
-      "symbolCount": 3,
-      "symbols": [
-        {
-          "name": "RoslynKit.AtlasPromptCacheProbe.Program",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.AtlasPromptCacheProbe.Program",
-          "line": 6,
-          "column": 23
-        },
-        {
-          "name": "JsonOptions",
-          "kind": "Field",
-          "displayName": "JsonOptions",
-          "line": 8,
-          "column": 51
-        },
-        {
-          "name": "Main",
-          "kind": "Method",
-          "displayName": "Main",
-          "line": 15,
-          "column": 35
-        }
-      ]
-    },
-    {
-      "path": "tests/RoslynKit.Tests/AtlasPromptCacheProbeTests.cs",
-      "projectName": "RoslynKit.Tests",
-      "documentKind": "source",
-      "symbolCount": 7,
-      "symbols": [
-        {
-          "name": "RoslynKit.Tests.AtlasPromptCacheProbeTests",
-          "kind": "NamedType",
-          "displayName": "RoslynKit.Tests.AtlasPromptCacheProbeTests",
-          "line": 9,
-          "column": 21
-        },
-        {
-          "name": "BuildStablePrefix_SortsFeatureCardsByPath",
-          "kind": "Method",
-          "displayName": "BuildStablePrefix_SortsFeatureCardsByPath",
-          "line": 12,
-          "column": 17
-        },
-        {
-          "name": "BuildStablePrefix_ExcludesGeneratedIndexMetadata",
-          "kind": "Method",
-          "displayName": "BuildStablePrefix_ExcludesGeneratedIndexMetadata",
-          "line": 30,
-          "column": 17
-        },
-        {
-          "name": "GetPromptCacheKey_UsesLaneSpecificValue",
-          "kind": "Method",
-          "displayName": "GetPromptCacheKey_UsesLaneSpecificValue",
-          "line": 47,
-          "column": 17
-        },
-        {
-          "name": "Parse_UsesDefaultTask_WhenArgumentsAreEmpty",
-          "kind": "Method",
-          "displayName": "Parse_UsesDefaultTask_WhenArgumentsAreEmpty",
-          "line": 56,
-          "column": 17
-        },
-        {
-          "name": "LoadSelectedIndexes_WarnsWhenIndexesAreMissing",
-          "kind": "Method",
-          "displayName": "LoadSelectedIndexes_WarnsWhenIndexesAreMissing",
-          "line": 68,
-          "column": 17
-        },
-        {
-          "name": "ReadUsage_ReadsCachedTokensFromPromptTokensDetails",
-          "kind": "Method",
-          "displayName": "ReadUsage_ReadsCachedTokensFromPromptTokensDetails",
-          "line": 98,
-          "column": 17
-        }
-      ]
-    },
-    {
       "path": "tests/RoslynKit.Tests/CliOutputTests.cs",
       "projectName": "RoslynKit.Tests",
       "documentKind": "source",
-      "symbolCount": 14,
+      "symbolCount": 18,
       "symbols": [
         {
           "name": "RoslynKit.Tests.CliOutputTests",
@@ -4103,24 +2973,52 @@
           "column": 23
         },
         {
+          "name": "RunAsync_WritesUsageErrorHint_ForLineBeyondDocumentEnd",
+          "kind": "Method",
+          "displayName": "RunAsync_WritesUsageErrorHint_ForLineBeyondDocumentEnd",
+          "line": 107,
+          "column": 23
+        },
+        {
+          "name": "RunAsync_WritesUsageErrorHint_ForColumnBeyondLineEnd",
+          "kind": "Method",
+          "displayName": "RunAsync_WritesUsageErrorHint_ForColumnBeyondLineEnd",
+          "line": 125,
+          "column": 23
+        },
+        {
+          "name": "RunAsync_OmitsUsageErrorHint_WhenNoRetryGuidanceExists",
+          "kind": "Method",
+          "displayName": "RunAsync_OmitsUsageErrorHint_WhenNoRetryGuidanceExists",
+          "line": 144,
+          "column": 23
+        },
+        {
           "name": "AssertUsageErrorAsync",
           "kind": "Method",
           "displayName": "AssertUsageErrorAsync",
-          "line": 106,
+          "line": 151,
           "column": 39
         },
         {
           "name": "AssertVersionOutputAsync",
           "kind": "Method",
           "displayName": "AssertVersionOutputAsync",
-          "line": 122,
+          "line": 172,
           "column": 31
         },
         {
           "name": "GetExpectedVersionOutput",
           "kind": "Method",
           "displayName": "GetExpectedVersionOutput",
-          "line": 131,
+          "line": 181,
+          "column": 27
+        },
+        {
+          "name": "NormalizeErrorOutput",
+          "kind": "Method",
+          "displayName": "NormalizeErrorOutput",
+          "line": 191,
           "column": 27
         }
       ]
@@ -4129,7 +3027,7 @@
       "path": "tests/RoslynKit.Tests/CliParserTests.cs",
       "projectName": "RoslynKit.Tests",
       "documentKind": "source",
-      "symbolCount": 25,
+      "symbolCount": 27,
       "symbols": [
         {
           "name": "RoslynKit.Tests.CliParserTests",
@@ -4300,10 +3198,24 @@
           "column": 17
         },
         {
+          "name": "Parse_AcceptsDocumentLines_WithRequiredRange",
+          "kind": "Method",
+          "displayName": "Parse_AcceptsDocumentLines_WithRequiredRange",
+          "line": 276,
+          "column": 17
+        },
+        {
+          "name": "Parse_RejectsMissingEndLine_ForDocumentLines",
+          "kind": "Method",
+          "displayName": "Parse_RejectsMissingEndLine_ForDocumentLines",
+          "line": 292,
+          "column": 17
+        },
+        {
           "name": "Parse_RejectsMissingSymbol_ForSymbolSource",
           "kind": "Method",
           "displayName": "Parse_RejectsMissingSymbol_ForSymbolSource",
-          "line": 276,
+          "line": 306,
           "column": 17
         }
       ]
@@ -4312,7 +3224,7 @@
       "path": "tests/RoslynKit.Tests/CommandExecutionTests.cs",
       "projectName": "RoslynKit.Tests",
       "documentKind": "source",
-      "symbolCount": 18,
+      "symbolCount": 24,
       "symbols": [
         {
           "name": "RoslynKit.Tests.CommandExecutionTests",
@@ -4343,101 +3255,143 @@
           "column": 23
         },
         {
+          "name": "DocumentLines_ReadsBoundedRange_FromFileSelector",
+          "kind": "Method",
+          "displayName": "DocumentLines_ReadsBoundedRange_FromFileSelector",
+          "line": 54,
+          "column": 23
+        },
+        {
+          "name": "DocumentLines_CapsOversizedEndLine_ToDocumentEnd",
+          "kind": "Method",
+          "displayName": "DocumentLines_CapsOversizedEndLine_ToDocumentEnd",
+          "line": 77,
+          "column": 23
+        },
+        {
+          "name": "DocumentLines_RejectsReversedRange",
+          "kind": "Method",
+          "displayName": "DocumentLines_RejectsReversedRange",
+          "line": 102,
+          "column": 23
+        },
+        {
+          "name": "DocumentLines_RejectsStartLineBeyondDocumentEnd",
+          "kind": "Method",
+          "displayName": "DocumentLines_RejectsStartLineBeyondDocumentEnd",
+          "line": 119,
+          "column": 23
+        },
+        {
           "name": "Definition_ReturnsCliApplicationConstructorDeclaration",
           "kind": "Method",
           "displayName": "Definition_ReturnsCliApplicationConstructorDeclaration",
-          "line": 54,
+          "line": 142,
           "column": 23
         },
         {
           "name": "QuickInfo_ReturnsConstructorSections_ForCliApplicationInstantiation",
           "kind": "Method",
           "displayName": "QuickInfo_ReturnsConstructorSections_ForCliApplicationInstantiation",
-          "line": 74,
+          "line": 162,
+          "column": 23
+        },
+        {
+          "name": "QuickInfo_LineBeyondDocumentEnd_HasRetryHint",
+          "kind": "Method",
+          "displayName": "QuickInfo_LineBeyondDocumentEnd_HasRetryHint",
+          "line": 181,
+          "column": 23
+        },
+        {
+          "name": "QuickInfo_ColumnBeyondLineEnd_HasRetryHint",
+          "kind": "Method",
+          "displayName": "QuickInfo_ColumnBeyondLineEnd_HasRetryHint",
+          "line": 201,
           "column": 23
         },
         {
           "name": "TypeDefinition_ReturnsFixtureInterfaceType",
           "kind": "Method",
           "displayName": "TypeDefinition_ReturnsFixtureInterfaceType",
-          "line": 93,
+          "line": 222,
           "column": 23
         },
         {
           "name": "Implementations_ReturnsFixtureImplementation",
           "kind": "Method",
           "displayName": "Implementations_ReturnsFixtureImplementation",
-          "line": 110,
+          "line": 239,
           "column": 23
         },
         {
           "name": "SignatureHelp_ReturnsConstructorSignature",
           "kind": "Method",
           "displayName": "SignatureHelp_ReturnsConstructorSignature",
-          "line": 126,
+          "line": 255,
           "column": 23
         },
         {
           "name": "DocumentText_DocumentKey_ReadsFullGeneratedDocument",
           "kind": "Method",
           "displayName": "DocumentText_DocumentKey_ReadsFullGeneratedDocument",
-          "line": 146,
+          "line": 275,
           "column": 23
         },
         {
           "name": "References_BySymbolSelector_FindsPositionResolverCallers",
           "kind": "Method",
           "displayName": "References_BySymbolSelector_FindsPositionResolverCallers",
-          "line": 169,
+          "line": 298,
           "column": 23
         },
         {
           "name": "Definition_ByDocIdSelector_ReturnsType",
           "kind": "Method",
           "displayName": "Definition_ByDocIdSelector_ReturnsType",
-          "line": 186,
+          "line": 315,
           "column": 23
         },
         {
           "name": "Implementations_BySymbolSelector_ReturnsFixtureImplementation",
           "kind": "Method",
           "displayName": "Implementations_BySymbolSelector_ReturnsFixtureImplementation",
-          "line": 202,
+          "line": 331,
           "column": 23
         },
         {
           "name": "References_AmbiguousQualifiedName_ListsCandidateDocIds",
           "kind": "Method",
           "displayName": "References_AmbiguousQualifiedName_ListsCandidateDocIds",
-          "line": 215,
+          "line": 344,
           "column": 23
         },
         {
           "name": "SymbolSource_ReturnsFullMethodBlock_ForFixtureMember",
           "kind": "Method",
           "displayName": "SymbolSource_ReturnsFullMethodBlock_ForFixtureMember",
-          "line": 228,
+          "line": 357,
           "column": 23
         },
         {
           "name": "SymbolSource_ReturnsSourceAndGeneratedDeclarations_ForPartialType",
           "kind": "Method",
           "displayName": "SymbolSource_ReturnsSourceAndGeneratedDeclarations_ForPartialType",
-          "line": 244,
+          "line": 373,
           "column": 23
         },
         {
           "name": "SymbolSource_UnknownSelector_ThrowsUsageError",
           "kind": "Method",
           "displayName": "SymbolSource_UnknownSelector_ThrowsUsageError",
-          "line": 258,
+          "line": 387,
           "column": 23
         },
         {
           "name": "AssertWholeDocumentRange",
           "kind": "Method",
           "displayName": "AssertWholeDocumentRange",
-          "line": 269,
+          "line": 398,
           "column": 25
         }
       ]
@@ -4446,7 +3400,7 @@
       "path": "tests/RoslynKit.Tests/MarkdownFormatTests.cs",
       "projectName": "RoslynKit.Tests",
       "documentKind": "source",
-      "symbolCount": 15,
+      "symbolCount": 16,
       "symbols": [
         {
           "name": "RoslynKit.Tests.MarkdownFormatTests",
@@ -4512,45 +3466,52 @@
           "column": 17
         },
         {
+          "name": "Render_EmitsRangeFence_ForDocumentLines",
+          "kind": "Method",
+          "displayName": "Render_EmitsRangeFence_ForDocumentLines",
+          "line": 195,
+          "column": 17
+        },
+        {
           "name": "Render_EmitsProjectAndDocumentBullets_ForWorkspace",
           "kind": "Method",
           "displayName": "Render_EmitsProjectAndDocumentBullets_ForWorkspace",
-          "line": 195,
+          "line": 225,
           "column": 17
         },
         {
           "name": "Render_EmitsWorkspaceDiagnosticMessages_AsBullets",
           "kind": "Method",
           "displayName": "Render_EmitsWorkspaceDiagnosticMessages_AsBullets",
-          "line": 215,
+          "line": 245,
           "column": 17
         },
         {
           "name": "SourcePath",
           "kind": "Field",
           "displayName": "SourcePath",
-          "line": 238,
+          "line": 268,
           "column": 26
         },
         {
           "name": "ProgramPath",
           "kind": "Field",
           "displayName": "ProgramPath",
-          "line": 239,
+          "line": 269,
           "column": 26
         },
         {
           "name": "CreateDescriptor",
           "kind": "Method",
           "displayName": "CreateDescriptor",
-          "line": 241,
+          "line": 271,
           "column": 39
         },
         {
           "name": "CreateSymbol",
           "kind": "Method",
           "displayName": "CreateSymbol",
-          "line": 253,
+          "line": 283,
           "column": 31
         }
       ]
