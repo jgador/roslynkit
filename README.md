@@ -13,7 +13,7 @@ This guide assumes `roslynkit` is already installed and available on `PATH`. For
 - Use Roslyn APIs directly instead of shelling out to an editor, language server, or IDE.
 - Prioritize read-only code intelligence before edit-producing refactor or formatting features.
 - Keep commands deterministic and scriptable for agents and terminal workflows.
-- Emit one deterministic markdown-flavored text shape for every command result: key-value header lines, labeled compact bullets, inline code spans, and fenced code blocks for source text. Failures print a two-line plain-text error and exit non-zero.
+- Emit one deterministic markdown-flavored text shape for every command result: key-value header lines, labeled compact bullets, inline code spans, and fenced code blocks for source text. Failures print a plain-text error and exit non-zero.
 - Support solution-level and project-level inspection with stable sorting and one-based source positions.
 
 ## Commands
@@ -29,11 +29,19 @@ truncated: false
 - kind: NamedType name: `MyApp.MyService` loc: `src/MyApp/MyService.cs:8:14-8:23` id: `T:MyApp.MyService`
 ```
 
-A failed result prints two plain-text lines and the process exits non-zero:
+A failed result prints plain-text lines and the process exits non-zero:
 
 ```text
 error: usage
 message: Missing required option '--target'.
+```
+
+All failures include `error:` and `message:`. Usage errors with a deterministic retry path may add a `hint:` line:
+
+```text
+error: usage
+message: Line 70 is outside the document range 1..13.
+hint: Retry with --line between 1 and 13, or run document-lines to inspect valid source lines before choosing --line/--column.
 ```
 
 Exit codes: `0` success, `2` usage error, `130` canceled, `1` any other failure. The `error:` value is `usage`, `canceled`, or the exception type name.
@@ -58,6 +66,7 @@ roslynkit symbols --target .\MySolution.slnx --query MyType
 roslynkit symbols --target .\MySolution.slnx --query MyService --exact --kind class
 roslynkit document-symbols --target .\MySolution.slnx --file .\src\MyApp\Program.cs
 roslynkit document-text --target .\MySolution.slnx --file .\src\MyApp\Service.cs
+roslynkit document-lines --target .\MySolution.slnx --file .\src\MyApp\Service.cs --start-line 40 --end-line 52
 roslynkit definition --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20
 roslynkit definition --target .\MySolution.slnx --symbol MyApp.MyService
 roslynkit references --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20
@@ -75,7 +84,7 @@ Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-bas
 
 `workspace` defaults to repo-relevant source documents only. Add `--include-generated`, `--include-additional`, and `--include-analyzer-config` when you need source-generated files, `AdditionalFiles`, or analyzer config documents. Distinct project and target-framework contexts stay separate through `documentKey`.
 
-For document-oriented commands such as `document-symbols`, `document-text`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, and `signature-help`, pass `--target` plus exactly one of `--file <path>` or `--document-key <id>`. Use `workspace` first when the same file appears in multiple project contexts or when you need a generated document key. Semantic position commands operate on C# source or source-generated documents; `document-text` can read source, source-generated, additional, and analyzer-config documents and always returns the entire resolved document.
+For document-oriented commands such as `document-symbols`, `document-text`, `document-lines`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, and `signature-help`, pass `--target` plus exactly one of `--file <path>` or `--document-key <id>`. Use `workspace` first when the same file appears in multiple project contexts or when you need a generated document key. Semantic position commands operate on C# source or source-generated documents and keep line/column coordinates strict. `document-text` can read source, source-generated, additional, and analyzer-config documents and always returns the entire resolved document. Use `document-lines` when a small line window is enough; it reads from `--start-line` through the lesser of `--end-line` and EOF.
 
 `definition`, `references`, and `implementations` also accept `--symbol <selector>` instead of the position selector. The selector is either a Roslyn documentation-comment ID (`T:`, `M:`, `P:`, `F:`, `E:`, or `N:` prefix, for example `M:MyApp.MyService.Execute(System.String)`) or a qualified symbol name such as `MyApp.MyService.Execute`. `--symbol` cannot be combined with `--file`, `--document-key`, `--line`, or `--column`. When a qualified name matches several declarations (for example method overloads), the command fails with a deterministic usage error listing the candidate documentation-comment IDs so the exact one can be retried. In symbol mode the result echoes the input as `selector:`. Constructors are addressable only through `M:...#ctor(...)` documentation-comment IDs.
 
@@ -83,7 +92,7 @@ Every symbol bullet includes an `id:` field carrying the symbol's documentation-
 
 `symbol-source` takes `--target` plus `--symbol` and returns the full declaration source text for the resolved symbol: one entry per declaring block with its document descriptor, true block range, and text. Partial types return every declaring block, including source-generated ones. The text covers the declaration node itself (attributes included); leading XML documentation comments are trivia and are not included.
 
-The markdown output is the only format; there is no `--format` option. Locations render as one-based `path:line:column-endLine:endColumn` ranges, and `symbol-source`, `document-text`, and `quick-info` payloads stay verbatim inside fenced code blocks — real newlines and quotes, no string escaping. A zero exit code means stdout is command output; a non-zero exit code means stdout is the two-line error. See `docs/markdown-output-format.md` for the full per-command output contract.
+The markdown output is the only format; there is no `--format` option. Locations render as one-based `path:line:column-endLine:endColumn` ranges, and `symbol-source`, `document-text`, `document-lines`, and `quick-info` payloads stay verbatim inside fenced code blocks — real newlines and quotes, no string escaping. A zero exit code means stdout is command output; a non-zero exit code means stdout is the plain-text error. See `docs/markdown-output-format.md` for the full per-command output contract.
 
 See `docs/roslyn-lsp-commands.md` for the exhaustive Roslyn language-server method inventory used to compare RoslynKit's current command set with Roslyn's broader code intelligence surface.
 

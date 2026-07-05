@@ -55,14 +55,22 @@ src/MyApp/Program.cs:10:20-10:20
 
 ## Format Contract
 
-On success, the command writes a compact markdown fragment to stdout and exits `0`. On failure, it writes a two-line plain-text error to stdout and exits non-zero:
+On success, the command writes a compact markdown fragment to stdout and exits `0`. On failure, it writes a plain-text error to stdout and exits non-zero:
 
 ```text
 error: usage
 message: Missing required option '--target'.
 ```
 
-Exit codes: `0` success, `2` usage error, `130` canceled, `1` any other failure. The `error:` value is `usage`, `canceled`, or the exception type name. A zero exit code means stdout is command output; a non-zero exit code means stdout is the two-line error.
+All failures include `error:` and `message:`. Usage errors with a deterministic retry path may include a third `hint:` line:
+
+```text
+error: usage
+message: Line 70 is outside the document range 1..13.
+hint: Retry with --line between 1 and 13, or run document-lines to inspect valid source lines before choosing --line/--column.
+```
+
+Exit codes: `0` success, `2` usage error, `130` canceled, `1` any other failure. The `error:` value is `usage`, `canceled`, or the exception type name. A zero exit code means stdout is command output; a non-zero exit code means stdout is the plain-text error.
 
 Success output starts with `command: <name>` followed by command-specific key-value lines, then a blank line before bullets or fences:
 
@@ -204,7 +212,7 @@ active-parameter: 1
 - signature: `MyService.Execute(string value)`
 ```
 
-### `document-text` And `symbol-source`
+### `document-text`, `document-lines`, And `symbol-source`
 
 Each document or declaration renders as metadata plus a fenced code block. The source payload is not indented, wrapped, escaped, or trimmed. `document-text` adds `truncated: true` only when the read was truncated.
 
@@ -221,6 +229,20 @@ public sealed class MyService
     public void Execute(string value)
     {
     }
+}
+```
+````
+
+`document-lines` reads from `--start-line` through the lesser of `--end-line` and EOF, then adds the actual returned line range before the fence:
+
+````markdown
+command: document-lines
+path: `src/MyApp/MyService.cs`
+range: `src/MyApp/MyService.cs:40:1-52:2`
+
+```csharp
+public void Execute(string value)
+{
 }
 ```
 ````
@@ -254,6 +276,6 @@ Renderer changes need focused tests for:
 - inline code span escaping for values containing backticks;
 - fenced code block rendering for source text containing backtick runs;
 - command-specific rendering for `symbols`, `references`, `quick-info`, `document-text`, and `symbol-source`;
-- the two-line plain-text error shape with non-zero exit codes;
+- the plain-text error shape with non-zero exit codes, including optional `hint:` lines for deterministic usage retries;
 - rejection of the removed `--format` option as an unknown option;
 - README and package documentation updates when the public output contract changes.

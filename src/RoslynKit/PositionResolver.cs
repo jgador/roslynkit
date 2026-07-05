@@ -34,13 +34,16 @@ public static class PositionResolver
 
         if (zeroBasedLine < 0 || zeroBasedLine >= text.Lines.Count)
         {
-            throw new CliUsageException(commandName, $"Line {oneBasedLine} is outside the document range 1..{text.Lines.Count}.");
+            var hint = $"Retry with --line between 1 and {text.Lines.Count}, or run document-lines to inspect valid source lines before choosing --line/--column.";
+            throw new CliUsageException(commandName, $"Line {oneBasedLine} is outside the document range 1..{text.Lines.Count}.", hint);
         }
 
         var line = text.Lines[zeroBasedLine];
         if (zeroBasedColumn < 0 || zeroBasedColumn > line.Span.Length)
         {
-            throw new CliUsageException(commandName, $"Column {oneBasedColumn} is outside the line range 1..{line.Span.Length + 1}.");
+            var lastColumn = line.Span.Length + 1;
+            var hint = $"Retry with --column between 1 and {lastColumn} for line {oneBasedLine}, or run document-lines to inspect that source line before choosing --line/--column.";
+            throw new CliUsageException(commandName, $"Column {oneBasedColumn} is outside the line range 1..{lastColumn}.", hint);
         }
 
         return text.Lines.GetPosition(new LinePosition(zeroBasedLine, zeroBasedColumn));

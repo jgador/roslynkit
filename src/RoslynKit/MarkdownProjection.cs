@@ -24,6 +24,7 @@ public static class MarkdownProjection
             SymbolSourceResult result => RenderSymbolSource(result),
             DocumentSymbolsResult result => RenderDocumentSymbols(result),
             DocumentTextResult result => RenderDocumentText(result),
+            DocumentLinesResult result => RenderDocumentLines(result),
             DiagnosticsResult result => RenderDiagnostics(result),
             WorkspaceResult result => RenderWorkspace(result),
             _ => data.ToString() ?? string.Empty,
@@ -242,6 +243,18 @@ public static class MarkdownProjection
             builder.Append("\ntruncated: true");
         }
 
+        builder.Append("\n\n");
+        AppendFence(builder, result.Text, FenceInfo(result.Document.DocumentKind));
+        AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
+        return builder.ToString();
+    }
+
+    private static string RenderDocumentLines(DocumentLinesResult result)
+    {
+        var builder = new StringBuilder();
+        builder.Append("command: document-lines");
+        builder.Append("\npath: ").Append(CodeSpan(DocumentPath(result.Document)));
+        builder.Append("\nrange: ").Append(CodeSpan(Location(DocumentPath(result.Document), result.Range)));
         builder.Append("\n\n");
         AppendFence(builder, result.Text, FenceInfo(result.Document.DocumentKind));
         AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);

@@ -55,8 +55,9 @@ Route command text from `Program.Main` through parse, help/version, and command 
 - Top-level `--version` rewrites to `version`.
 - One builtin registry owns command metadata.
 - Commands emit markdown-flavored text only (`MarkdownProjection`); there is no `--format` option and passing it is a usage error.
-- Failures write a two-line plain-text error (`error:` code, `message:` text) to stdout with exit codes 2 (usage), 130 (canceled), or 1 (internal); success is exit 0.
+- Failures write a plain-text error (`error:` code, `message:` text, and optional usage-error `hint:` text) to stdout with exit codes 2 (usage), 130 (canceled), or 1 (internal); success is exit 0.
 - `definition`, `references`, and `implementations` validate `--symbol` and the position selector as mutually exclusive in `CliParser.ValidateSymbolOrPositionSelector`.
+- `document-lines` rejects reversed ranges and `--start-line` beyond EOF, but caps an oversized `--end-line` to the document EOF and reports the actual returned range.
 
 ## Common pitfalls
 
@@ -78,4 +79,4 @@ Route command text from `Program.Main` through parse, help/version, and command 
 
 ## Last verified
 
-`2026-07-03`
+`2026-07-05`

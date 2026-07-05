@@ -51,6 +51,94 @@ public sealed class CommandExecutionTests
     }
 
     [Fact]
+    public async Task DocumentLines_ReadsBoundedRange_FromFileSelector()
+    {
+        var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+        var lines = File.ReadAllLines(programPath);
+        var lineNumber = Array.FindIndex(lines, line => line.Contains("new CliApplication", StringComparison.Ordinal)) + 1;
+        Assert.True(lineNumber > 0);
+
+        var result = await TestPaths.ExecuteCommandAsync<DocumentLinesResult>(
+            "document-lines",
+            "--target", TestPaths.SolutionPath(),
+            "--file", programPath,
+            "--start-line", lineNumber.ToString(),
+            "--end-line", lineNumber.ToString());
+
+        Assert.Equal("Program.cs", result.Document.Name);
+        Assert.Equal(lines[lineNumber - 1], result.Text);
+        Assert.Equal(lineNumber, result.Range.Line);
+        Assert.Equal(lineNumber, result.Range.EndLine);
+        Assert.Equal(1, result.Range.Column);
+        Assert.Equal(lines[lineNumber - 1].Length + 1, result.Range.EndColumn);
+    }
+
+    [Fact]
+    public async Task DocumentLines_CapsOversizedEndLine_ToDocumentEnd()
+    {
+        var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+        using var loaded = await RoslynWorkspaceLoader.LoadAsync(TestPaths.SolutionPath(), TestContext.Current.CancellationToken);
+        var context = await loaded.FindTextDocumentAsync(programPath, null, "document-lines", TestContext.Current.CancellationToken);
+        var text = await context.TextDocument.GetTextAsync(TestContext.Current.CancellationToken);
+        var lastLineNumber = text.Lines.Count;
+        var lastTextLine = text.Lines[lastLineNumber - 1];
+
+        var result = await TestPaths.ExecuteCommandAsync<DocumentLinesResult>(
+            "document-lines",
+            "--target", TestPaths.SolutionPath(),
+            "--file", programPath,
+            "--start-line", "1",
+            "--end-line", "70");
+
+        Assert.Equal("Program.cs", result.Document.Name);
+        Assert.Equal(1, result.Range.Line);
+        Assert.Equal(lastLineNumber, result.Range.EndLine);
+        Assert.Equal(1, result.Range.Column);
+        Assert.Equal(lastTextLine.Span.Length + 1, result.Range.EndColumn);
+        Assert.Equal(text.ToString(), result.Text);
+    }
+
+    [Fact]
+    public async Task DocumentLines_RejectsReversedRange()
+    {
+        var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+
+        var exception = await Assert.ThrowsAsync<CliUsageException>(() => TestPaths.ExecuteCommandAsync<DocumentLinesResult>(
+            "document-lines",
+            "--target", TestPaths.SolutionPath(),
+            "--file", programPath,
+            "--start-line", "4",
+            "--end-line", "3"));
+
+        Assert.Equal("document-lines", exception.CommandName);
+        Assert.Contains("greater than or equal to", exception.Message, StringComparison.Ordinal);
+        Assert.Null(exception.Hint);
+    }
+
+    [Fact]
+    public async Task DocumentLines_RejectsStartLineBeyondDocumentEnd()
+    {
+        var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+        using var loaded = await RoslynWorkspaceLoader.LoadAsync(TestPaths.SolutionPath(), TestContext.Current.CancellationToken);
+        var context = await loaded.FindTextDocumentAsync(programPath, null, "document-lines", TestContext.Current.CancellationToken);
+        var text = await context.TextDocument.GetTextAsync(TestContext.Current.CancellationToken);
+        var lineBeyondEnd = text.Lines.Count + 1;
+
+        var exception = await Assert.ThrowsAsync<CliUsageException>(() => TestPaths.ExecuteCommandAsync<DocumentLinesResult>(
+            "document-lines",
+            "--target", TestPaths.SolutionPath(),
+            "--file", programPath,
+            "--start-line", lineBeyondEnd.ToString(),
+            "--end-line", lineBeyondEnd.ToString()));
+
+        Assert.Equal("document-lines", exception.CommandName);
+        Assert.Contains($"Line {lineBeyondEnd} is outside the document range", exception.Message, StringComparison.Ordinal);
+        var hint = exception.Hint;
+        Assert.NotNull(hint);
+        Assert.Contains($"--start-line between 1 and {text.Lines.Count}", hint!, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Definition_ReturnsCliApplicationConstructorDeclaration()
     {
         var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
@@ -87,6 +175,47 @@ public sealed class CommandExecutionTests
 
         Assert.NotEmpty(result.Sections);
         Assert.Contains(result.Sections, section => section.Text.Contains("CliApplication.CliApplication", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task QuickInfo_LineBeyondDocumentEnd_HasRetryHint()
+    {
+        var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+
+        var exception = await Assert.ThrowsAsync<CliUsageException>(() => TestPaths.ExecuteCommandAsync<QuickInfoResult>(
+            "quick-info",
+            "--target", TestPaths.SolutionPath(),
+            "--file", programPath,
+            "--line", "70",
+            "--column", "1"));
+
+        Assert.Equal("quick-info", exception.CommandName);
+        Assert.Equal("Line 70 is outside the document range 1..13.", exception.Message);
+        var hint = exception.Hint;
+        Assert.NotNull(hint);
+        Assert.Contains("--line between 1 and 13", hint!, StringComparison.Ordinal);
+        Assert.Contains("document-lines", hint!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task QuickInfo_ColumnBeyondLineEnd_HasRetryHint()
+    {
+        var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+        var (line, _) = TestPaths.FindLineAndColumn(programPath, "return new CliApplication");
+
+        var exception = await Assert.ThrowsAsync<CliUsageException>(() => TestPaths.ExecuteCommandAsync<QuickInfoResult>(
+            "quick-info",
+            "--target", TestPaths.SolutionPath(),
+            "--file", programPath,
+            "--line", line.ToString(),
+            "--column", "200"));
+
+        Assert.Equal("quick-info", exception.CommandName);
+        Assert.Contains("Column 200 is outside the line range", exception.Message, StringComparison.Ordinal);
+        var hint = exception.Hint;
+        Assert.NotNull(hint);
+        Assert.Contains("--column between 1 and", hint!, StringComparison.Ordinal);
+        Assert.Contains($"for line {line}", hint!, StringComparison.Ordinal);
     }
 
     [Fact]

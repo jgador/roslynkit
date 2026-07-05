@@ -27,6 +27,7 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 | Implemented | `symbols` | `workspace/symbol`, `SymbolFinder`, declarations | Lets agents locate named C# declarations without text-only search. |
 | Implemented | `document-symbols` | `textDocument/documentSymbol` | Gives compact structure for one file. |
 | Implemented | `document-text` | `workspace/textDocumentContent`, source-generated, additional, and analyzer-config document APIs | Lets agents read full source or virtual document contents once the workspace has resolved the right document context. |
+| Implemented | `document-lines` | `SourceText`, workspace document resolution | Lets agents read compact line windows from resolved documents without falling back to shell text reads or pulling whole files. |
 | Implemented | `definition` | `textDocument/definition`, `FindSourceDefinitionAsync` | Essential go-to-definition behavior. |
 | Implemented | `references` | `textDocument/references`, `FindReferencesAsync` | Essential impact analysis before changing a symbol. |
 | Implemented | `type-definition` | `textDocument/typeDefinition` | Useful when the symbol usage points at a variable, property, or interface abstraction. |
@@ -63,6 +64,7 @@ RoslynKit currently registers these commands:
 - `symbols`
 - `document-symbols`
 - `document-text`
+- `document-lines`
 - `definition`
 - `references`
 - `implementations`

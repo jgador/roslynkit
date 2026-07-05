@@ -45,6 +45,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\measure-codex-toke
 - `repo-references`: find callers or references of `RoslynKit.PositionResolver.GetPositionAsync`.
 - `repo-references-flow`: trace `references --symbol RoslynKit.PositionResolver.GetPositionAsync` from command registration/parsing through execution, symbol/document resolution, markdown rendering, and relevant test coverage.
 
+`repo-references-flow` also records `artifacts/token-efficiency/20260704-120341` as its fixed reference baseline: 642575 baseline input tokens and 93199 uncached input tokens. The same-run Savings table is still useful for judging run-to-run variance, but the Reference Baseline Targets table reports whether the RoslynKit arm beats that saved target.
+
 Trial order alternates by pair: baseline then RoslynKit for odd trials, RoslynKit then baseline for even trials.
 
 ## Outputs
@@ -95,4 +97,4 @@ Use medians first. Individual Codex runs can vary by planning choices, prompt ca
 
 Check `answers/*.md` before trusting token savings. A lower-token run is not useful if it answered the wrong question or skipped necessary evidence.
 
-If the RoslynKit arm wins on uncached input tokens but not total input tokens, the command output is likely compact, but prompt or cached context dominates the session. If it loses on both, inspect `commands/*.txt` and the RoslynKit output chosen by Codex; the prompt may need to steer toward `symbol-source`, `references --symbol`, or smaller `--max-results` values.
+If the RoslynKit arm wins on uncached input tokens but not total input tokens, the command output is likely compact, but prompt or cached context dominates the session. If it loses on both, inspect `commands/*.txt` and the RoslynKit output chosen by Codex; the prompt may need to steer toward `document-lines`, `references --symbol`, or smaller `--max-results` values. Use `symbol-source` only when a full declaration body is required.

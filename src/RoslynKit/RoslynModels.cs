@@ -147,6 +147,32 @@ public sealed class DocumentTextResult
 }
 
 /// <summary>
+/// Represents the <c>document-lines</c> command payload for a bounded range in one resolved document.
+/// </summary>
+public sealed class DocumentLinesResult
+{
+    public DocumentLinesResult(
+        DocumentDescriptor document,
+        DocumentRange range,
+        string text,
+        IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
+    {
+        Document = document;
+        Range = range;
+        Text = text;
+        WorkspaceDiagnostics = workspaceDiagnostics;
+    }
+
+    public DocumentDescriptor Document { get; }
+
+    public DocumentRange Range { get; }
+
+    public string Text { get; }
+
+    public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
+}
+
+/// <summary>
 /// Represents the <c>document-symbols</c> command payload for declarations in one semantic document.
 /// </summary>
 public sealed class DocumentSymbolsResult

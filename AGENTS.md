@@ -28,6 +28,8 @@ RoslynKit is a .NET 10 command-line tool. Production code lives under `src/Rosly
 
 Verify conclusions against current files, tests, docs, and command output.
 
+Do not use Repository Synapse in this repository. Do not run `synapse ensure`, `synapse recall`, `synapse tests`, or any other command that creates `.synapse/` repo-local cache files. Use Atlas, RoslynKit, scout agents, and direct file/test inspection instead.
+
 ### RoslynKit Default Semantic Inspection
 
 When the task is ordinary C# semantic inspection inside this RoslynKit repo, use `.agents\skills\roslynkit-dev\SKILL.md` first. Treat that dev skill as the repo-default route for declarations, symbol structure, definitions, references, implementations, types, signatures, generated documents, and similar Roslyn-backed inspection work.

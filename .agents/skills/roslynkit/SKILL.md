@@ -27,6 +27,8 @@ Do not default to `Get-Content`, `Select-String`, or grep-style file reads for q
 
 Hard rule: coordinates must come from tool output, a diagnostic, or the user. If you would have to read or search a file to find a line number, use `--symbol` instead.
 
+When a coordinate usage error includes a `hint:` line, do not retry the same `--line`/`--column`. Use the valid range in `hint:` and pick a new coordinate with `document-lines` or `document-symbols` before retrying semantic commands.
+
 Chain by identity: every symbol payload carries `symbolId` (`id` in compact format). Pass it straight to the next `--symbol` command. After editing a file, cached line and column values are stale; `symbolId` stays valid.
 
 ## Default File Scope
@@ -37,7 +39,7 @@ RoslynKit is C#-only by default.
 - Treat `.cs` as the default and required file scope unless the user explicitly asks for generated-document inspection that uses `--document-key` instead of `--file`.
 - Do not run RoslynKit with `--file` values that point to `.md`, `.json`, `.xml`, `.yml`, `.yaml`, `.props`, `.targets`, `.editorconfig`, `.sln`, `.slnx`, `.csproj`, or other non-C# files.
 - If the task is prose inspection, comment wording, XML documentation wording, TODO scanning, or literal text matching, let Codex CLI choose the terminal-native fallback even when the text appears inside a `.cs` file.
-- A `.cs` file may still be inspected with RoslynKit when the primary task is semantic C# analysis or source inspection. Returned ranges may include comments, but comment text is not itself a RoslynKit search target. Because `document-text` now returns whole documents only, prefer position-based commands, `quick-info`, and targeted cross-references first. Use `document-symbols` only when the file is already known and you need local structure. Use `document-text` only when a full document read is justified after the symbol or file is already resolved.
+- A `.cs` file may still be inspected with RoslynKit when the primary task is semantic C# analysis or source inspection. Returned ranges may include comments, but comment text is not itself a RoslynKit search target. Because `document-text` returns whole documents only, prefer position-based commands, `quick-info`, targeted cross-references, and `document-lines` first. Use `document-symbols` only when the file is already known and you need local structure. Use `document-lines` when a resolved path and small line window are enough; an oversized `--end-line` is capped at EOF, but `--start-line` still must be inside the document. Use `document-text` only when a full document read is justified after the symbol or file is already resolved.
 
 ## Command
 
@@ -75,6 +77,7 @@ When a line contains more than one semantic target, choose the cursor deliberate
 - For chained expressions such as `new SomeType(...).RunAsync(args)`, probe the rightmost invoked method or property first with `quick-info`, then use `definition` on that same position if the jump still looks useful.
 - Treat the constructor token or enclosing type name as an opt-in target only when object construction or type identity is the actual question.
 - If the question changes to "what is this type?", resolve the class with `symbols --exact --kind class` and then use `quick-info` at the class declaration before reading the file body.
+- Keep semantic cursor coordinates strict for `definition`, `quick-info`, `signature-help`, `type-definition`, `references`, and `implementations`; do not overshoot line or column bounds or retry an out-of-range coordinate for those commands.
 
 ## Cheap-First Semantic Workflow
 
@@ -84,7 +87,7 @@ When the task is a semantic C# question, prefer this order and stop as soon as y
 2. If the current `.cs` file and cursor are already known, pick the most flow-bearing symbol on the current line and start with a position-based `definition`, `references`, `implementations`, or `quick-info` on that location. For chained invocations, start with the rightmost invoked method or property, not the constructor or enclosing type, unless construction is the question.
 3. Use `symbols` only for discovery: fuzzy name search, kind-filtered listing, or checking whether a declaration exists. Do not use it to convert a known name into coordinates.
 4. Use `quick-info` at the resolved position or location before reading source text when you need signature, type, or documentation context.
-5. If only a small literal snippet or comment block is needed after semantic resolution, let Codex CLI choose the terminal-native fallback for that narrow read instead of pulling the whole document through RoslynKit.
+5. If only a small source snippet is needed after semantic resolution, use `document-lines` with the smallest useful inclusive line range instead of pulling the whole document through RoslynKit.
 6. Use `document-symbols` only when the file is already known and local structure is still needed to choose a member or range.
 7. Use `document-text` only when a full document read is still justified after the symbol or file is already resolved.
 8. Use `symbol-source` when exactly one declaration body is needed; read larger source regions only when symbol locations, quick info, document structure, and targeted cross-references are still insufficient.
@@ -99,7 +102,8 @@ When the task is a semantic C# question, prefer this order and stop as soon as y
 - Do not start with `document-symbols` unless you already know the file and still need local structure to choose a member or range.
 - Prefer a `definition` hop from a known call site over broad declaration search when tracing control flow.
 - Prefer `definition` plus `quick-info` over `document-symbols` or `document-text` when the next useful hop is already on the current line.
-- After RoslynKit resolves the relevant file and position, use shell and file-reading tools for the smallest useful literal snippet instead of pulling the whole document through RoslynKit.
+- After RoslynKit resolves the relevant file and position, use `document-lines` for the smallest useful source window instead of pulling the whole document through RoslynKit.
+- Prefer `document-lines` over `symbol-source` when you only need a few lines around a call site, switch arm, option declaration, or assertion.
 - Keep `references` narrow with the smallest useful `--max-results` when the goal is routing or nearest-test discovery.
 - Once you have enough evidence, stop instead of gathering extra member bodies or sibling declarations.
 
@@ -134,6 +138,12 @@ roslynkit document-symbols --target .\SomeSolution.slnx --file .\src\SomeProject
 
 ```powershell
 roslynkit document-text --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs
+```
+
+### Read resolved source lines
+
+```powershell
+roslynkit document-lines --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --start-line 40 --end-line 52
 ```
 
 ### Jump to a definition

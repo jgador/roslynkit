@@ -346,6 +346,33 @@ function Get-ForbiddenExternalToolViolations {
     return @($violations | Select-Object -Unique)
 }
 
+function Test-RoslynKitCommandInvocation {
+    param([string] $Command)
+
+    if ([string]::IsNullOrWhiteSpace($Command)) {
+        return $false
+    }
+
+    $namedInvocationPattern = '(?i)(^|[;&]\s*)(&\s*)?(\$roslynkit(Dev)?\b|(roslynkit|roslynkit-dev)(\.exe)?(\s|$))'
+    if ($Command -match $namedInvocationPattern) {
+        return $true
+    }
+
+    $pathInvocationPattern = '(?i)(^|[;&]\s*)(&\s*)?("[^"]*(\\|/)roslynkit\.exe"|''[^'']*(\\|/)roslynkit\.exe''|[^\s;&|]*(\\|/)roslynkit\.exe)(\s|$)'
+    if ($Command -match $pathInvocationPattern) {
+        return $true
+    }
+
+    return $false
+}
+
+function Test-DotNetRunRoslynKitInvocation {
+    param([string] $Command)
+
+    return -not [string]::IsNullOrWhiteSpace($Command) -and
+        $Command -match '(?i)(^|[;&]\s*)dotnet(\.exe)?\s+run\b.*RoslynKit'
+}
+
 function Get-RoslynKitSemanticCommandFailures {
     param([string[]] $Paths)
 
@@ -360,7 +387,7 @@ function Get-RoslynKitSemanticCommandFailures {
             }
 
             $command = [string] $record.item.command
-            if ($command -notmatch "(?i)(roslynkit-dev|\.roslynkit|roslynkit\.exe|(^|[\s;&|`"'])roslynkit(\s|`"|$)|`$roslynkit)") {
+            if (-not (Test-RoslynKitCommandInvocation -Command $command)) {
                 continue
             }
 
@@ -470,16 +497,17 @@ function Get-CommandViolations {
     foreach ($command in $Commands) {
         $violations.AddRange([string[]] @(Get-ForbiddenExternalCommandViolations -Command $command))
 
-        if ($command -match "(?i)(roslynkit-dev|\.roslynkit|roslynkit\.exe|(^|[\s;&|])roslynkit(\s|$)|`$roslynkit)") {
+        $usesRoslynKitCommand = Test-RoslynKitCommandInvocation -Command $command
+        if ($usesRoslynKitCommand) {
             $usesRoslynKit = $true
         }
 
         if ($Arm -eq "baseline") {
-            if ($command -match "(?i)(roslynkit-dev|\.roslynkit|roslynkit\.exe|(^|[\s;&|])roslynkit(\s|$)|`$roslynkit)") {
+            if ($usesRoslynKitCommand) {
                 $violations.Add("baseline used RoslynKit: $command")
             }
 
-            if ($command -match "(?i)dotnet\s+run.*RoslynKit") {
+            if (Test-DotNetRunRoslynKitInvocation -Command $command) {
                 $violations.Add("baseline used dotnet run for RoslynKit: $command")
             }
         }
@@ -490,7 +518,7 @@ function Get-CommandViolations {
                 $violations.Add("roslynkit arm used text/source inspection: $command")
             }
 
-            if ($command -match "(?i)(roslynkit-dev|\.roslynkit|roslynkit\.exe|(^|[\s;&|])roslynkit(\s|$)|`$roslynkit)" -and
+            if ($usesRoslynKitCommand -and
                 $command -match "(?i)(^|[\s;&|])--format(\s|=|$)") {
                 $violations.Add("roslynkit arm used unsupported --format option: $command")
             }
@@ -651,7 +679,11 @@ Constraints:
 - Use this RoslynKit dev executable for C# inspection: {ROSLYNKIT_PATH}
 - Always pass --target .\RoslynKit.slnx for repo symbols.
 - Do not pass --format; RoslynKit output is markdown text only.
-- Prefer references, definition, symbol-source, symbols --max-results 1, and quick-info over full document reads.
+- Use `references --symbol RoslynKit.PositionResolver.GetPositionAsync --max-results 5` first.
+- Use `definition --symbol` for known flow symbols, then `document-lines` on the returned path and nearby line window for evidence.
+- Prefer `document-lines` over `symbol-source`; do not use `document-text`.
+- Do not run broad `symbols` queries. For test coverage only, you may run one narrow `symbols --query References --kind method --max-results 10` command and then `document-lines` around the relevant test methods.
+- Keep the whole investigation to 16 commands or fewer, including the required skill read.
 - Stop as soon as you have enough evidence.
 Return a concise answer with the RoslynKit commands or symbol ids that support it.
 '@
@@ -680,6 +712,9 @@ Return a concise answer with the RoslynKit commands or symbol ids that support i
             Set            = "repo"
             BaselinePrompt = $referencesFlowBaseline
             RoslynKitPrompt = $referencesFlowRoslynKit
+            ReferenceBaselineArtifact = "artifacts\token-efficiency\20260704-120341"
+            ReferenceBaselineInputTokens = 642575
+            ReferenceBaselineUncachedInputTokens = 93199
         }
     )
 
@@ -810,6 +845,9 @@ function Invoke-CodexBenchmarkRun {
         output_tokens            = $outputTokens
         reasoning_output_tokens  = $reasoningOutputTokens
         total_tokens             = $totalTokens
+        reference_baseline_input_tokens = Get-ObjectPropertyValue -Object $Case -Name "ReferenceBaselineInputTokens"
+        reference_baseline_uncached_input_tokens = Get-ObjectPropertyValue -Object $Case -Name "ReferenceBaselineUncachedInputTokens"
+        reference_baseline_artifact = Get-ObjectPropertyValue -Object $Case -Name "ReferenceBaselineArtifact"
         command_count            = $commands.Count
         violation_count          = $issues.Count
         violations               = ($issues -join " | ")
@@ -845,6 +883,24 @@ function Format-NullableNumber {
     }
 
     return ([double] $Value).ToString("0.##")
+}
+
+function Get-ObjectPropertyValue {
+    param(
+        [object] $Object,
+        [string] $Name
+    )
+
+    if ($null -eq $Object) {
+        return $null
+    }
+
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        return $null
+    }
+
+    return $property.Value
 }
 
 function Write-Summary {
@@ -922,6 +978,41 @@ function Write-Summary {
                 (Format-NullableNumber $baselineUncached),
                 (Format-NullableNumber $roslynUncached),
                 (Format-NullableNumber $uncachedSavings)))
+    }
+
+    $targetRows = @($validRows | Where-Object { $_.arm -eq "roslynkit" -and $null -ne $_.reference_baseline_input_tokens })
+    if ($targetRows.Count -gt 0) {
+        $lines.Add("")
+        $lines.Add("## Reference Baseline Targets")
+        $lines.Add("")
+        $lines.Add("| Case | Reference artifact | Target input | RoslynKit median input | Input delta | Savings % | Target uncached | RoslynKit median uncached | Uncached delta | Status |")
+        $lines.Add("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |")
+
+        foreach ($caseGroup in $targetRows | Group-Object case_id | Sort-Object Name) {
+            $items = @($caseGroup.Group)
+            $first = $items[0]
+            $targetInput = [long] $first.reference_baseline_input_tokens
+            $targetUncached = if ($null -ne $first.reference_baseline_uncached_input_tokens) { [long] $first.reference_baseline_uncached_input_tokens } else { $null }
+            $artifact = if ($null -ne $first.reference_baseline_artifact) { [string] $first.reference_baseline_artifact } else { "" }
+            $roslynMedian = Get-Median -Values @($items | ForEach-Object { [long] $_.input_tokens })
+            $roslynUncached = Get-Median -Values @($items | Where-Object { $null -ne $_.uncached_input_tokens } | ForEach-Object { [long] $_.uncached_input_tokens })
+            $delta = $targetInput - $roslynMedian
+            $savings = if ($targetInput -gt 0) { 100.0 * $delta / $targetInput } else { $null }
+            $uncachedDelta = if ($null -ne $targetUncached -and $null -ne $roslynUncached) { $targetUncached - $roslynUncached } else { $null }
+            $status = if ($delta -gt 0) { "pass" } else { "fail" }
+
+            $lines.Add(("| {0} | {1} | {2} | {3} | {4} | {5} | {6} | {7} | {8} | {9} |" -f
+                    $caseGroup.Name,
+                    $artifact,
+                    (Format-NullableNumber $targetInput),
+                    (Format-NullableNumber $roslynMedian),
+                    (Format-NullableNumber $delta),
+                    (Format-NullableNumber $savings),
+                    (Format-NullableNumber $targetUncached),
+                    (Format-NullableNumber $roslynUncached),
+                    (Format-NullableNumber $uncachedDelta),
+                    $status))
+        }
     }
 
     $invalidRows = @($Rows | Where-Object { $_.valid -ne $true })

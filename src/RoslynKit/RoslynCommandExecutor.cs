@@ -35,6 +35,7 @@ public static class RoslynCommandExecutor
         {
             "diagnostics" => await DiagnosticsAsync(command, cancellationToken).ConfigureAwait(false),
             "definition" => await DefinitionAsync(command, cancellationToken).ConfigureAwait(false),
+            "document-lines" => await DocumentLinesAsync(command, cancellationToken).ConfigureAwait(false),
             "document-symbols" => await DocumentSymbolsAsync(command, cancellationToken).ConfigureAwait(false),
             "document-text" => await DocumentTextAsync(command, cancellationToken).ConfigureAwait(false),
             "implementations" => await ImplementationsAsync(command, cancellationToken).ConfigureAwait(false),
@@ -179,6 +180,37 @@ public static class RoslynCommandExecutor
             resolvedRange,
             text.ToString(),
             truncated: false,
+            loaded.WorkspaceDiagnostics);
+    }
+
+    private static async Task<object> DocumentLinesAsync(ParsedCommand command, CancellationToken cancellationToken)
+    {
+        var startLine = command.OptionalInt("start-line", 1, 1);
+        var endLine = command.OptionalInt("end-line", 1, 1);
+        if (endLine < startLine)
+        {
+            throw new CliUsageException(command.Name, "Option '--end-line' must be greater than or equal to '--start-line'.");
+        }
+
+        using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
+        var context = await loaded.FindTextDocumentAsync(command.Optional("file"), command.Optional("document-key"), command.Name, cancellationToken).ConfigureAwait(false);
+        var text = await context.TextDocument.GetTextAsync(cancellationToken).ConfigureAwait(false);
+        if (startLine > text.Lines.Count)
+        {
+            var hint = $"Retry with --start-line between 1 and {text.Lines.Count}, or run document-lines with an in-range --start-line and oversized --end-line to inspect the document end.";
+            throw new CliUsageException(command.Name, $"Line {startLine} is outside the document range 1..{text.Lines.Count}.", hint);
+        }
+
+        var resolvedEndLine = Math.Min(endLine, text.Lines.Count);
+        var startTextLine = text.Lines[startLine - 1];
+        var endTextLine = text.Lines[resolvedEndLine - 1];
+        var span = TextSpan.FromBounds(startTextLine.Span.Start, endTextLine.Span.End);
+        var range = new DocumentRange(startLine, 1, resolvedEndLine, endTextLine.Span.Length + 1);
+
+        return new DocumentLinesResult(
+            context.Descriptor,
+            range,
+            text.ToString(span),
             loaded.WorkspaceDiagnostics);
     }
 

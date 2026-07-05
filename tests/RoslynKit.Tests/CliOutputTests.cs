@@ -4,7 +4,7 @@ namespace RoslynKit.Tests;
 
 /// <summary>
 /// Verifies the top-level CLI output contracts: markdown help, plain-text version output, and the
-/// two-line plain-text error shape with non-zero exit codes.
+/// plain-text error shape with non-zero exit codes.
 /// </summary>
 public sealed class CliOutputTests
 {
@@ -103,7 +103,52 @@ public sealed class CliOutputTests
         Assert.Contains("Unknown option '--format' for command 'symbols'.", output, StringComparison.Ordinal);
     }
 
-    private static async Task<string> AssertUsageErrorAsync(string[] args)
+    [Fact]
+    public async Task RunAsync_WritesUsageErrorHint_ForLineBeyondDocumentEnd()
+    {
+        var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+
+        var output = await AssertUsageErrorAsync([
+            "quick-info",
+            "--target", TestPaths.SolutionPath(),
+            "--file", programPath,
+            "--line", "70",
+            "--column", "1",
+        ], expectedLineCount: 3);
+
+        Assert.Contains("Line 70 is outside the document range 1..13.", output, StringComparison.Ordinal);
+        Assert.Contains("hint: Retry with --line between 1 and 13", output, StringComparison.Ordinal);
+        Assert.Contains("document-lines", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesUsageErrorHint_ForColumnBeyondLineEnd()
+    {
+        var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+        var (line, _) = TestPaths.FindLineAndColumn(programPath, "return new CliApplication");
+
+        var output = await AssertUsageErrorAsync([
+            "quick-info",
+            "--target", TestPaths.SolutionPath(),
+            "--file", programPath,
+            "--line", line.ToString(),
+            "--column", "200",
+        ], expectedLineCount: 3);
+
+        Assert.Contains("Column 200 is outside the line range", output, StringComparison.Ordinal);
+        Assert.Contains("hint: Retry with --column between 1 and", output, StringComparison.Ordinal);
+        Assert.Contains($"for line {line}", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_OmitsUsageErrorHint_WhenNoRetryGuidanceExists()
+    {
+        var output = await AssertUsageErrorAsync(["symbols", "--query", "Foo"]);
+
+        Assert.Equal("error: usage\nmessage: Missing required option '--target'.", NormalizeErrorOutput(output));
+    }
+
+    private static async Task<string> AssertUsageErrorAsync(string[] args, int expectedLineCount = 2)
     {
         using var writer = new StringWriter();
         var exitCode = await new CliApplication(writer).RunAsync(args, TestContext.Current.CancellationToken);
@@ -112,9 +157,14 @@ public sealed class CliOutputTests
         var lines = output.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd('\n').Split('\n');
 
         Assert.Equal(2, exitCode);
-        Assert.Equal(2, lines.Length);
+        Assert.Equal(expectedLineCount, lines.Length);
         Assert.Equal("error: usage", lines[0]);
         Assert.StartsWith("message: ", lines[1], StringComparison.Ordinal);
+        if (expectedLineCount == 3)
+        {
+            Assert.StartsWith("hint: ", lines[2], StringComparison.Ordinal);
+        }
+
         Assert.DoesNotContain("{", output, StringComparison.Ordinal);
         return output;
     }
@@ -136,5 +186,10 @@ public sealed class CliOutputTests
             ? informationalVersion
             : assembly.GetName().Version?.ToString() ?? "unknown";
         return $"roslynkit version {version}";
+    }
+
+    private static string NormalizeErrorOutput(string output)
+    {
+        return output.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd('\n');
     }
 }

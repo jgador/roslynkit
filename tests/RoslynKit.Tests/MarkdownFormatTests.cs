@@ -192,6 +192,36 @@ public sealed class MarkdownFormatTests
     }
 
     [Fact]
+    public void Render_EmitsRangeFence_ForDocumentLines()
+    {
+        const string sourcePath = @"src\App\Source.cs";
+        var descriptor = new DocumentDescriptor(
+            "doc_source",
+            "App",
+            null,
+            "net10.0",
+            DocumentKindNames.Source,
+            "Source.cs",
+            sourcePath);
+        var result = new DocumentLinesResult(
+            descriptor,
+            new DocumentRange(10, 1, 12, 2),
+            "if (ready)\n{\n}",
+            []);
+
+        var rendered = MarkdownProjection.Render(result);
+
+        var expected = "command: document-lines\n"
+            + "path: `" + sourcePath + "`\n"
+            + "range: `" + sourcePath + ":10:1-12:2`\n"
+            + "\n"
+            + "```csharp\n"
+            + "if (ready)\n{\n}\n"
+            + "```";
+        Assert.Equal(expected, rendered);
+    }
+
+    [Fact]
     public void Render_EmitsProjectAndDocumentBullets_ForWorkspace()
     {
         var result = new WorkspaceResult(

@@ -273,6 +273,7 @@ public static class CliParser
         switch (commandName)
         {
             case "document-text":
+            case "document-lines":
             case "document-symbols":
             case "type-definition":
             case "quick-info":
@@ -389,11 +390,14 @@ public sealed record ParsedCommand(
 /// </summary>
 public sealed class CliUsageException : Exception
 {
-    public CliUsageException(string commandName, string message)
+    public CliUsageException(string commandName, string message, string? hint = null)
         : base(message)
     {
         CommandName = commandName;
+        Hint = hint;
     }
 
     public string CommandName { get; }
+
+    public string? Hint { get; }
 }

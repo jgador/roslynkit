@@ -273,6 +273,36 @@ public sealed class CliParserTests
     }
 
     [Fact]
+    public void Parse_AcceptsDocumentLines_WithRequiredRange()
+    {
+        var command = CliParser.Parse([
+            "document-lines",
+            "--target", "repo.slnx",
+            "--file", "Program.cs",
+            "--start-line", "10",
+            "--end-line", "14",
+        ]);
+
+        Assert.Equal("document-lines", command.Name);
+        Assert.Equal("10", command.Required("start-line"));
+        Assert.Equal("14", command.Required("end-line"));
+    }
+
+    [Fact]
+    public void Parse_RejectsMissingEndLine_ForDocumentLines()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
+            "document-lines",
+            "--target", "repo.slnx",
+            "--file", "Program.cs",
+            "--start-line", "10",
+        ]));
+
+        Assert.Equal("document-lines", exception.CommandName);
+        Assert.Contains("Missing required option '--end-line'", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Parse_RejectsMissingSymbol_ForSymbolSource()
     {
         var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(["symbol-source", "--target", "repo.slnx"]));

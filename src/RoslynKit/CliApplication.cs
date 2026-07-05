@@ -19,12 +19,13 @@ public sealed class CliApplication
     /// <summary>
     /// Parses arguments, dispatches help or command execution, and writes markdown-flavored text output.
     /// A zero exit code means stdout is command, help, or version output; a non-zero exit code means
-    /// stdout is a two-line plain-text error (<c>error:</c> code and <c>message:</c> text).
+    /// stdout is a plain-text error (<c>error:</c> code, <c>message:</c> text, and optional <c>hint:</c> text).
     /// </summary>
     public async Task<int> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken = default)
     {
         string errorCode;
         string errorMessage;
+        string? errorHint = null;
         int exitCode;
 
         try
@@ -52,6 +53,7 @@ public sealed class CliApplication
             exitCode = 2;
             errorCode = "usage";
             errorMessage = ex.Message;
+            errorHint = ex.Hint;
         }
         catch (OperationCanceledException)
         {
@@ -66,7 +68,13 @@ public sealed class CliApplication
             errorMessage = ex.Message;
         }
 
-        await _stdout.WriteLineAsync($"error: {errorCode}\nmessage: {errorMessage}").ConfigureAwait(false);
+        var output = $"error: {errorCode}\nmessage: {errorMessage}";
+        if (!string.IsNullOrWhiteSpace(errorHint))
+        {
+            output += $"\nhint: {errorHint}";
+        }
+
+        await _stdout.WriteLineAsync(output).ConfigureAwait(false);
         return exitCode;
     }
 

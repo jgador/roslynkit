@@ -54,6 +54,17 @@ public static class BuiltinCommandRegistry
                 DocumentKeyOption(),
             ]),
         new BuiltinCommand(
+            "document-lines",
+            "Read a bounded one-based line range from one resolved document.",
+            ["roslynkit document-lines --target <target> (--file <path> | --document-key <id>) --start-line <n> --end-line <n>"],
+            [
+                TargetOption(),
+                FileOption(),
+                DocumentKeyOption(),
+                StartLineOption(),
+                EndLineOption(),
+            ]),
+        new BuiltinCommand(
             "document-symbols",
             "List declared symbols in one source or source-generated C# document.",
             ["roslynkit document-symbols --target <target> (--file <path> | --document-key <id>)"],
@@ -180,6 +191,16 @@ public static class BuiltinCommandRegistry
     private static OptionSpec LineOption(bool required = true)
     {
         return OptionSpec.Integer(null, "line", "n", "one-based source line", required);
+    }
+
+    private static OptionSpec StartLineOption()
+    {
+        return OptionSpec.Integer(null, "start-line", "n", "one-based first document line", required: true);
+    }
+
+    private static OptionSpec EndLineOption()
+    {
+        return OptionSpec.Integer(null, "end-line", "n", "one-based last document line", required: true);
     }
 
     private static OptionSpec ColumnOption(bool required = true)
