@@ -100,7 +100,7 @@ public static class MarkdownProjection
         builder.Append("command: symbols");
         builder.Append("\nquery: ").Append(CodeSpan(result.Query));
         AppendCounts(builder, result.TotalCount, result.ReturnedCount, result.Truncated);
-        AppendSymbolBullets(builder, result.Symbols);
+        AppendSymbolBullets(builder, result.Symbols, includeDocumentation: true);
         AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
         return builder.ToString();
     }
@@ -110,7 +110,7 @@ public static class MarkdownProjection
         var builder = new StringBuilder();
         builder.Append("command: definition");
         AppendSelector(builder, result.Selector, result.Document, result.Line, result.Column);
-        AppendSymbolBullets(builder, [result.Symbol]);
+        AppendSymbolBullets(builder, [result.Symbol], includeDocumentation: true);
         AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
         return builder.ToString();
     }
@@ -120,7 +120,7 @@ public static class MarkdownProjection
         var builder = new StringBuilder();
         builder.Append("command: type-definition");
         AppendSelector(builder, selector: null, result.Document, result.Line, result.Column);
-        AppendSymbolBullets(builder, [result.Symbol]);
+        AppendSymbolBullets(builder, [result.Symbol], includeDocumentation: true);
         AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
         return builder.ToString();
     }
@@ -156,7 +156,7 @@ public static class MarkdownProjection
         AppendSelector(builder, result.Selector, result.Document, result.Line, result.Column);
         builder.Append("\nsymbol: ").Append(CodeSpan(result.Symbol.SymbolId ?? result.Symbol.DisplayName));
         AppendCounts(builder, result.TotalCount, result.ReturnedCount, result.Truncated);
-        AppendSymbolBullets(builder, result.Symbols);
+        AppendSymbolBullets(builder, result.Symbols, includeDocumentation: true);
         AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
         return builder.ToString();
     }
@@ -234,7 +234,7 @@ public static class MarkdownProjection
         var builder = new StringBuilder();
         builder.Append("command: document-symbols");
         builder.Append("\nfile: ").Append(CodeSpan(DocumentPath(result.Document)));
-        AppendSymbolBullets(builder, result.Symbols);
+        AppendSymbolBullets(builder, result.Symbols, includeDocumentation: true);
         AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
         return builder.ToString();
     }
@@ -340,7 +340,7 @@ public static class MarkdownProjection
         }
     }
 
-    private static void AppendSymbolBullets(StringBuilder builder, IReadOnlyList<SymbolItem> symbols)
+    private static void AppendSymbolBullets(StringBuilder builder, IReadOnlyList<SymbolItem> symbols, bool includeDocumentation = false)
     {
         if (symbols.Count == 0)
         {
@@ -360,6 +360,11 @@ public static class MarkdownProjection
             if (symbol.SymbolId is { } symbolId)
             {
                 builder.Append(" id: ").Append(CodeSpan(symbolId));
+            }
+
+            if (includeDocumentation && symbol.Documentation is { Length: > 0 } documentation)
+            {
+                builder.Append("\n  documentation: ").Append(documentation);
             }
 
             if (symbol.Declarations.Count > 1)

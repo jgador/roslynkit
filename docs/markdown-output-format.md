@@ -85,10 +85,11 @@ For repeated items, output uses compact bullets:
 
 ```markdown
 - kind: NamedType name: `MyApp.MyService` loc: `src/MyApp/MyService.cs:8:14-8:23` id: `T:MyApp.MyService`
+  documentation: Runs application work for the current request.
 - kind: Method name: `MyApp.MyService.Execute` loc: `src/MyApp/MyService.cs:12:17-12:24` id: `M:MyApp.MyService.Execute(System.String)`
 ```
 
-`name:` carries the fully qualified display name, and `id:` carries the documentation-comment ID that chains into `--symbol`. When a symbol has more than one declaration (partial types), extra `- decl:` bullets follow with one location each.
+`name:` carries the fully qualified display name, and `id:` carries the documentation-comment ID that chains into `--symbol`. For `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations`, a non-empty XML summary may render as an indented `documentation:` continuation line below the symbol bullet. When a symbol has more than one declaration (partial types), extra `- decl:` bullets follow with one location each.
 
 For source text, output uses fenced code blocks with a fence longer than any backtick run inside the payload:
 
@@ -150,6 +151,7 @@ returned: 2/2
 truncated: false
 
 - kind: NamedType name: `MyApp.MyService` loc: `src/MyApp/MyService.cs:8:14-8:23` id: `T:MyApp.MyService`
+  documentation: Runs application work for the current request.
 ```
 
 ### `definition`, `type-definition`, And `implementations`
@@ -161,6 +163,7 @@ command: definition
 selector: `src/MyApp/Program.cs:10:20-10:20`
 
 - kind: NamedType name: `MyApp.MyService` loc: `src/MyApp/MyService.cs:8:14-8:23` id: `T:MyApp.MyService`
+  documentation: Runs application work for the current request.
 ```
 
 ### `references`

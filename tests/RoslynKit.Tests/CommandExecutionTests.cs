@@ -188,6 +188,27 @@ public sealed class CommandExecutionTests
     }
 
     [Fact]
+    public async Task Definition_ReturnsDocumentationForCliApplicationRunAsync()
+    {
+        var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+        var (line, column) = TestPaths.FindLineAndColumn(programPath, "RunAsync(args)");
+
+        var result = await TestPaths.ExecuteCommandAsync<DefinitionResult>(
+            "definition",
+            "--target", TestPaths.SolutionPath(),
+            "--file", programPath,
+            "--line", line.ToString(),
+            "--column", column.ToString());
+
+        Assert.Equal("RunAsync", result.Symbol.Name);
+        Assert.Contains("Parses arguments, dispatches help or command execution", result.Symbol.Documentation!, StringComparison.Ordinal);
+        Assert.Contains(
+            "\n  documentation: Parses arguments, dispatches help or command execution",
+            MarkdownProjection.Render(result).Replace("\r\n", "\n", StringComparison.Ordinal),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task QuickInfo_ReturnsConstructorSections_ForCliApplicationInstantiation()
     {
         var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
@@ -248,6 +269,24 @@ public sealed class CommandExecutionTests
     }
 
     [Fact]
+    public async Task DocumentSymbols_ReturnsDocumentationForProgram()
+    {
+        var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+
+        var result = await TestPaths.ExecuteCommandAsync<DocumentSymbolsResult>(
+            "document-symbols",
+            "--target", TestPaths.SolutionPath(),
+            "--file", programPath);
+
+        var programSymbol = Assert.Single(result.Symbols, symbol => symbol.Name == "Program");
+        Assert.Contains("Forwards the RoslynKit console entry point", programSymbol.Documentation!, StringComparison.Ordinal);
+        Assert.Contains(
+            "\n  documentation: Forwards the RoslynKit console entry point",
+            MarkdownProjection.Render(result).Replace("\r\n", "\n", StringComparison.Ordinal),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task TypeDefinition_ReturnsFixtureInterfaceType()
     {
         var sourcePath = TestPaths.RepoFile("tests", "FixtureWorkspace", "App", "Source.cs");
@@ -265,6 +304,27 @@ public sealed class CommandExecutionTests
     }
 
     [Fact]
+    public async Task TypeDefinition_ReturnsDocumentationForParsedCommand()
+    {
+        var applicationPath = TestPaths.RepoFile("src", "RoslynKit", "CliApplication.cs");
+        var (line, column) = TestPaths.FindLineAndColumn(applicationPath, "command = CliParser.Parse");
+
+        var result = await TestPaths.ExecuteCommandAsync<TypeDefinitionResult>(
+            "type-definition",
+            "--target", TestPaths.SolutionPath(),
+            "--file", applicationPath,
+            "--line", line.ToString(),
+            "--column", column.ToString());
+
+        Assert.Equal("ParsedCommand", result.Symbol.Name);
+        Assert.Contains("Represents a parsed RoslynKit invocation", result.Symbol.Documentation!, StringComparison.Ordinal);
+        Assert.Contains(
+            "\n  documentation: Represents a parsed RoslynKit invocation",
+            MarkdownProjection.Render(result).Replace("\r\n", "\n", StringComparison.Ordinal),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Implementations_ReturnsFixtureImplementation()
     {
         var sourcePath = TestPaths.RepoFile("tests", "FixtureWorkspace", "App", "Source.cs");
@@ -278,6 +338,22 @@ public sealed class CommandExecutionTests
             "--column", column.ToString());
 
         Assert.Contains(result.Symbols, symbol => symbol.Name == "GeneratedMessageSource");
+    }
+
+    [Fact]
+    public async Task Implementations_ReturnsDocumentationForDisposableImplementation()
+    {
+        var result = await TestPaths.ExecuteCommandAsync<ImplementationsResult>(
+            "implementations",
+            "--target", TestPaths.SolutionPath(),
+            "--symbol", "T:System.IDisposable");
+
+        var implementation = Assert.Single(result.Symbols, symbol => symbol.Name == "RoslynWorkspaceLoader");
+        Assert.Contains("Loads an MSBuild workspace", implementation.Documentation!, StringComparison.Ordinal);
+        Assert.Contains(
+            "\n  documentation: Loads an MSBuild workspace",
+            MarkdownProjection.Render(result).Replace("\r\n", "\n", StringComparison.Ordinal),
+            StringComparison.Ordinal);
     }
 
     [Fact]

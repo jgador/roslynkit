@@ -27,6 +27,7 @@ returned: 2/2
 truncated: false
 
 - kind: NamedType name: `MyApp.MyService` loc: `src/MyApp/MyService.cs:8:14-8:23` id: `T:MyApp.MyService`
+  documentation: Runs application work for the current request.
 ```
 
 A failed result prints plain-text lines and the process exits non-zero:
@@ -88,7 +89,7 @@ For document-oriented commands such as `document-symbols`, `document-text`, `doc
 
 `definition`, `references`, and `implementations` also accept `--symbol <selector>` instead of the position selector. The selector is either a Roslyn documentation-comment ID (`T:`, `M:`, `P:`, `F:`, `E:`, or `N:` prefix, for example `M:MyApp.MyService.Execute(System.String)`) or a qualified symbol name such as `MyApp.MyService.Execute`. `--symbol` cannot be combined with `--file`, `--project`, `--tfm`, `--document-kind`, `--line`, or `--column`. When a qualified name matches several declarations (for example method overloads), the command fails with a deterministic usage error listing the candidate documentation-comment IDs so the exact one can be retried. In symbol mode the result echoes the input as `selector:`. Constructors are addressable only through `M:...#ctor(...)` documentation-comment IDs.
 
-Every symbol bullet includes an `id:` field carrying the symbol's documentation-comment ID, so results chain by identity: take `id:` from `symbols`, `definition`, or `references` output and pass it straight to the next `--symbol` command without copying line and column numbers. The ID stays valid after files are edited; cached line numbers do not.
+Every symbol bullet includes an `id:` field carrying the symbol's documentation-comment ID, so results chain by identity: take `id:` from `symbols`, `definition`, or `references` output and pass it straight to the next `--symbol` command without copying line and column numbers. The ID stays valid after files are edited; cached line numbers do not. Symbol bullets from `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations` may include an indented `documentation:` line when the resolved symbol has a non-empty XML summary.
 
 `symbol-source` takes `--target` plus `--symbol` and returns the full declaration source text for the resolved symbol: one entry per declaring block with its document descriptor, true block range, and text. Partial types return every declaring block, including source-generated ones. The text covers the declaration node itself (attributes included); leading XML documentation comments are trivia and are not included.
 

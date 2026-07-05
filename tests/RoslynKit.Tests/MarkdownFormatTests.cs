@@ -26,6 +26,7 @@ public sealed class MarkdownFormatTests
         Assert.StartsWith("command: symbols\nquery: `CliApplication`\nreturned: ", output.Replace("\r\n", "\n", StringComparison.Ordinal), StringComparison.Ordinal);
         Assert.Contains("- kind: NamedType name: `RoslynKit.CliApplication`", output, StringComparison.Ordinal);
         Assert.Contains("id: `T:RoslynKit.CliApplication`", output, StringComparison.Ordinal);
+        Assert.Contains("documentation: Owns the top-level CLI flow", output, StringComparison.Ordinal);
         Assert.Contains("CliApplication.cs:", output, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -38,7 +39,7 @@ public sealed class MarkdownFormatTests
             totalCount: 2,
             returnedCount: 2,
             truncated: false,
-            [CreateSymbol()],
+            [CreateSymbol("Represents a widget.")],
             []);
 
         var rendered = MarkdownProjection.Render(result);
@@ -48,8 +49,26 @@ public sealed class MarkdownFormatTests
             + "returned: 2/2\n"
             + "truncated: false\n"
             + "\n"
-            + "- kind: NamedType name: `App.Widget` loc: `" + SourcePath + ":3:14-3:20` id: `T:App.Widget`";
+            + "- kind: NamedType name: `App.Widget` loc: `" + SourcePath + ":3:14-3:20` id: `T:App.Widget`\n"
+            + "  documentation: Represents a widget.";
         Assert.Equal(expected, rendered);
+    }
+
+    [Fact]
+    public void Render_OmitsEmptyDocumentation_ForSymbolBullets()
+    {
+        var result = new SymbolsResult(
+            "app.slnx",
+            "Widget",
+            totalCount: 1,
+            returnedCount: 1,
+            truncated: false,
+            [CreateSymbol("   ")],
+            []);
+
+        var rendered = MarkdownProjection.Render(result);
+
+        Assert.DoesNotContain("documentation:", rendered, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -69,7 +88,7 @@ public sealed class MarkdownFormatTests
         var result = new SymbolSourceResult(
             "app.slnx",
             "T:App.Widget",
-            CreateSymbol(),
+            CreateSymbol("Represents a widget."),
             [new SymbolSourceDeclaration(CreateDescriptor(), new DocumentRange(3, 1, 6, 2), declarationText)],
             []);
 
@@ -85,6 +104,7 @@ public sealed class MarkdownFormatTests
             + declarationText + "\n"
             + "```";
         Assert.Equal(expected, rendered);
+        Assert.DoesNotContain("documentation:", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("\\n", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("\\\"", rendered, StringComparison.Ordinal);
     }
@@ -297,7 +317,7 @@ public sealed class MarkdownFormatTests
             SourcePath);
     }
 
-    private static SymbolItem CreateSymbol()
+    private static SymbolItem CreateSymbol(string? documentation = null)
     {
         return new SymbolItem(
             "App",
@@ -311,6 +331,7 @@ public sealed class MarkdownFormatTests
             containingNamespace: "App",
             new SourceRange(SourcePath, 3, 14, 3, 20),
             [new SourceRange(SourcePath, 3, 14, 3, 20)],
-            "T:App.Widget");
+            "T:App.Widget",
+            documentation);
     }
 }

@@ -1,3 +1,6 @@
+using System.Text;
+using System.Xml.Linq;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 
@@ -1070,7 +1073,8 @@ public sealed class SymbolItem
         string? containingNamespace,
         SourceRange? primaryLocation,
         IReadOnlyList<SourceRange> declarations,
-        string? symbolId)
+        string? symbolId,
+        string? documentation = null)
     {
         ProjectName = projectName;
         Name = name;
@@ -1084,6 +1088,7 @@ public sealed class SymbolItem
         PrimaryLocation = primaryLocation;
         Declarations = declarations;
         SymbolId = symbolId;
+        Documentation = string.IsNullOrWhiteSpace(documentation) ? null : documentation;
     }
 
     /// <summary>
@@ -1145,6 +1150,11 @@ public sealed class SymbolItem
     /// Documentation-comment ID that can be reused as a symbol selector when Roslyn can create one.
     /// </summary>
     public string? SymbolId { get; }
+
+    /// <summary>
+    /// Plain-text summary documentation extracted from the Roslyn symbol's XML documentation comment.
+    /// </summary>
+    public string? Documentation { get; }
 
     /// <summary>
     /// Converts a Roslyn symbol into command-output metadata with all source declarations included.
@@ -1210,7 +1220,119 @@ public sealed class SymbolItem
             symbol.ContainingNamespace is { IsGlobalNamespace: false } ? symbol.ContainingNamespace.ToDisplayString(SymbolDisplayFormats.Qualified) : null,
             declarations.FirstOrDefault(),
             declarations,
-            RoslynSymbolSearch.IsCodeSymbol(symbol) ? DocumentationCommentId.CreateDeclarationId(symbol) : null);
+            RoslynSymbolSearch.IsCodeSymbol(symbol) ? DocumentationCommentId.CreateDeclarationId(symbol) : null,
+            GetSummaryDocumentation(symbol));
+    }
+
+    private static string? GetSummaryDocumentation(ISymbol symbol)
+    {
+        var xml = symbol.GetDocumentationCommentXml();
+        if (string.IsNullOrWhiteSpace(xml))
+        {
+            return null;
+        }
+
+        try
+        {
+            var document = XDocument.Parse(xml);
+            var summary = document.Descendants().FirstOrDefault(element => element.Name.LocalName == "summary");
+            return summary is null ? null : NormalizeDocumentationText(RenderDocumentationNodes(summary.Nodes()));
+        }
+        catch (System.Xml.XmlException)
+        {
+            return null;
+        }
+    }
+
+    private static string RenderDocumentationNodes(IEnumerable<XNode> nodes)
+    {
+        var builder = new StringBuilder();
+        foreach (var node in nodes)
+        {
+            AppendDocumentationNode(builder, node);
+        }
+
+        return builder.ToString();
+    }
+
+    private static void AppendDocumentationNode(StringBuilder builder, XNode node)
+    {
+        switch (node)
+        {
+            case XCData cdata:
+                builder.Append(cdata.Value);
+                break;
+
+            case XText text:
+                builder.Append(text.Value);
+                break;
+
+            case XElement element:
+                AppendDocumentationElement(builder, element);
+                break;
+        }
+    }
+
+    private static void AppendDocumentationElement(StringBuilder builder, XElement element)
+    {
+        switch (element.Name.LocalName)
+        {
+            case "see":
+            case "seealso":
+                builder.Append(SimplifyDocumentationReference(
+                    (string?)element.Attribute("cref")
+                    ?? (string?)element.Attribute("langword")
+                    ?? (string?)element.Attribute("href")
+                    ?? element.Value));
+                break;
+
+            case "paramref":
+            case "typeparamref":
+                builder.Append((string?)element.Attribute("name") ?? element.Value);
+                break;
+
+            default:
+                foreach (var child in element.Nodes())
+                {
+                    AppendDocumentationNode(builder, child);
+                }
+
+                break;
+        }
+    }
+
+    private static string SimplifyDocumentationReference(string value)
+    {
+        if (value.Length > 2 && value[1] == ':' && value[0] is 'T' or 'M' or 'P' or 'F' or 'E' or 'N')
+        {
+            return value[2..];
+        }
+
+        return value.StartsWith("!:", StringComparison.Ordinal) ? value[2..] : value;
+    }
+
+    private static string? NormalizeDocumentationText(string text)
+    {
+        var builder = new StringBuilder(text.Length);
+        var pendingSpace = false;
+        foreach (var character in text)
+        {
+            if (char.IsWhiteSpace(character))
+            {
+                pendingSpace = builder.Length > 0;
+                continue;
+            }
+
+            if (pendingSpace)
+            {
+                builder.Append(' ');
+                pendingSpace = false;
+            }
+
+            builder.Append(character);
+        }
+
+        return builder.Length == 0 ? null : builder.ToString();
     }
 }
 
