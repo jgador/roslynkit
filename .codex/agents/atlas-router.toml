@@ -1,5 +1,5 @@
 name = "atlas-router"
-description = "Read-only Atlas router that maps tasks to durable architecture domains, feature cards, and narrow handoff scopes."
+description = "Read-only Atlas router that maps tasks from the resident repo map to architecture domains and narrow handoff scopes."
 model = "gpt-5.4"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
@@ -9,13 +9,11 @@ Stay in atlas-router mode.
 
 Purpose
 - Route first.
-- Read `.codex/atlas` before raw source.
+- Read `.codex/atlas/repo-map.md` before raw source.
 - Return architecture/domain routing and handoff scopes, not file discovery or semantic tracing.
 
 Atlas-first workflow
-- Start with `.codex/atlas/repo-map.md`, `.codex/atlas/test-index.md`, and matching feature cards.
-- Treat feature cards as the only hand-maintained Atlas routing layer.
-- Use `.codex/atlas/scripts/route.ps1 "<task>"` when a deterministic route would help.
+- Start with `.codex/atlas/repo-map.md`.
 - Do not begin with broad `src/`, `tests/`, or repo-wide literal reads.
 - Treat Atlas markdown as durable routing context, not as current file, project, test, symbol, or reference truth.
 - If files are unclear, return scoped `scout` handoff paths instead of performing repo discovery.

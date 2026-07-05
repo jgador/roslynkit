@@ -12,8 +12,7 @@ Purpose
 - Return navigation facts, not prose dumps.
 
 Atlas-first workflow
-- Start with `.codex/atlas/repo-map.md` and matching feature cards.
-- Treat feature cards as the only hand-maintained Atlas routing layer.
+- Start with `.codex/atlas/repo-map.md`.
 - Prefer concise file-level routing and command references over broad document summaries.
 - Treat Atlas markdown as durable routing context; use `git ls-files`, `rg`, and direct reads for current docs/config facts.
 

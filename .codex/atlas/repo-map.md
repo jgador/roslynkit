@@ -1,74 +1,57 @@
-# Repo Map
+# RoslynKit Map
+
+Resident architecture context for first-pass navigation. Atlas stores durable routing facts only; use `git ls-files`, `rg`, RoslynKit live commands, tests, and direct file reads for current facts.
 
 ## Shape
 
 - Solution: `RoslynKit.slnx`
-- Source project: `src/RoslynKit/RoslynKit.csproj`
-- Test project: `tests/RoslynKit.Tests/RoslynKit.Tests.csproj`
-- Test-side utility: `tests/RoslynKit.WorkspaceGraphDump/RoslynKit.WorkspaceGraphDump.csproj`
-- Docs: `docs/`
-- Scripts: `scripts/`
-- Agent assets: `.agents/skills/`, `.codex/agents/`, `.codex/atlas/`
-
-## Entrypoints
-
-- CLI entrypoint: `src/RoslynKit/Program.cs`
-- Top-level runtime and output flow: `src/RoslynKit/CliApplication.cs`
-- CLI parsing: `src/RoslynKit/CliParser.cs`
-- Command registry: `src/RoslynKit/BuiltinCommandRegistry.cs`
-- Command execution: `src/RoslynKit/RoslynCommandExecutor.cs`
-- Workspace and document resolution: `src/RoslynKit/RoslynWorkspaceLoader.cs`
-
-## Build And Test
-
-- Restore: `dotnet restore .\RoslynKit.slnx`
-- Build: `dotnet build .\RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"`
-- Test: `dotnet test .\RoslynKit.slnx`
-- Run locally: `dotnet run --project .\src\RoslynKit -- help`
-- Pack: `dotnet pack .\src\RoslynKit\RoslynKit.csproj`
-
-## Conventions
-
-- .NET 10 CLI-first repo with deterministic markdown-first command output.
-- `roslynkit-dev` is the repo-default semantic inspection route.
-- Prefer tests before implementation when available.
-- Prefer symbol and line-range reads over full-file reads.
-- Atlas carries durable architecture and routing facts only; use RoslynKit live commands for task-sized semantic graph hops.
-- `global.json` pins the SDK and testing platform; `Directory.Packages.props` centralizes package versions.
+- Product: `src/RoslynKit/`
+- Tests: `tests/RoslynKit.Tests/`
+- Test utility: `tests/RoslynKit.WorkspaceGraphDump/`
+- Fixture input: `tests/FixtureWorkspace/App/`
+- Docs and packaging: `README.md`, `docs/`, `scripts/`
+- Agent assets: `AGENTS.md`, `.agents/skills/`, `.codex/agents/`, `.codex/atlas/repo-map.md`
 
 ## Runtime Flow
 
 - `Program.Main` creates `CliApplication` and calls `RunAsync`.
-- `CliApplication.RunAsync` parses arguments, dispatches help/version, calls `RoslynCommandExecutor.ExecuteAsync`, and renders results through `MarkdownProjection`.
-- `CliParser` binds command tokens to `BuiltinCommandRegistry` metadata and validates selector/option combinations.
+- `CliApplication.RunAsync` parses args, handles help/version, calls `RoslynCommandExecutor.ExecuteAsync`, and renders through `MarkdownProjection`.
+- `CliParser` validates command tokens and selector/option combinations against `BuiltinCommandRegistry`.
 - `RoslynCommandExecutor` loads workspaces, resolves documents or symbols, invokes Roslyn APIs, and returns result models.
-- `MarkdownProjection` is the only command output renderer.
+- `MarkdownProjection` is the deterministic markdown output renderer for successful commands.
 
-## Live Navigation
+## Domains
 
-- Use `symbols` for filtered declaration discovery.
-- Use `document-symbols` for one known C# document outline.
-- Use `definition`, `references`, `implementations`, `type-definition`, and `quick-info` for bounded semantic hops from a seed.
-- Use `document-lines` or `symbol-source` after the exact file or symbol is known.
-- Do not use Atlas markdown as a symbol graph.
+- CLI routing: `Program.cs`, `CliApplication.cs`, `CliParser.cs`, `BuiltinCommandRegistry.cs`, `RoslynCommandExecutor.cs`; start symbols `Program.Main`, `CliApplication.RunAsync`, `CliParser.Parse`, `RoslynCommandExecutor.ExecuteAsync`; tests `CliParserTests.cs`, `CliOutputTests.cs`, `CommandExecutionTests.cs`, `MarkdownFormatTests.cs`.
+- Workspace/navigation: `RoslynCommandExecutor.cs`, `RoslynWorkspaceLoader.cs`, `PositionResolver.cs`, `RoslynSymbolResolver.cs`, `RoslynDocumentFilters.cs`, `RoslynSymbolSearch.cs`, `RoslynSignatureHelpService.cs`; start symbols `RoslynWorkspaceLoader.LoadAsync`, `PositionResolver.GetPositionAsync`, `RoslynSymbolResolver.ResolveAsync`, `RoslynSymbolSearch.EnumerateSourceSymbols`; tests `CommandExecutionTests.cs`, `SymbolsCommandTests.cs`, `CliOutputTests.cs`.
+- Markdown output: `MarkdownProjection.cs`, result model types, `docs/markdown-output-format.md`; tests `MarkdownFormatTests.cs`, `CliOutputTests.cs`.
+- Tooling/packaging: `RoslynKit.csproj`, `scripts/prepare-roslynkit-package.ps1`, `scripts/install-roslynkit-dev.ps1`, `scripts/RoslynKit.Packaging.ps1`, `docs/dev-install.md`, `docs/dotnet-tool-release.md`, `docs/skill-maintenance.md`; tests usually start with `CliOutputTests.cs` plus build/pack smoke commands.
+- Agent/navigation policy: `AGENTS.md`, `.agents/skills/roslynkit*/SKILL.md`, `.codex/agents/*.toml`, this map.
 
-## Likely Domains
+## Test Routing
 
-- command routing and help/version
-- parser and option validation
-- workspace loading and document selection
-- symbol search and document symbols
-- navigation commands: definition, references, implementations, quick-info, type-definition, signature-help
-- markdown output rendering and result models
-- packaging, install, and release flow
-- agent and skill routing
+- Parser and option validation -> `tests/RoslynKit.Tests/CliParserTests.cs`
+- Command execution and Roslyn navigation flows -> `tests/RoslynKit.Tests/CommandExecutionTests.cs`
+- Help/version/error output -> `tests/RoslynKit.Tests/CliOutputTests.cs`
+- Markdown rendering contract -> `tests/RoslynKit.Tests/MarkdownFormatTests.cs`
+- Symbol search and document-symbol behavior -> `tests/RoslynKit.Tests/SymbolsCommandTests.cs`
+- Repo and fixture path helpers -> `tests/RoslynKit.Tests/TestPaths.cs`
 
-## Ignore First
+## Commands
 
-- `artifacts/`
-- `TestResults/`
-- `.vs/`
-- `Visual Studio 18/`
-- `bin/`
-- `obj/`
-- `*.nupkg`
+- Build: `dotnet build .\RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"`
+- Test: `dotnet test .\RoslynKit.slnx`
+- Run: `dotnet run --project .\src\RoslynKit -- help`
+- Pack: `dotnet pack .\src\RoslynKit\RoslynKit.csproj`
+- Workspace graph: `dotnet run --project .\tests\RoslynKit.WorkspaceGraphDump -- .\RoslynKit.slnx`
+
+## Navigation Rules
+
+- Use `roslynkit-dev` for repo-local C# semantic inspection unless the task is explicitly about the stable global tool.
+- Prefer tests before implementation when available.
+- Prefer RoslynKit `symbols`, `document-symbols`, `definition`, `references`, `implementations`, `type-definition`, `quick-info`, `signature-help`, `document-lines`, and `symbol-source` over broad source reads.
+- Use sparse XML comments surfaced by `quick-info` as next-hop hints, not as exhaustive documentation.
+- Do not use Atlas as a file inventory, test inventory, symbol graph, reference graph, or source cache.
+- Ignore first: `artifacts/`, `TestResults/`, `.vs/`, `Visual Studio 18/`, `bin/`, `obj/`, `*.nupkg`.
+
+Last verified: `2026-07-05`

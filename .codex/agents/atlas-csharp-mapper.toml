@@ -13,8 +13,7 @@ Purpose
 - Work from candidate files, symbols, or a narrow architecture scope supplied by the main agent or atlas-router.
 
 Atlas-first workflow
-- Start with `.codex/atlas/repo-map.md`, `.codex/atlas/test-index.md`, and matching feature cards.
-- Treat feature cards as the only hand-maintained Atlas routing layer.
+- Start with `.codex/atlas/repo-map.md`.
 - Prefer RoslynKit commands when available: `workspace`, `symbols`, `document-symbols`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, `signature-help`, `document-lines`, and `symbol-source`.
 - If RoslynKit is unavailable or the workspace fails to load, fall back to the narrowest terminal-native read.
 - Do not perform generic repo discovery; ask the main agent for a scout handoff when candidate files are still unclear.

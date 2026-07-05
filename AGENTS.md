@@ -30,6 +30,8 @@ Verify conclusions against current files, tests, docs, and command output.
 
 Do not use Repository Synapse in this repository. Do not run `synapse ensure`, `synapse recall`, `synapse tests`, or any other command that creates `.synapse/` repo-local cache files. Use Atlas, RoslynKit, scout agents, and direct file/test inspection instead.
 
+For ad-hoc scripts, scratch files, and temporary command results, use a clear subfolder under `artifacts/` such as `artifacts/<task-name>/`. Do not create repo-root scratch folders such as `.tmp`; `artifacts/` is ignored and is the expected place for disposable local outputs.
+
 ### RoslynKit Default Semantic Inspection
 
 When the task is ordinary C# semantic inspection inside this RoslynKit repo, use `.agents\skills\roslynkit-dev\SKILL.md` first. Treat that dev skill as the repo-default route for declarations, symbol structure, definitions, references, implementations, types, signatures, generated documents, and similar Roslyn-backed inspection work.
@@ -60,21 +62,17 @@ Every scout prompt must include `assigned_scope`, `search_goal`, known keywords 
 
 ## Repository Atlas Reading Policy
 
-- Use `.codex/atlas/` before broad source reading.
+- Use `.codex/atlas/repo-map.md` before broad source reading.
 - Use `atlas-router` when the architecture/domain is unclear.
 - Use `scout` when files are unclear inside a bounded scope.
 - For C# semantic inspection after candidate files or symbols are known, prefer RoslynKit or `atlas-csharp-mapper`.
 - Read tests before implementation when available.
 - Prefer symbol and line-range reads over full-file reads.
 - Stop after five source files and state a hypothesis before reading more.
-- Feature cards are the only hand-maintained Atlas routing layer.
 - Atlas does not store file, project, test, symbol, reference, or source-slice inventories; use `git ls-files`, `rg`, RoslynKit live queries, build/test output, or direct file inspection for current facts.
-- Keep `repo-map.md`, `test-index.md`, and feature cards focused on durable architecture, source-to-test routing, and feature ownership facts.
-- Update feature cards only with durable discoveries.
-- When a task changes durable Atlas facts for a covered feature or domain, update the matching feature card and refresh `Last verified` before finishing.
-- When durable repo shape or source-to-test mapping facts change, update `.codex/atlas/repo-map.md` or `.codex/atlas/test-index.md` in the same change.
-- When Atlas workflow, routing scripts, or feature-card schema changes, update `.codex/atlas/README.md`, `.codex/atlas/USAGE.md`, or `.codex/atlas/feature-cards/README.md` in the same change.
-- Use PowerShell scripts under `.codex/atlas/scripts/` for Atlas routing.
+- Keep `repo-map.md` focused on durable architecture, source-to-test routing, feature ownership facts, and navigation rules.
+- When durable Atlas facts change, update `.codex/atlas/repo-map.md` and refresh its `Last verified` date before finishing.
+- When Atlas workflow changes, update this policy and the relevant `.codex/agents/*.toml` prompts in the same change.
 
 ## State-Changing Git Command Safety
 
