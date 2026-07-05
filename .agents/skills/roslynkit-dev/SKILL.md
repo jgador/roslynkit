@@ -27,7 +27,7 @@ Do not default to `Get-Content`, `Select-String`, or grep-style file reads for q
 
 ## Selector Choice
 
-`definition`, `references`, and `implementations` accept either `--symbol <selector>` or a position (`--file`/`--document-key` plus `--line --column`), never both. Pick by what you already hold:
+`definition`, `references`, and `implementations` accept either `--symbol <selector>` or a position (`--file` plus `--line --column`), never both. Pick by what you already hold:
 
 - You know a declared name (type, method, property, field, event): use `--symbol` directly. Do not run `symbols` first just to obtain line and column numbers.
 - You hold a position from prior RoslynKit output (a reference location, a declaration location, a diagnostic) or from the user's cursor: use the position selector for the next hop at that spot.
@@ -47,7 +47,7 @@ Chain by identity: every symbol bullet carries its documentation-comment ID as `
 RoslynKit is C#-only by default.
 
 - For any RoslynKit command that accepts `--file`, always pass a path that ends in `.cs`.
-- Treat `.cs` as the default and required file scope unless the user explicitly asks for generated-document inspection that uses `--document-key` instead of `--file`.
+- Treat `.cs` as the default and required file scope. Generated C# documents are still selected by the generated `path` emitted from `workspace --include-generated`.
 - Do not run RoslynKit with `--file` values that point to `.md`, `.json`, `.xml`, `.yml`, `.yaml`, `.props`, `.targets`, `.editorconfig`, `.sln`, `.slnx`, `.csproj`, or other non-C# files.
 - If the task is prose inspection, comment wording, XML documentation wording, TODO scanning, or literal text matching, let Codex CLI choose the terminal-native fallback even when the text appears inside a `.cs` file.
 - A `.cs` file may still be inspected with RoslynKit when the primary task is semantic C# analysis or source inspection. Returned ranges may include comments, but comment text is not itself a RoslynKit search target. Because `document-text` returns whole documents only, prefer position-based commands, `quick-info`, targeted cross-references, and `document-lines` first. Use `document-symbols` only when the file is already known and you need local structure. Use `document-lines` when a resolved path and small line window are enough; an oversized `--end-line` is capped at EOF, but `--start-line` still must be inside the document. Use `document-text` only when a full document read is justified after the symbol or file is already resolved.
@@ -71,7 +71,7 @@ The dev tool install and update workflow is documented separately in `docs/dev-i
 
 Run `workspace` first when any of these are true:
 
-- you need a generated document key;
+- you need a generated document path;
 - the same file may appear in multiple target-framework or project contexts;
 - you need to inspect additional files or analyzer config documents.
 
@@ -82,6 +82,8 @@ $roslynkitDev = Join-Path (Join-Path (Join-Path $HOME ".roslynkit") "tools") "ro
 $roslynkitDev = Join-Path $roslynkitDev ($(if ($IsWindows) { "roslynkit.exe" } else { "roslynkit" }))
 & $roslynkitDev workspace --target .\SomeSolution.slnx --include-generated --include-additional --include-analyzer-config
 ```
+
+If a document command reports multiple document contexts for the same path, retry with the concrete context from the error hint. Use `--project <path>` for linked files, `--tfm <framework>` for multi-targeted projects, and `--document-kind <source|sourceGenerated|additional|analyzerConfig>` only when the same path still maps to multiple document kinds.
 
 ## Cursor Choice
 
@@ -221,14 +223,14 @@ The following examples assume `$roslynkitDev` has already been set as shown abov
 
 ### Generated-document reads
 
-This is the routine exception to the `.cs` `--file` default.
+Use the generated path surfaced by `workspace --include-generated`.
 
 1. Run `workspace --include-generated`.
-2. Copy the `documentKey` for the source-generated document.
-3. Read it with `document-text --document-key`.
+2. Copy the generated document `path`.
+3. Read it with `document-text --file`; add `--document-kind sourceGenerated` if the same path is ambiguous.
 
 ```powershell
-& $roslynkitDev document-text --target .\SomeProject.csproj --document-key doc_ABC123
+& $roslynkitDev document-text --target .\SomeProject.csproj --file .\obj\Debug\net10.0\Generated.g.cs --document-kind sourceGenerated
 ```
 
 ## Fallbacks

@@ -173,7 +173,6 @@ public sealed class MarkdownFormatTests
     public void Render_EmitsTextFence_ForNonSourceDocumentText()
     {
         var descriptor = new DocumentDescriptor(
-            "doc_notes",
             "App",
             null,
             "net10.0",
@@ -196,7 +195,6 @@ public sealed class MarkdownFormatTests
     {
         const string sourcePath = @"src\App\Source.cs";
         var descriptor = new DocumentDescriptor(
-            "doc_source",
             "App",
             null,
             "net10.0",
@@ -222,6 +220,26 @@ public sealed class MarkdownFormatTests
     }
 
     [Fact]
+    public void Render_UsesDisplayPath_ForDocumentText()
+    {
+        var descriptor = new DocumentDescriptor(
+            "App",
+            @"C:\repo\App\App.csproj",
+            "net10.0",
+            DocumentKindNames.Source,
+            "Source.cs",
+            @"C:\repo\App\Source.cs",
+            @"App\App.csproj",
+            @"App\Source.cs");
+        var result = new DocumentTextResult(descriptor, new DocumentRange(1, 1, 1, 14), "public class C", truncated: false, []);
+
+        var rendered = MarkdownProjection.Render(result);
+
+        Assert.Contains("path: `" + @"App\Source.cs" + "`", rendered, StringComparison.Ordinal);
+        Assert.DoesNotContain(@"C:\repo\App\Source.cs", rendered, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Render_EmitsProjectAndDocumentBullets_ForWorkspace()
     {
         var result = new WorkspaceResult(
@@ -237,7 +255,7 @@ public sealed class MarkdownFormatTests
             + "documents: 1\n"
             + "\n"
             + "- project: `App` tfm: `net10.0` documents: 2\n"
-            + "- project: `App` tfm: `net10.0` kind: source path: `" + SourcePath + "` key: `doc_123`";
+            + "- project: `App` tfm: `net10.0` kind: source path: `" + SourcePath + "`";
         Assert.Equal(expected, rendered);
     }
 
@@ -271,7 +289,6 @@ public sealed class MarkdownFormatTests
     private static DocumentDescriptor CreateDescriptor()
     {
         return new DocumentDescriptor(
-            "doc_123",
             "App",
             null,
             "net10.0",

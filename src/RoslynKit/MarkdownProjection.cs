@@ -313,15 +313,14 @@ public static class MarkdownProjection
 
             foreach (var document in result.Documents)
             {
-                builder.Append("\n- project: ").Append(CodeSpan(document.ProjectName));
+                builder.Append("\n- project: ").Append(CodeSpan(DocumentProjectPath(document)));
                 if (document.TargetFramework is { } documentTfm)
                 {
                     builder.Append(" tfm: ").Append(CodeSpan(documentTfm));
                 }
 
                 builder.Append(" kind: ").Append(document.DocumentKind)
-                    .Append(" path: ").Append(CodeSpan(DocumentPath(document)))
-                    .Append(" key: ").Append(CodeSpan(document.DocumentKey));
+                    .Append(" path: ").Append(CodeSpan(DocumentPath(document)));
             }
         }
 
@@ -448,6 +447,11 @@ public static class MarkdownProjection
 
     private static string DocumentPath(DocumentDescriptor document)
     {
-        return document.Path ?? document.Name;
+        return document.DisplayPath ?? "-";
+    }
+
+    private static string DocumentProjectPath(DocumentDescriptor document)
+    {
+        return document.DisplayProjectPath ?? document.ProjectName;
     }
 }

@@ -171,7 +171,7 @@ public static class RoslynCommandExecutor
     private static async Task<object> DocumentTextAsync(ParsedCommand command, CancellationToken cancellationToken)
     {
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
-        var context = await loaded.FindTextDocumentAsync(command.Optional("file"), command.Optional("document-key"), command.Name, cancellationToken).ConfigureAwait(false);
+        var context = await ResolveTextDocumentAsync(command, loaded, cancellationToken).ConfigureAwait(false);
         var text = await context.TextDocument.GetTextAsync(cancellationToken).ConfigureAwait(false);
         var resolvedRange = PositionResolver.ToDocumentRange(text, new TextSpan(0, text.Length));
 
@@ -193,7 +193,7 @@ public static class RoslynCommandExecutor
         }
 
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
-        var context = await loaded.FindTextDocumentAsync(command.Optional("file"), command.Optional("document-key"), command.Name, cancellationToken).ConfigureAwait(false);
+        var context = await ResolveTextDocumentAsync(command, loaded, cancellationToken).ConfigureAwait(false);
         var text = await context.TextDocument.GetTextAsync(cancellationToken).ConfigureAwait(false);
         if (startLine > text.Lines.Count)
         {
@@ -528,13 +528,24 @@ public static class RoslynCommandExecutor
     /// </summary>
     private static async Task<WorkspaceDocumentContext> ResolveSemanticDocumentAsync(ParsedCommand command, RoslynWorkspaceLoader loaded, CancellationToken cancellationToken)
     {
-        var context = await loaded.FindTextDocumentAsync(command.Optional("file"), command.Optional("document-key"), command.Name, cancellationToken).ConfigureAwait(false);
+        var context = await ResolveTextDocumentAsync(command, loaded, cancellationToken).ConfigureAwait(false);
         if (context.Document is null || !RoslynDocumentFilters.IsSemanticDocument(context.Document, context.DocumentKind))
         {
             throw new CliUsageException(command.Name, $"Command '{command.Name}' only supports C# source and source-generated documents.");
         }
 
         return context;
+    }
+
+    private static Task<WorkspaceDocumentContext> ResolveTextDocumentAsync(ParsedCommand command, RoslynWorkspaceLoader loaded, CancellationToken cancellationToken)
+    {
+        return loaded.FindTextDocumentAsync(
+            command.Optional("file"),
+            command.Optional("project"),
+            command.Optional("tfm"),
+            command.Optional("document-kind"),
+            command.Name,
+            cancellationToken);
     }
 
     /// <summary>

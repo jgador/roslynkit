@@ -34,6 +34,19 @@ public sealed class CommandExecutionTests
     }
 
     [Fact]
+    public async Task Workspace_RendersRootContainedDocumentPathsRelative()
+    {
+        var result = await TestPaths.ExecuteCommandAsync<WorkspaceResult>(
+            "workspace",
+            "--target", TestPaths.FixtureProjectPath());
+
+        var source = Assert.Single(result.Documents, document => document.Name == "Source.cs");
+
+        Assert.Equal(Path.Combine("tests", "FixtureWorkspace", "App", "Source.cs"), source.DisplayPath);
+        Assert.Equal(Path.Combine("tests", "FixtureWorkspace", "App", "App.csproj"), source.DisplayProjectPath);
+    }
+
+    [Fact]
     public async Task DocumentText_ReadsFullSourceDocument_FromFileSelector()
     {
         var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
@@ -48,6 +61,22 @@ public sealed class CommandExecutionTests
         Assert.Equal(expectedText, result.Text);
         AssertWholeDocumentRange(result.ResolvedRange, expectedText);
         Assert.False(result.Truncated);
+    }
+
+    [Fact]
+    public async Task DocumentText_ReadsFullSourceDocument_FromRelativeFileSelector()
+    {
+        var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+        var relativePath = Path.GetRelativePath(Environment.CurrentDirectory, programPath);
+        var expectedText = File.ReadAllText(programPath);
+
+        var result = await TestPaths.ExecuteCommandAsync<DocumentTextResult>(
+            "document-text",
+            "--target", TestPaths.SolutionPath(),
+            "--file", relativePath);
+
+        Assert.Equal("Program.cs", result.Document.Name);
+        Assert.Equal(expectedText, result.Text);
     }
 
     [Fact]
@@ -78,7 +107,7 @@ public sealed class CommandExecutionTests
     {
         var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(TestPaths.SolutionPath(), TestContext.Current.CancellationToken);
-        var context = await loaded.FindTextDocumentAsync(programPath, null, "document-lines", TestContext.Current.CancellationToken);
+        var context = await loaded.FindTextDocumentAsync(programPath, null, null, null, "document-lines", TestContext.Current.CancellationToken);
         var text = await context.TextDocument.GetTextAsync(TestContext.Current.CancellationToken);
         var lastLineNumber = text.Lines.Count;
         var lastTextLine = text.Lines[lastLineNumber - 1];
@@ -120,7 +149,7 @@ public sealed class CommandExecutionTests
     {
         var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(TestPaths.SolutionPath(), TestContext.Current.CancellationToken);
-        var context = await loaded.FindTextDocumentAsync(programPath, null, "document-lines", TestContext.Current.CancellationToken);
+        var context = await loaded.FindTextDocumentAsync(programPath, null, null, null, "document-lines", TestContext.Current.CancellationToken);
         var text = await context.TextDocument.GetTextAsync(TestContext.Current.CancellationToken);
         var lineBeyondEnd = text.Lines.Count + 1;
 
@@ -272,26 +301,74 @@ public sealed class CommandExecutionTests
     }
 
     [Fact]
-    public async Task DocumentText_DocumentKey_ReadsFullGeneratedDocument()
+    public async Task DocumentText_FileSelector_ReadsFullGeneratedDocument()
     {
         var workspace = await TestPaths.ExecuteCommandAsync<WorkspaceResult>(
             "workspace",
             "--target", TestPaths.FixtureProjectPath(),
             "--include-generated");
         var generatedDocument = workspace.Documents.First(document => document.DocumentKind == DocumentKindNames.SourceGenerated);
+        Assert.NotNull(generatedDocument.Path);
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(TestPaths.FixtureProjectPath(), TestContext.Current.CancellationToken);
-        var context = await loaded.FindTextDocumentAsync(null, generatedDocument.DocumentKey, "document-text", TestContext.Current.CancellationToken);
+        var context = await loaded.FindTextDocumentAsync(generatedDocument.Path, null, null, DocumentKindNames.SourceGenerated, "document-text", TestContext.Current.CancellationToken);
         var expectedText = (await context.TextDocument.GetTextAsync(TestContext.Current.CancellationToken)).ToString();
 
         var result = await TestPaths.ExecuteCommandAsync<DocumentTextResult>(
             "document-text",
             "--target", TestPaths.FixtureProjectPath(),
-            "--document-key", generatedDocument.DocumentKey);
+            "--file", generatedDocument.Path!,
+            "--document-kind", DocumentKindNames.SourceGenerated);
 
         Assert.Equal(DocumentKindNames.SourceGenerated, result.Document.DocumentKind);
         Assert.Equal(expectedText, result.Text);
         AssertWholeDocumentRange(result.ResolvedRange, expectedText);
         Assert.False(result.Truncated);
+    }
+
+    [Fact]
+    public async Task DocumentText_AmbiguousFilePath_ListsProjectTfmKindAndPath()
+    {
+        var fixture = CreateAmbiguousPathFixture();
+
+        var exception = await Assert.ThrowsAsync<CliUsageException>(() => TestPaths.ExecuteCommandAsync<DocumentTextResult>(
+            "document-text",
+            "--target", fixture.SolutionPath,
+            "--file", fixture.SharedSourcePath));
+
+        Assert.Equal("document-text", exception.CommandName);
+        Assert.Contains("multiple document contexts", exception.Message, StringComparison.Ordinal);
+        var hint = exception.Hint;
+        Assert.NotNull(hint);
+        Assert.Contains("--project", hint!, StringComparison.Ordinal);
+        Assert.Contains("--tfm", hint!, StringComparison.Ordinal);
+        Assert.Contains("--document-kind", hint!, StringComparison.Ordinal);
+        Assert.Contains("ProjectA.csproj", hint!, StringComparison.Ordinal);
+        Assert.Contains("ProjectB.csproj", hint!, StringComparison.Ordinal);
+        Assert.Contains("net10.0", hint!, StringComparison.Ordinal);
+        Assert.Contains("netstandard2.1", hint!, StringComparison.Ordinal);
+        Assert.Contains("Shared.cs", hint!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DocumentText_ContextOptions_DisambiguateFilePath()
+    {
+        var fixture = CreateAmbiguousPathFixture();
+
+        var projectResult = await TestPaths.ExecuteCommandAsync<DocumentTextResult>(
+            "document-text",
+            "--target", fixture.SolutionPath,
+            "--file", fixture.SharedSourcePath,
+            "--project", fixture.ProjectAPath);
+        var tfmResult = await TestPaths.ExecuteCommandAsync<DocumentTextResult>(
+            "document-text",
+            "--target", fixture.SolutionPath,
+            "--file", fixture.SharedSourcePath,
+            "--tfm", "netstandard2.1");
+
+        Assert.Equal("ProjectA", projectResult.Document.ProjectName);
+        Assert.Equal("net10.0", projectResult.Document.TargetFramework);
+        Assert.Equal("ProjectB", tfmResult.Document.ProjectName);
+        Assert.Equal("netstandard2.1", tfmResult.Document.TargetFramework);
     }
 
     [Fact]
@@ -404,4 +481,53 @@ public sealed class CommandExecutionTests
         Assert.Equal(lines.Length, range.EndLine);
         Assert.Equal(lines[^1].TrimEnd('\r').Length + 1, range.EndColumn);
     }
+
+    private static AmbiguousPathFixture CreateAmbiguousPathFixture()
+    {
+        var root = Path.Combine(TestPaths.RepositoryRoot(), "artifacts", "path-first-document-selection", Guid.NewGuid().ToString("N"));
+        var projectADirectory = Path.Combine(root, "ProjectA");
+        var projectBDirectory = Path.Combine(root, "ProjectB");
+        Directory.CreateDirectory(projectADirectory);
+        Directory.CreateDirectory(projectBDirectory);
+
+        var sharedSourcePath = Path.Combine(root, "Shared.cs");
+        File.WriteAllText(sharedSourcePath, "namespace AmbiguousFixture;\n\npublic sealed class Shared\n{\n    public string Value => \"shared\";\n}\n");
+
+        var projectAPath = Path.Combine(projectADirectory, "ProjectA.csproj");
+        var projectBPath = Path.Combine(projectBDirectory, "ProjectB.csproj");
+        File.WriteAllText(projectAPath, CreateSharedCompileProject("net10.0"));
+        File.WriteAllText(projectBPath, CreateSharedCompileProject("netstandard2.1"));
+
+        var solutionPath = Path.Combine(root, "Ambiguous.slnx");
+        File.WriteAllText(solutionPath, """
+            <Solution>
+              <Project Path="ProjectA/ProjectA.csproj" />
+              <Project Path="ProjectB/ProjectB.csproj" />
+            </Solution>
+            """);
+
+        return new AmbiguousPathFixture(solutionPath, projectAPath, projectBPath, sharedSourcePath);
+    }
+
+    private static string CreateSharedCompileProject(string targetFramework)
+    {
+        return $$"""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>{{targetFramework}}</TargetFramework>
+                <ImplicitUsings>enable</ImplicitUsings>
+                <Nullable>enable</Nullable>
+              </PropertyGroup>
+              <ItemGroup>
+                <Compile Include="..\Shared.cs" Link="Shared.cs" />
+              </ItemGroup>
+            </Project>
+            """;
+    }
+
+    private sealed record AmbiguousPathFixture(
+        string SolutionPath,
+        string ProjectAPath,
+        string ProjectBPath,
+        string SharedSourcePath);
 }

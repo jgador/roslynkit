@@ -47,43 +47,51 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "document-text",
             "Read the full text of one resolved document.",
-            ["roslynkit document-text --target <target> (--file <path> | --document-key <id>)"],
+            ["roslynkit document-text --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>]"],
             [
                 TargetOption(),
                 FileOption(),
-                DocumentKeyOption(),
+                ProjectOption(),
+                TargetFrameworkOption(),
+                DocumentKindOption(),
             ]),
         new BuiltinCommand(
             "document-lines",
             "Read a bounded one-based line range from one resolved document.",
-            ["roslynkit document-lines --target <target> (--file <path> | --document-key <id>) --start-line <n> --end-line <n>"],
+            ["roslynkit document-lines --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --start-line <n> --end-line <n>"],
             [
                 TargetOption(),
                 FileOption(),
-                DocumentKeyOption(),
+                ProjectOption(),
+                TargetFrameworkOption(),
+                DocumentKindOption(),
                 StartLineOption(),
                 EndLineOption(),
             ]),
         new BuiltinCommand(
             "document-symbols",
             "List declared symbols in one source or source-generated C# document.",
-            ["roslynkit document-symbols --target <target> (--file <path> | --document-key <id>)"],
+            ["roslynkit document-symbols --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>]"],
             [
                 TargetOption(),
                 FileOption(),
-                DocumentKeyOption(),
+                ProjectOption(),
+                TargetFrameworkOption(),
+                DocumentKindOption(),
             ]),
         new BuiltinCommand(
             "definition",
             "Resolve a symbol selector or the symbol at a one-based line and column to source definitions.",
             [
-                "roslynkit definition --target <target> (--file <path> | --document-key <id>) --line <n> --column <n>",
+                "roslynkit definition --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>",
                 "roslynkit definition --target <target> --symbol <selector>",
             ],
             [
                 TargetOption(),
                 FileOption(),
-                DocumentKeyOption(),
+                ProjectOption(),
+                TargetFrameworkOption(),
+                DocumentKindOption(),
                 LineOption(required: false),
                 ColumnOption(required: false),
                 SymbolOption(),
@@ -91,11 +99,13 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "type-definition",
             "Resolve the type of the symbol at a one-based line and column to source definitions.",
-            ["roslynkit type-definition --target <target> (--file <path> | --document-key <id>) --line <n> --column <n>"],
+            ["roslynkit type-definition --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>"],
             [
                 TargetOption(),
                 FileOption(),
-                DocumentKeyOption(),
+                ProjectOption(),
+                TargetFrameworkOption(),
+                DocumentKindOption(),
                 LineOption(),
                 ColumnOption(),
             ]),
@@ -103,13 +113,15 @@ public static class BuiltinCommandRegistry
             "references",
             "Find source references for a symbol selector or the symbol at a one-based line and column.",
             [
-                "roslynkit references --target <target> (--file <path> | --document-key <id>) --line <n> --column <n> [--max-results <n>]",
+                "roslynkit references --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n> [--max-results <n>]",
                 "roslynkit references --target <target> --symbol <selector> [--max-results <n>]",
             ],
             [
                 TargetOption(),
                 FileOption(),
-                DocumentKeyOption(),
+                ProjectOption(),
+                TargetFrameworkOption(),
+                DocumentKindOption(),
                 LineOption(required: false),
                 ColumnOption(required: false),
                 SymbolOption(),
@@ -119,13 +131,15 @@ public static class BuiltinCommandRegistry
             "implementations",
             "Find implementations for a symbol selector or the symbol at a one-based line and column.",
             [
-                "roslynkit implementations --target <target> (--file <path> | --document-key <id>) --line <n> --column <n> [--max-results <n>]",
+                "roslynkit implementations --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n> [--max-results <n>]",
                 "roslynkit implementations --target <target> --symbol <selector> [--max-results <n>]",
             ],
             [
                 TargetOption(),
                 FileOption(),
-                DocumentKeyOption(),
+                ProjectOption(),
+                TargetFrameworkOption(),
+                DocumentKindOption(),
                 LineOption(required: false),
                 ColumnOption(required: false),
                 SymbolOption(),
@@ -134,22 +148,26 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "quick-info",
             "Return Roslyn quick info for the symbol at a one-based line and column.",
-            ["roslynkit quick-info --target <target> (--file <path> | --document-key <id>) --line <n> --column <n>"],
+            ["roslynkit quick-info --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>"],
             [
                 TargetOption(),
                 FileOption(),
-                DocumentKeyOption(),
+                ProjectOption(),
+                TargetFrameworkOption(),
+                DocumentKindOption(),
                 LineOption(),
                 ColumnOption(),
             ]),
         new BuiltinCommand(
             "signature-help",
             "Return Roslyn signature help for the position at a one-based line and column.",
-            ["roslynkit signature-help --target <target> (--file <path> | --document-key <id>) --line <n> --column <n>"],
+            ["roslynkit signature-help --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>"],
             [
                 TargetOption(),
                 FileOption(),
-                DocumentKeyOption(),
+                ProjectOption(),
+                TargetFrameworkOption(),
+                DocumentKindOption(),
                 LineOption(),
                 ColumnOption(),
             ]),
@@ -189,9 +207,19 @@ public static class BuiltinCommandRegistry
         return OptionSpec.String('f', "file", "path", "document file path in the loaded target");
     }
 
-    private static OptionSpec DocumentKeyOption()
+    private static OptionSpec ProjectOption()
     {
-        return OptionSpec.String(null, "document-key", "id", "opaque document key from the workspace command");
+        return OptionSpec.String(null, "project", "path", "owning project file path when a document path is ambiguous");
+    }
+
+    private static OptionSpec TargetFrameworkOption()
+    {
+        return OptionSpec.String(null, "tfm", "framework", "target framework when a document path is ambiguous across project contexts");
+    }
+
+    private static OptionSpec DocumentKindOption()
+    {
+        return OptionSpec.String(null, "document-kind", "kind", "document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig");
     }
 
     private static OptionSpec LineOption(bool required = true)

@@ -39,6 +39,22 @@ public sealed class CliOutputTests
     }
 
     [Fact]
+    public async Task RunAsync_WritesCommandHelp_ForDocumentTextPathSelector()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(["help", "document-text"], TestContext.Current.CancellationToken);
+
+        var output = writer.ToString();
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("--file <path>", output, StringComparison.Ordinal);
+        Assert.Contains("- option: `--project`", output, StringComparison.Ordinal);
+        Assert.Contains("- option: `--tfm`", output, StringComparison.Ordinal);
+        Assert.Contains("- option: `--document-kind`", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("--document-key", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RunAsync_WritesCommandHelp_ForTopLevelVersionHelp()
     {
         using var writer = new StringWriter();
@@ -83,7 +99,7 @@ public sealed class CliOutputTests
     {
         var output = await AssertUsageErrorAsync(["document-text", "--target", "missing.slnx"]);
 
-        Assert.Contains("Exactly one of '--file' or '--document-key' is required.", output, StringComparison.Ordinal);
+        Assert.Contains("Missing required option '--file'.", output, StringComparison.Ordinal);
     }
 
     [Fact]

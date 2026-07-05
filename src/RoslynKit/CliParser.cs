@@ -5,6 +5,21 @@ namespace RoslynKit;
 /// </summary>
 public static class CliParser
 {
+    private static readonly string[] DocumentContextOptions =
+    [
+        "project",
+        "tfm",
+        "document-kind",
+    ];
+
+    private static readonly string[] SupportedDocumentKinds =
+    [
+        DocumentKindNames.Source,
+        DocumentKindNames.SourceGenerated,
+        DocumentKindNames.Additional,
+        DocumentKindNames.AnalyzerConfig,
+    ];
+
     private static readonly string[] DocumentTextLegacyRangeOptions =
     [
         "start-line",
@@ -290,22 +305,24 @@ public static class CliParser
 
     private static void ValidateDocumentSelector(string commandName, IReadOnlyDictionary<string, string> options)
     {
-        var hasFile = options.ContainsKey("file");
-        var hasDocumentKey = options.ContainsKey("document-key");
-
-        if (hasFile == hasDocumentKey)
+        if (!options.ContainsKey("file"))
         {
-            throw new CliUsageException(commandName, "Exactly one of '--file' or '--document-key' is required.");
+            throw new CliUsageException(commandName, "Missing required option '--file'.");
         }
+
+        ValidateDocumentKindOption(commandName, options);
     }
 
     private static void ValidateSymbolOrPositionSelector(string commandName, IReadOnlyDictionary<string, string> options)
     {
         if (options.ContainsKey("symbol"))
         {
-            if (options.ContainsKey("file") || options.ContainsKey("document-key") || options.ContainsKey("line") || options.ContainsKey("column"))
+            if (options.ContainsKey("file")
+                || DocumentContextOptions.Any(options.ContainsKey)
+                || options.ContainsKey("line")
+                || options.ContainsKey("column"))
             {
-                throw new CliUsageException(commandName, "Option '--symbol' cannot be combined with '--file', '--document-key', '--line', or '--column'.");
+                throw new CliUsageException(commandName, "Option '--symbol' cannot be combined with '--file', '--project', '--tfm', '--document-kind', '--line', or '--column'.");
             }
 
             return;
@@ -319,6 +336,19 @@ public static class CliParser
             {
                 throw new CliUsageException(commandName, $"Missing required option '--{positionOption}'.");
             }
+        }
+    }
+
+    private static void ValidateDocumentKindOption(string commandName, IReadOnlyDictionary<string, string> options)
+    {
+        if (!options.TryGetValue("document-kind", out var documentKind))
+        {
+            return;
+        }
+
+        if (!SupportedDocumentKinds.Contains(documentKind, StringComparer.Ordinal))
+        {
+            throw new CliUsageException(commandName, $"Unknown document kind '{documentKind}'. Supported values: {string.Join(", ", SupportedDocumentKinds)}.");
         }
     }
 

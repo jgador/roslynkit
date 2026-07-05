@@ -50,13 +50,18 @@ public sealed class CliParserTests
     }
 
     [Fact]
-    public void Parse_AcceptsDocumentKeySelector()
+    public void Parse_RejectsDocumentKeySelector()
     {
-        var command = CliParser.Parse(["quick-info", "--target", "repo.slnx", "--document-key", "doc_123", "--line", "7", "--column", "15"]);
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
+            "quick-info",
+            "--target", "repo.slnx",
+            "--document-key", "doc_123",
+            "--line", "7",
+            "--column", "15",
+        ]));
 
-        Assert.Equal("quick-info", command.Name);
-        Assert.Equal("doc_123", command.Required("document-key"));
-        Assert.Null(command.Optional("file"));
+        Assert.Equal("quick-info", exception.CommandName);
+        Assert.Contains("Unknown option '--document-key'", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -66,17 +71,25 @@ public sealed class CliParserTests
 
         Assert.Equal("document-text", command.Name);
         Assert.Equal("Program.cs", command.Required("file"));
-        Assert.Null(command.Optional("document-key"));
     }
 
     [Fact]
-    public void Parse_AcceptsWholeFileDocumentTextDocumentKeySelector()
+    public void Parse_AcceptsDocumentContextOptionsWithFileSelector()
     {
-        var command = CliParser.Parse(["document-text", "--target", "repo.slnx", "--document-key", "doc_123"]);
+        var command = CliParser.Parse([
+            "document-text",
+            "--target", "repo.slnx",
+            "--file", "Program.cs",
+            "--project", "App.csproj",
+            "--tfm", "net10.0",
+            "--document-kind", "source",
+        ]);
 
         Assert.Equal("document-text", command.Name);
-        Assert.Equal("doc_123", command.Required("document-key"));
-        Assert.Null(command.Optional("file"));
+        Assert.Equal("Program.cs", command.Required("file"));
+        Assert.Equal("App.csproj", command.Required("project"));
+        Assert.Equal("net10.0", command.Required("tfm"));
+        Assert.Equal("source", command.Required("document-kind"));
     }
 
     [Fact]
@@ -130,23 +143,34 @@ public sealed class CliParserTests
         var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(["document-text", "--target", "repo.slnx"]));
 
         Assert.Equal("document-text", exception.CommandName);
-        Assert.Contains("Exactly one of '--file' or '--document-key' is required.", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Missing required option '--file'.", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Parse_RejectsMultipleDocumentSelectors()
+    public void Parse_RejectsContextOptionsWithoutFile()
     {
         var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
-            "definition",
+            "document-text",
             "--target", "repo.slnx",
-            "--file", "Program.cs",
-            "--document-key", "doc_123",
-            "--line", "10",
-            "--column", "4",
+            "--project", "App.csproj",
         ]));
 
-        Assert.Equal("definition", exception.CommandName);
-        Assert.Contains("Exactly one of '--file' or '--document-key' is required.", exception.Message, StringComparison.Ordinal);
+        Assert.Equal("document-text", exception.CommandName);
+        Assert.Contains("Missing required option '--file'.", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_RejectsUnknownDocumentKind()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
+            "document-text",
+            "--target", "repo.slnx",
+            "--file", "Program.cs",
+            "--document-kind", "banana",
+        ]));
+
+        Assert.Equal("document-text", exception.CommandName);
+        Assert.Contains("Unknown document kind 'banana'", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -247,6 +271,21 @@ public sealed class CliParserTests
 
         Assert.Equal("implementations", exception.CommandName);
         Assert.Contains("Option '--symbol' cannot be combined with", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_RejectsSymbolCombinedWithDocumentContext()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
+            "references",
+            "--target", "repo.slnx",
+            "--symbol", "RoslynKit.CliApplication",
+            "--project", "App.csproj",
+        ]));
+
+        Assert.Equal("references", exception.CommandName);
+        Assert.Contains("Option '--symbol' cannot be combined with", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("--project", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

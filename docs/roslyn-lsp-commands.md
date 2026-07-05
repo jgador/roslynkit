@@ -22,7 +22,7 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 
 | Priority | RoslynKit command family | Roslyn method or API source | Why it matters for agents |
 | --- | --- | --- | --- |
-| Implemented | `workspace` | `MSBuildWorkspace`, `Project`, `Document`, source-generated, additional, and analyzer-config document APIs | Default output is now repo-relevant source documents. Generated, additional, and analyzer-config documents are opt-in, and distinct project or target-framework contexts remain separate through `documentKey`. |
+| Implemented | `workspace` | `MSBuildWorkspace`, `Project`, `Document`, source-generated, additional, and analyzer-config document APIs | Default output is now repo-relevant source documents. Generated, additional, and analyzer-config documents are opt-in, and distinct project or target-framework contexts remain visible through project path, TFM, document kind, and document path. |
 | Implemented | `diagnostics` | compiler diagnostics, `textDocument/diagnostic`, `workspace/diagnostic` | Lets agents verify build/compiler issues before and after edits. |
 | Implemented | `symbols` | `workspace/symbol`, `SymbolFinder`, declarations | Lets agents locate named C# declarations without text-only search. |
 | Implemented | `document-symbols` | `textDocument/documentSymbol` | Gives compact structure for one file. |

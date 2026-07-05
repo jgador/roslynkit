@@ -117,14 +117,14 @@ workspace-diagnostics: 1
 
 ### `workspace`
 
-Workspace metadata renders as key-value lines with project and document bullets. `key:` carries the opaque document key that chains into `--document-key`.
+Workspace metadata renders as key-value lines with project and document bullets. Project summary bullets use the project display name. Document bullets use the owning project path, target framework when available, document kind, and document path. Paths under the loaded root render relative; paths outside the loaded root render absolute.
 
 ```markdown
 command: workspace
 documents: 1
 
 - project: `MyApp` tfm: `net10.0` documents: 42
-- project: `MyApp` tfm: `net10.0` kind: source path: `src/MyApp/Program.cs` key: `doc_abc123`
+- project: `src/MyApp/MyApp.csproj` tfm: `net10.0` kind: source path: `src/MyApp/Program.cs`
 ```
 
 ### `diagnostics`

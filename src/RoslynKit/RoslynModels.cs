@@ -755,18 +755,42 @@ public sealed class SignatureHelpResult
 }
 
 /// <summary>
-/// Describes one document resolved from the loaded workspace, including project context and document key.
+/// Describes one document resolved from the loaded workspace, including project and path context.
 /// </summary>
 public sealed class DocumentDescriptor
 {
     public DocumentDescriptor(
+        string projectName,
+        string? projectPath,
+        string? targetFramework,
+        string documentKind,
+        string name,
+        string? path,
+        string? displayProjectPath = null,
+        string? displayPath = null)
+        : this(
+            documentKey: string.Empty,
+            projectName,
+            projectPath,
+            targetFramework,
+            documentKind,
+            name,
+            path,
+            displayProjectPath,
+            displayPath)
+    {
+    }
+
+    internal DocumentDescriptor(
         string documentKey,
         string projectName,
         string? projectPath,
         string? targetFramework,
         string documentKind,
         string name,
-        string? path)
+        string? path,
+        string? displayProjectPath = null,
+        string? displayPath = null)
     {
         DocumentKey = documentKey;
         ProjectName = projectName;
@@ -775,12 +799,14 @@ public sealed class DocumentDescriptor
         DocumentKind = documentKind;
         Name = name;
         Path = path;
+        DisplayProjectPath = displayProjectPath ?? projectPath;
+        DisplayPath = displayPath ?? path;
     }
 
     /// <summary>
-    /// Stable opaque key that can reselect this document when file paths are ambiguous or unavailable.
+    /// Private stable key used only for deterministic internal ordering and de-duplication.
     /// </summary>
-    public string DocumentKey { get; }
+    internal string DocumentKey { get; }
 
     /// <summary>
     /// Name of the project that owns the document.
@@ -791,6 +817,11 @@ public sealed class DocumentDescriptor
     /// Absolute path to the owning project file, when Roslyn exposes one.
     /// </summary>
     public string? ProjectPath { get; }
+
+    /// <summary>
+    /// User-facing owning project path, relative to the loaded root when possible.
+    /// </summary>
+    public string? DisplayProjectPath { get; }
 
     /// <summary>
     /// Target framework label for the project context, when the load supplied one.
@@ -811,6 +842,11 @@ public sealed class DocumentDescriptor
     /// Absolute file path for path-backed documents, or <c>null</c> for generated documents without a path.
     /// </summary>
     public string? Path { get; }
+
+    /// <summary>
+    /// User-facing document path, relative to the loaded root when possible.
+    /// </summary>
+    public string? DisplayPath { get; }
 }
 
 /// <summary>

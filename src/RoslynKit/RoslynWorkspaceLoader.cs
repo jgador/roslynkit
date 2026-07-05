@@ -137,6 +137,22 @@ public sealed class RoslynWorkspaceLoader : IDisposable
     }
 
     /// <summary>
+    /// Renders a loaded target path relative to the root when it is inside that root.
+    /// </summary>
+    public string? FormatPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        var fullPath = Path.GetFullPath(path);
+        return IsPathUnderRoot(fullPath)
+            ? Path.GetRelativePath(RootPath, fullPath)
+            : fullPath;
+    }
+
+    /// <summary>
     /// Enumerates command-addressable source, generated, additional, and analyzer-config documents after workspace load.
     /// </summary>
     public async Task<IReadOnlyList<WorkspaceDocumentContext>> EnumerateDocumentsAsync(DocumentEnumerationOptions options, CancellationToken cancellationToken)
@@ -216,11 +232,13 @@ public sealed class RoslynWorkspaceLoader : IDisposable
     }
 
     /// <summary>
-    /// Resolves one text document from <c>--file</c> or <c>--document-key</c> for follow-on RoslynKit commands.
+    /// Resolves one text document from a path selector and optional project, TFM, or document-kind context.
     /// </summary>
     public async Task<WorkspaceDocumentContext> FindTextDocumentAsync(
         string? filePath,
-        string? documentKey,
+        string? projectPath,
+        string? targetFramework,
+        string? documentKind,
         string commandName,
         CancellationToken cancellationToken)
     {
@@ -232,28 +250,45 @@ public sealed class RoslynWorkspaceLoader : IDisposable
                 RepositoryRelevantOnly: false),
             cancellationToken).ConfigureAwait(false);
 
-        if (!string.IsNullOrWhiteSpace(documentKey))
-        {
-            var match = documents.SingleOrDefault(document => string.Equals(document.Descriptor.DocumentKey, documentKey, StringComparison.Ordinal));
-            return match
-                ?? throw new CliUsageException(commandName, $"Document key '{documentKey}' is not part of the loaded target.");
-        }
-
         if (string.IsNullOrWhiteSpace(filePath))
         {
-            throw new CliUsageException(commandName, "Exactly one of '--file' or '--document-key' is required.");
+            throw new CliUsageException(commandName, "Missing required option '--file'.");
         }
 
         var fullFilePath = Path.GetFullPath(filePath);
-        var matches = documents
+        var fileMatches = documents
             .Where(document => document.Descriptor.Path is not null && PathComparer.Equals(document.Descriptor.Path, fullFilePath))
             .ToArray();
 
+        var matches = fileMatches;
+        if (!string.IsNullOrWhiteSpace(projectPath))
+        {
+            var fullProjectPath = Path.GetFullPath(projectPath);
+            matches = matches
+                .Where(document => document.Descriptor.ProjectPath is not null && PathComparer.Equals(document.Descriptor.ProjectPath, fullProjectPath))
+                .ToArray();
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetFramework))
+        {
+            matches = matches
+                .Where(document => string.Equals(document.Descriptor.TargetFramework, targetFramework, StringComparison.Ordinal))
+                .ToArray();
+        }
+
+        if (!string.IsNullOrWhiteSpace(documentKind))
+        {
+            matches = matches
+                .Where(document => string.Equals(document.Descriptor.DocumentKind, documentKind, StringComparison.Ordinal))
+                .ToArray();
+        }
+
         return matches.Length switch
         {
-            0 => throw new CliUsageException(commandName, $"File '{fullFilePath}' is not part of the loaded target."),
+            0 when fileMatches.Length == 0 => throw new CliUsageException(commandName, $"File '{fullFilePath}' is not part of the loaded target."),
+            0 => throw new CliUsageException(commandName, $"File '{fullFilePath}' has no document context matching the supplied --project, --tfm, or --document-kind options.", CreateDocumentContextHint(fileMatches)),
             1 => matches[0],
-            _ => throw new CliUsageException(commandName, $"File '{fullFilePath}' appears in multiple project contexts. Use '--document-key' from 'workspace' to choose the exact document."),
+            _ => throw new CliUsageException(commandName, $"File '{fullFilePath}' appears in multiple document contexts.", CreateDocumentContextHint(matches)),
         };
     }
 
@@ -325,6 +360,33 @@ public sealed class RoslynWorkspaceLoader : IDisposable
         }
 
         return Path.GetDirectoryName(targetPath) ?? Environment.CurrentDirectory;
+    }
+
+    private string CreateDocumentContextHint(IReadOnlyList<WorkspaceDocumentContext> matches)
+    {
+        var candidates = matches
+            .OrderBy(document => FormatPath(document.Descriptor.ProjectPath), StringComparer.Ordinal)
+            .ThenBy(document => document.Descriptor.TargetFramework, StringComparer.Ordinal)
+            .ThenBy(document => document.Descriptor.DocumentKind, StringComparer.Ordinal)
+            .ThenBy(document => FormatPath(document.Descriptor.Path), StringComparer.Ordinal)
+            .Select(document =>
+                $"project '{FormatPath(document.Descriptor.ProjectPath) ?? document.Descriptor.ProjectName}' tfm '{document.Descriptor.TargetFramework ?? "-"}' kind '{document.Descriptor.DocumentKind}' path '{FormatPath(document.Descriptor.Path) ?? "-"}'")
+            .ToArray();
+
+        return "Retry with --project, --tfm, or --document-kind. Matches: " + string.Join("; ", candidates);
+    }
+
+    private bool IsPathUnderRoot(string fullPath)
+    {
+        var root = Path.GetFullPath(RootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var path = Path.GetFullPath(fullPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (PathComparer.Equals(path, root))
+        {
+            return true;
+        }
+
+        var rootWithSeparator = root + Path.DirectorySeparatorChar;
+        return path.StartsWith(rootWithSeparator, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     }
 
     private static void RegisterMSBuild()
@@ -399,7 +461,9 @@ public sealed class WorkspaceDocumentContext
             targetFramework,
             documentKind,
             textDocument.Name,
-            normalizedPath);
+            normalizedPath,
+            loader.FormatPath(textDocument.Project.FilePath),
+            loader.FormatPath(normalizedPath));
 
         return new WorkspaceDocumentContext(textDocument, descriptor);
     }
