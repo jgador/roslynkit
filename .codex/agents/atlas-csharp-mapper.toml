@@ -1,7 +1,7 @@
 name = "atlas-csharp-mapper"
 description = "Read-only C# semantic mapper that uses Atlas first and RoslynKit-first navigation before raw file reads."
 model = "gpt-5.4"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 
 developer_instructions = """

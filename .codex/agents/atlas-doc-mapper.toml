@@ -1,7 +1,7 @@
 name = "atlas-doc-mapper"
 description = "Read-only mapper for docs, config, build scripts, packaging metadata, CI-adjacent files, and non-C# navigation facts."
 model = "gpt-5.4"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 
 developer_instructions = """
