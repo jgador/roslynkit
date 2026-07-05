@@ -40,7 +40,7 @@ Hard rule: coordinates must come from tool output, a diagnostic, or the user. If
 
 When a coordinate usage error includes a `hint:` line, do not retry the same `--line`/`--column`. Use the valid range in `hint:` and pick a new coordinate with `document-lines` or `document-symbols` before retrying semantic commands.
 
-Chain by identity: every symbol bullet carries its documentation-comment ID as `id:`. Pass it straight to the next `--symbol` command. After editing a file, cached line and column values are stale; the ID stays valid.
+Chain by identity when possible: symbol bullets carry documentation-comment IDs as `id:` when Roslyn can provide them. Pass that value straight to the next `--symbol` command. After editing a file, cached line and column values are stale; the ID stays valid.
 
 ## Default File Scope
 
@@ -123,7 +123,7 @@ When the task is a semantic C# question, prefer this order and stop as soon as y
 
 - Do not read an entire `.cs` file through `document-text` by default.
 - Do not read a whole class body by default.
-- Chain follow-up lookups with the `id:` value from previous output instead of re-resolving the same symbol through `symbols` or a fresh position lookup.
+- Chain follow-up lookups with the `id:` value from previous output when it is present instead of re-resolving the same symbol through `symbols` or a fresh position lookup.
 - Prefer `symbol-source` over `document-text` or shell reads when exactly one declaration body is needed.
 - Use `symbols` for name discovery inside the loaded target, not to convert a known name into coordinates and not to inspect external Roslyn APIs or other non-declared implementation details.
 - Do not start with `document-symbols` unless you already know the file and still need local structure to choose a member or range.

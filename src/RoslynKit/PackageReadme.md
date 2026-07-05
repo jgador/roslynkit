@@ -37,6 +37,7 @@ dotnet tool update --global roslynkit --add-source <local-feed-path> --version <
 - `document-text`: read a full file-backed or generated document without shelling out to text tools
 - `document-lines`: read from `--start-line` through the lesser of `--end-line` and EOF in one resolved document
 - `definition`, `references`, `implementations`, `quick-info`, `type-definition`, `signature-help`: C# semantic inspection commands for source and source-generated documents
+- `symbol-source`: read the full declaration source for a symbol selector
 
 Document commands use `--file <path>` as the document selector. Relative paths resolve from the current working directory, and ambiguous linked or multi-targeted files can be narrowed with `--project`, `--tfm`, or `--document-kind`.
 

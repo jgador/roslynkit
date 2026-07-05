@@ -89,7 +89,7 @@ For repeated items, output uses compact bullets:
 - kind: Method name: `MyApp.MyService.Execute` loc: `src/MyApp/MyService.cs:12:17-12:24` id: `M:MyApp.MyService.Execute(System.String)`
 ```
 
-`name:` carries the fully qualified display name, and `id:` carries the documentation-comment ID that chains into `--symbol`. For `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations`, a non-empty XML summary may render as an indented `documentation:` continuation line below the symbol bullet. `references` renders documentation once in the command header for the searched symbol. When a symbol has more than one declaration (partial types), extra `- decl:` bullets follow with one location each.
+`name:` carries the fully qualified display name, and `id:` carries the documentation-comment ID that chains into `--symbol` when Roslyn can provide one. For `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations`, a non-empty XML summary may render as an indented `documentation:` continuation line below the symbol bullet. `references` renders documentation once in the command header for the searched symbol. When a symbol has more than one declaration (partial types), extra `- decl:` bullets follow with one location each.
 
 For source text, output uses fenced code blocks with a fence longer than any backtick run inside the payload:
 
@@ -142,7 +142,7 @@ truncated: false
 
 ### `symbols` And `document-symbols`
 
-Counts first, then one bullet per symbol. `document-symbols` uses a `file:` line instead of `query:` and counts.
+`symbols` renders counts first, then one bullet per symbol. `document-symbols` uses a `file:` line instead of `query:` and does not render counts.
 
 ```markdown
 command: symbols

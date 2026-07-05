@@ -89,9 +89,9 @@ For document-oriented commands such as `document-symbols`, `document-text`, `doc
 
 `definition`, `references`, and `implementations` also accept `--symbol <selector>` instead of the position selector. The selector is either a Roslyn documentation-comment ID (`T:`, `M:`, `P:`, `F:`, `E:`, or `N:` prefix, for example `M:MyApp.MyService.Execute(System.String)`) or a qualified symbol name such as `MyApp.MyService.Execute`. `--symbol` cannot be combined with `--file`, `--project`, `--tfm`, `--document-kind`, `--line`, or `--column`. When a qualified name matches several declarations (for example method overloads), the command fails with a deterministic usage error listing the candidate documentation-comment IDs so the exact one can be retried. In symbol mode the result echoes the input as `selector:`. Constructors are addressable only through `M:...#ctor(...)` documentation-comment IDs.
 
-Every symbol bullet includes an `id:` field carrying the symbol's documentation-comment ID, so results chain by identity: take `id:` from `symbols`, `definition`, or `implementations` output and pass it straight to the next `--symbol` command without copying line and column numbers. The ID stays valid after files are edited; cached line numbers do not. Symbol bullets from `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations` may include an indented `documentation:` line when the resolved symbol has a non-empty XML summary. `references` may include a header-level `documentation:` line for the searched symbol.
+Symbol bullets include an `id:` field when Roslyn can provide a documentation-comment ID, so results can often chain by identity: take `id:` from `symbols`, `definition`, or `implementations` output and pass it straight to the next `--symbol` command without copying line and column numbers. The ID stays valid after files are edited; cached line numbers do not. Symbol bullets from `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations` may include an indented `documentation:` line when the resolved symbol has a non-empty XML summary. `references` may include a header-level `documentation:` line for the searched symbol.
 
-`symbol-source` takes `--target` plus `--symbol` and returns the full declaration source text for the resolved symbol: one entry per declaring block with its document descriptor, true block range, and text. Partial types return every declaring block, including source-generated ones. The text covers the declaration node itself (attributes included); leading XML documentation comments are trivia and are not included.
+`symbol-source` takes `--target` plus `--symbol` and returns the full declaration source text for the resolved symbol: one entry per declaring block with a symbol bullet, true block `loc:`, and fenced source text. Partial types return every declaring block, including source-generated ones. The text covers the declaration node itself (attributes included); leading XML documentation comments are trivia and are not included.
 
 The markdown output is the only format; there is no `--format` option. Locations render as one-based `path:line:column-endLine:endColumn` ranges, and `symbol-source`, `document-text`, `document-lines`, and `quick-info` payloads stay verbatim inside fenced code blocks — real newlines and quotes, no string escaping. A zero exit code means stdout is command output; a non-zero exit code means stdout is the plain-text error. See `docs/markdown-output-format.md` for the full per-command output contract.
 
@@ -111,7 +111,7 @@ Examples:
 
 ```powershell
 roslynkit help symbols
-roslynkit symbols --target=.\MySolution.slnx --query=MyType --max=5
+roslynkit symbols --target=.\MySolution.slnx --query=MyType --max-results=5
 roslynkit symbols --target=.\MySolution.slnx --query=ExecuteAsync --exact --kind=method
 roslynkit symbols --help
 ```

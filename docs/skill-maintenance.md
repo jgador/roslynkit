@@ -10,6 +10,14 @@ Their normative guidance and examples must stay repository-agnostic so the same 
 
 The separate `.agents\skills\commit-context\SKILL.md` and `.agents\skills\git-commit-push\SKILL.md` files are repo workflow skills for maintaining ignored local commit notes and committing from that prepared context. They are not part of the stable/dev RoslynKit command-skill pair and do not need to mirror either RoslynKit skill.
 
+## Claude Code exposure
+
+Claude Code discovers project skills under `.claude\skills\`. The `.agents\skills\` folder stays the single source of truth; `.claude\skills\` only exposes it:
+
+Every `.claude\skills\<name>\SKILL.md` (`roslynkit`, `roslynkit-dev`, `commit-context`, `git-commit-push`) is a thin wrapper skill: front matter plus a dynamic context injection line, `` !`powershell.exe -NoProfile -Command "Get-Content -Raw '.agents/skills/<name>/SKILL.md'"` ``, which Claude Code executes when the skill loads so the canonical content is inlined automatically. The command is Windows-native by design, uses no environment-variable placeholders, and its relative path assumes the session starts at the repo root. Wrappers work without symlink privileges and on fresh clones; do not replace them with symlinks. The CLAUDE.md `@path` import syntax does not apply to skill files; injection is the skill-file equivalent.
+
+Wrapper front matter duplicates only the `description`. When a canonical skill's `description` changes, update the matching wrapper file in the same commit. Never add normative guidance to a wrapper file.
+
 ## Ownership
 
 Keep the ownership boundaries explicit:
@@ -77,4 +85,4 @@ Stable versions and prerelease versions are maintained differently:
 - Stable version updates usually change package examples in `README.md`, `docs\dotnet-tool-release.md`, and `src\RoslynKit\PackageReadme.md`.
 - Prerelease dogfooding usually does not require any skill-file text change unless the install path or invocation pattern changed.
 
-Use a bare stable version such as `0.1.0` for global install examples. Use a prerelease such as `0.1.1-dev.1` for the side-by-side dev tool path.
+Use a bare stable version such as `0.1.0` for global install examples. Use a prerelease such as `0.1.0-dev.1` for the side-by-side dev tool path.

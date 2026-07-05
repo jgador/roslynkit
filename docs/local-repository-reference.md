@@ -120,7 +120,7 @@ RoslynKit takeaways:
 
 - Prefer Roslyn public APIs directly where practical: `MSBuildWorkspace`, `SymbolFinder`, semantic models, syntax roots, diagnostics, and solution/project/document models.
 - Use LSP handler implementations as behavioral references, not as transport code to copy.
-- Use protocol unit tests to understand edge cases and expected shapes when adding similar RoslynKit JSON commands.
+- Use protocol unit tests to understand edge cases and expected shapes when adding similar RoslynKit markdown commands.
 
 ## VS Code C#
 
@@ -152,7 +152,7 @@ rg -n "definition|references|documentSymbol|diagnostic|sourceGenerator" C:\repo\
 RoslynKit takeaways:
 
 - VS Code C# is useful for launch settings, extension packaging assumptions, and practical Roslyn server integration.
-- It is not proof that RoslynKit should become an LSP client. RoslynKit should continue to call Roslyn APIs directly and expose deterministic JSON CLI commands.
+- It is not proof that RoslynKit should become an LSP client. RoslynKit should continue to call Roslyn APIs directly and expose deterministic markdown CLI commands.
 - C# Dev Kit integration is detected through extension exports and component path configuration; treat it as client integration context, not a dependency for RoslynKit.
 
 ## RoslynKit Usage Guidance
@@ -168,7 +168,7 @@ When adding or changing a RoslynKit feature:
 Keep RoslynKit's product boundary explicit:
 
 - CLI-first.
-- JSON stdout for commands.
+- Markdown stdout for commands.
 - Direct Roslyn/MSBuild APIs.
 - Read-only Roslyn intelligence first: inspect, navigate, understand, and verify C# code before adding edit-producing workflows.
 - Preview proposed edits before any future apply mode for formatting, rename, or code actions.

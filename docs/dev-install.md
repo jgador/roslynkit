@@ -30,12 +30,12 @@ This install is intentionally separate from the stable global `roslynkit` tool s
 Run the installer with the prerelease version you want to dogfood:
 
 ```powershell
-pwsh .\scripts\install-roslynkit-dev.ps1 -Version 0.1.1-dev.1
+pwsh .\scripts\install-roslynkit-dev.ps1 -Version <prerelease>
 ```
 
 The script now does the full side-by-side prerelease flow from the current checkout:
 
-1. Verifies that `-Version` is a prerelease such as `0.1.1-dev.1`.
+1. Verifies that `-Version` is a prerelease such as `0.1.0-dev.1`.
 2. Builds the repo.
 3. Packs `src\RoslynKit\RoslynKit.csproj` with `/p:Version=<prerelease>`.
 4. Uses the dedicated dev-only folder feed `.\artifacts\packages\roslynkit-dev` by default.
@@ -59,13 +59,13 @@ If the dev tool already exists at the target `--tool-path`, the script uses `dot
 Use `-PackageFeedPath` to pack into and install from a different local folder feed:
 
 ```powershell
-pwsh .\scripts\install-roslynkit-dev.ps1 -Version 0.1.1-dev.1 -PackageFeedPath .\artifacts\packages\roslynkit-dev-alt
+pwsh .\scripts\install-roslynkit-dev.ps1 -Version <prerelease> -PackageFeedPath .\artifacts\packages\roslynkit-dev-alt
 ```
 
 Use `-ToolPath` to install the side-by-side tool somewhere other than the default user-profile path:
 
 ```powershell
-pwsh .\scripts\install-roslynkit-dev.ps1 -Version 0.1.1-dev.1 -ToolPath .\artifacts\tool-install\roslynkit-dev
+pwsh .\scripts\install-roslynkit-dev.ps1 -Version <prerelease> -ToolPath .\artifacts\tool-install\roslynkit-dev
 ```
 
 When `-PackageFeedPath` is supplied, the script packs the requested prerelease into that explicit feed before installing from it.
@@ -81,7 +81,7 @@ $roslynkitDev = Join-Path $roslynkitDev ($(if ($IsWindows) { "roslynkit.exe" } e
 & $roslynkitDev help
 ```
 
-The reported version should include the prerelease suffix, for example `0.1.1-dev.1` or `0.1.1-dev.1+<build-metadata>`.
+The reported version should include the prerelease suffix, for example `0.1.0-dev.1` or `0.1.0-dev.1+<build-metadata>`.
 
 ## Relationship to the checked-in skills
 

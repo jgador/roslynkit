@@ -2,7 +2,7 @@
 
 This benchmark measures whether RoslynKit's markdown CLI output is token efficient for Codex compared with a baseline that uses native shell/text inspection.
 
-The benchmark uses actual Codex accounting. Each trial starts paired `codex -m gpt-5.5 --dangerously-bypass-approvals-and-sandbox exec --json` sessions and extracts the final cumulative `input_tokens` from the last `token_count` event in the Codex JSONL output or persisted rollout file.
+The benchmark uses actual Codex accounting. Each trial starts paired `codex --model gpt-5.5 --dangerously-bypass-approvals-and-sandbox exec --json` sessions and extracts the final cumulative `input_tokens` from the latest supported usage record in the Codex JSONL output or persisted rollout file: either `turn.completed.usage` or a `token_count` event.
 
 ## What It Compares
 
