@@ -5,7 +5,8 @@ Visual Studio 18/
 .vscode/
 .idea/
 TestResults/
-artifacts/
+artifacts/*
+!artifacts/.gitkeep
 *.user
 *.suo
 *.nupkg

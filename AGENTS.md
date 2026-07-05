@@ -114,6 +114,12 @@ After C# coding work, run these commands before final build/test verification:
 - `dotnet format whitespace .\RoslynKit.slnx --no-restore --verbosity minimal`
 - `dotnet format style .\RoslynKit.slnx --no-restore --severity warn --verbosity minimal`
 
+## End-of-Session Commit Context
+
+After a meaningful coding session, refresh `artifacts\commit-context.md` as a commit-ready message by following `.agents\skills\commit-context\SKILL.md`.
+
+Run this like the post-change formatting step: do it near the end of the session and before `$git-commit-push`, using live git status and diffs to describe the whole current change set, not only the latest edit. Match the recent commit message structure: a Conventional Commit subject, a blank line, and concise imperative body paragraphs. Treat the file as ignored advisory context; commit/push workflows must still re-check staged, unstaged, and untracked changes.
+
 ## Testing Guidelines
 
 Tests use xUnit through Microsoft Testing Platform in `tests/RoslynKit.Tests`. Name test methods as behavior statements, for example `Parse_RejectsDuplicateOption`. Add parser/renderer tests for CLI contract changes and focused Roslyn execution tests when command behavior changes. Run `dotnet test .\RoslynKit.slnx` before publishing changes.
@@ -122,6 +128,7 @@ Tests use xUnit through Microsoft Testing Platform in `tests/RoslynKit.Tests`. N
 
 Recent history uses short imperative subjects and conventional prefixes such as `docs:` and `chore:`. Match the surrounding history and keep subjects imperative.
 
+- When the user invokes `$git-commit-push`, use `.agents\skills\git-commit-push\SKILL.md`: stage all non-ignored changes with `git add -A`, commit with `artifacts\commit-context.md`, and push non-interactively after the required preflight checks.
 - Keep commits focused. Separate behavior changes, docs-only edits, generated output refreshes, and repo maintenance when practical.
 - Before committing, confirm the diff is real and relevant. Do not commit CRLF-only or stat-only churn just because `git status` mentions a file.
 - Pull requests should explain what command, parser behavior, Roslyn behavior, or docs surface changed.

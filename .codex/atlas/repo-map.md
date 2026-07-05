@@ -10,7 +10,7 @@ Resident architecture context for first-pass navigation. Atlas stores durable ro
 - Test utility: `tests/RoslynKit.WorkspaceGraphDump/`
 - Fixture input: `tests/FixtureWorkspace/App/`
 - Docs and packaging: `README.md`, `docs/`, `scripts/`
-- Agent assets: `AGENTS.md`, `.agents/skills/`, `.codex/agents/`, `.codex/atlas/repo-map.md`
+- Agent assets: `AGENTS.md`, `.agents/skills/roslynkit*/`, `.agents/skills/commit-context/`, `.agents/skills/git-commit-push/`, `.codex/agents/`, `.codex/atlas/repo-map.md`
 
 ## Runtime Flow
 
@@ -54,4 +54,4 @@ Resident architecture context for first-pass navigation. Atlas stores durable ro
 - Do not use Atlas as a file inventory, test inventory, symbol graph, reference graph, or source cache.
 - Ignore first: `artifacts/`, `TestResults/`, `.vs/`, `Visual Studio 18/`, `bin/`, `obj/`, `*.nupkg`.
 
-Last verified: `2026-07-05`
+Last verified: `2026-07-06`

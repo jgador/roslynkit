@@ -1,12 +1,14 @@
 # RoslynKit Skill Maintenance
 
-RoslynKit keeps two checked-in agent skills:
+RoslynKit keeps two checked-in RoslynKit command skills:
 
 - `.agents\skills\roslynkit\SKILL.md` for the stable global `roslynkit` command.
 - `.agents\skills\roslynkit-dev\SKILL.md` for the side-by-side prerelease RoslynKit dev tool.
 
 The two skill files should stay structurally aligned. They describe the same RoslynKit command surface and should diverge only where the invocation path is intentionally different.
 Their normative guidance and examples must stay repository-agnostic so the same checked-in files can be reused in arbitrary C# repositories.
+
+The separate `.agents\skills\commit-context\SKILL.md` and `.agents\skills\git-commit-push\SKILL.md` files are repo workflow skills for maintaining ignored local commit notes and committing from that prepared context. They are not part of the stable/dev RoslynKit command-skill pair and do not need to mirror either RoslynKit skill.
 
 ## Ownership
 
@@ -15,6 +17,7 @@ Keep the ownership boundaries explicit:
 - `AGENTS.md` is the source of truth for which skill is the default route in this repo and for repo-specific workflow policy.
 - `.codex\atlas\` is the home for durable repo-specific tracing or routing guidance when Atlas coverage exists.
 - `.agents\skills\roslynkit\SKILL.md` and `.agents\skills\roslynkit-dev\SKILL.md` are reusable usage-only guides. Do not embed repo-owned routing sequences, repo-local source paths, or project-specific symbol chains inside either skill.
+- `.agents\skills\commit-context\SKILL.md` and `.agents\skills\git-commit-push\SKILL.md` are repo-specific workflow guides and may reference `artifacts\commit-context.md` and RoslynKit commit policy directly.
 - `docs/dev-install.md` is the install/update source of truth for the side-by-side prerelease tool.
 
 ## Intentional differences
