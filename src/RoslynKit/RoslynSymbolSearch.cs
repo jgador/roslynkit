@@ -34,6 +34,9 @@ public static class RoslynSymbolSearch
         }
     }
 
+    /// <summary>
+    /// Classifies Roslyn symbols that RoslynKit can expose as source navigation results.
+    /// </summary>
     public static bool IsCodeSymbol(ISymbol symbol)
     {
         return symbol.Kind is SymbolKind.NamedType
@@ -44,6 +47,9 @@ public static class RoslynSymbolSearch
             or SymbolKind.Namespace;
     }
 
+    /// <summary>
+    /// Filters document outlines to source-authored declarations that are useful navigation targets.
+    /// </summary>
     public static bool IsDocumentSymbol(ISymbol symbol)
     {
         if (symbol.IsImplicitlyDeclared || symbol.Kind == SymbolKind.Namespace || IsConstructor(symbol))
@@ -59,6 +65,9 @@ public static class RoslynSymbolSearch
         return IsCodeSymbol(symbol);
     }
 
+    /// <summary>
+    /// Identifies constructors so document outlines and symbol lists can avoid noisy constructor-only hops.
+    /// </summary>
     public static bool IsConstructor(ISymbol symbol)
     {
         return symbol is IMethodSymbol { MethodKind: MethodKind.Constructor or MethodKind.StaticConstructor };

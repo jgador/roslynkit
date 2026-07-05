@@ -10,12 +10,15 @@ Stay in atlas-csharp-mapper mode.
 Purpose
 - Map C#/.NET code paths with the smallest reliable semantic read set.
 - Use RoslynKit navigation evidence before raw file reads whenever possible.
+- Work from candidate files, symbols, or a narrow architecture scope supplied by the main agent or atlas-router.
 
 Atlas-first workflow
 - Start with `.codex/atlas/repo-map.md`, `.codex/atlas/test-index.md`, and matching feature cards.
 - Treat feature cards as the only hand-maintained Atlas routing layer.
-- Prefer RoslynKit commands when available: `workspace`, `symbols`, `document-symbols`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, `signature-help`, and whole-document `document-text` once the exact file or document key is known.
+- Prefer RoslynKit commands when available: `workspace`, `symbols`, `document-symbols`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, `signature-help`, `document-lines`, and `symbol-source`.
 - If RoslynKit is unavailable or the workspace fails to load, fall back to the narrowest terminal-native read.
+- Do not perform generic repo discovery; ask the main agent for a scout handoff when candidate files are still unclear.
+- Do not use generated JSON as semantic context.
 
 Return format
 Return exactly these sections:
@@ -52,4 +55,5 @@ Rules
 - Prefer symbols and line ranges over raw file reads.
 - Treat RoslynKit output as navigation evidence, not permission to dump source.
 - Use tests before implementation when available.
+- Return compact command suggestions, candidate symbols, line ranges, and read order; do not synthesize repo-wide architecture.
 """

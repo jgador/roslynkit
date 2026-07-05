@@ -17,6 +17,9 @@ public static class PositionResolver
         return GetPosition(text, oneBasedLine, oneBasedColumn, commandName);
     }
 
+    /// <summary>
+    /// Converts a Roslyn span into the one-based inclusive/exclusive range contract used in command payloads.
+    /// </summary>
     public static DocumentRange ToDocumentRange(SourceText text, TextSpan span)
     {
         var lineSpan = text.Lines.GetLinePositionSpan(span);

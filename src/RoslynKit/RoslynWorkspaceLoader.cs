@@ -115,6 +115,9 @@ public sealed class RoslynWorkspaceLoader : IDisposable
             : null;
     }
 
+    /// <summary>
+    /// Enumerates command-addressable source, generated, additional, and analyzer-config documents after workspace load.
+    /// </summary>
     public async Task<IReadOnlyList<WorkspaceDocumentContext>> EnumerateDocumentsAsync(DocumentEnumerationOptions options, CancellationToken cancellationToken)
     {
         var documents = new List<WorkspaceDocumentContext>();
@@ -338,6 +341,9 @@ public sealed class WorkspaceDocumentContext
 
     public string DocumentKind => Descriptor.DocumentKind;
 
+    /// <summary>
+    /// Builds the stable document descriptor RoslynKit returns so later commands can select the same document by path or key.
+    /// </summary>
     public static async Task<WorkspaceDocumentContext> CreateAsync(
         RoslynWorkspaceLoader loader,
         TextDocument textDocument,

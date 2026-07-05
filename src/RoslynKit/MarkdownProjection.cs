@@ -10,6 +10,9 @@ namespace RoslynKit;
 /// </summary>
 public static class MarkdownProjection
 {
+    /// <summary>
+    /// Dispatches result models to the deterministic markdown renderer used by every successful command.
+    /// </summary>
     public static string Render(object data)
     {
         return data switch
@@ -31,6 +34,9 @@ public static class MarkdownProjection
         };
     }
 
+    /// <summary>
+    /// Renders top-level or command-specific help from built-in command metadata.
+    /// </summary>
     public static string RenderHelp(BuiltinCommand? subject)
     {
         return subject is null ? RenderHelpOverview() : RenderCommandHelp(subject);

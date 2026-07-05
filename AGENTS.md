@@ -61,12 +61,15 @@ Every scout prompt must include `assigned_scope`, `search_goal`, known keywords 
 ## Repository Atlas Reading Policy
 
 - Use `.codex/atlas/` before broad source reading.
-- Use `atlas-router` when the target area is unclear.
-- For C# semantic inspection, prefer RoslynKit or `atlas-csharp-mapper`.
+- Use `atlas-router` when the architecture/domain is unclear.
+- Use `scout` when files are unclear inside a bounded scope.
+- For C# semantic inspection after candidate files or symbols are known, prefer RoslynKit or `atlas-csharp-mapper`.
 - Read tests before implementation when available.
 - Prefer symbol and line-range reads over full-file reads.
 - Stop after five source files and state a hypothesis before reading more.
 - Feature cards are the only hand-maintained Atlas routing layer.
+- Atlas does not store repo-wide symbol inventories; use RoslynKit live queries for symbols, definitions, references, implementations, quick-info, and exact source slices.
+- Generated Atlas indexes are file/project/test metadata for deterministic scripts, not semantic context or prose summaries.
 - Update feature cards only with durable discoveries.
 - When a task changes durable Atlas facts for a covered feature or domain, update the matching feature card and refresh `Last verified` before finishing.
 - When durable repo shape or source-to-test mapping facts change, update `.codex/atlas/repo-map.md` or `.codex/atlas/test-index.md` in the same change.
@@ -94,6 +97,8 @@ Follow `.editorconfig`: UTF-8, spaces, final newline, 4-space indentation for C#
 ## C# Working Rules
 
 Follow the existing style in touched files. Prefer clear names and structure over commentary. Use sparse XML documentation comments in C#: add a brief `summary` comment to each class, do not add comments or XML docs to constructors, add a brief `summary` comment to a public method only when its behavior is complex or non-obvious, and do not add parameter documentation comments.
+
+Navigation comments should help RoslynKit `quick-info` guide the next hop. Add or refine public-method summaries only for entrypoints, orchestration points, cross-boundary adapters, Roslyn workspace/symbol/position resolution boundaries, or helpers whose name alone does not explain when to jump there. Keep summaries architectural and specific; avoid generic comments such as "Executes the method" and avoid documenting every public member for coverage.
 
 - Preserve the CLI-first architecture: no MCP server, no LSP client, no background daemon, and no editor-specific protocol coupling.
 - Prefer direct Roslyn/MSBuild APIs over shelling out to editors, language servers, or IDEs.

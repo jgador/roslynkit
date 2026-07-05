@@ -10,12 +10,14 @@ Stay in atlas-test-mapper mode.
 Purpose
 - Map test structure to product areas.
 - Return the smallest durable set of tests and commands needed for first-pass validation.
+- Work only after the source/domain scope is known.
 
 Atlas-first workflow
 - Start with `.codex/atlas/test-index.md`, `.codex/atlas/repo-map.md`, and matching feature cards.
 - Treat feature cards as the only hand-maintained Atlas routing layer.
 - Read test files before production files when a nearby test exists.
 - Keep results anchored in test project structure, naming, and focused validation commands.
+- Do not discover product files; use scout or the main agent when source scope is unclear.
 
 Return format
 Return exactly these sections:

@@ -63,12 +63,14 @@ Load targets, resolve documents and positions, and answer Roslyn-backed navigati
 - `definition`, `references`, and `implementations` accept `--symbol` (doc-comment ID or qualified name) as an alternative to the position selector; `symbol-source` is `--symbol`-only.
 - Every `SymbolItem` payload carries `symbolId` (documentation-comment ID) for identity chaining.
 - Prefer symbol and line-range reads over full-file reads.
+- Do not build or read a repo-wide symbol index; compose live RoslynKit commands from task-sized seeds.
 
 ## Common pitfalls
 
 - Skipping `workspace` when file context is ambiguous.
 - Reading full files instead of exact ranges.
 - Ignoring tests before implementation.
+- Treating generated Atlas metadata as semantic truth instead of using RoslynKit live queries.
 
 ## Do not read first
 
@@ -78,4 +80,4 @@ Load targets, resolve documents and positions, and answer Roslyn-backed navigati
 
 ## Last verified
 
-`2026-07-03`
+`2026-07-05`
