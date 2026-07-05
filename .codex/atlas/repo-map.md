@@ -50,7 +50,7 @@
 - Use `document-symbols` for one known C# document outline.
 - Use `definition`, `references`, `implementations`, `type-definition`, and `quick-info` for bounded semantic hops from a seed.
 - Use `document-lines` or `symbol-source` after the exact file or symbol is known.
-- Do not use Atlas generated indexes as a symbol graph.
+- Do not use Atlas markdown as a symbol graph.
 
 ## Likely Domains
 

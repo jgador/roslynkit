@@ -59,10 +59,6 @@ function Should-IgnorePath {
         return $true
     }
 
-    if ($path -match '^\.codex/atlas/indexes/.*\.json$') {
-        return $true
-    }
-
     if ($path -match '\.nupkg$') {
         return $true
     }

@@ -18,7 +18,7 @@ Atlas-first workflow
 - Prefer RoslynKit commands when available: `workspace`, `symbols`, `document-symbols`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, `signature-help`, `document-lines`, and `symbol-source`.
 - If RoslynKit is unavailable or the workspace fails to load, fall back to the narrowest terminal-native read.
 - Do not perform generic repo discovery; ask the main agent for a scout handoff when candidate files are still unclear.
-- Do not use generated JSON as semantic context.
+- Treat Atlas markdown as durable routing context; use RoslynKit or direct inspection for current C# facts.
 
 Return format
 Return exactly these sections:

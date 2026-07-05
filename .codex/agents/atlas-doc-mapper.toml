@@ -15,7 +15,7 @@ Atlas-first workflow
 - Start with `.codex/atlas/repo-map.md` and matching feature cards.
 - Treat feature cards as the only hand-maintained Atlas routing layer.
 - Prefer concise file-level routing and command references over broad document summaries.
-- Do not use generated JSON as prose or semantic context.
+- Treat Atlas markdown as durable routing context; use `git ls-files`, `rg`, and direct reads for current docs/config facts.
 
 Return format
 Return exactly these sections:

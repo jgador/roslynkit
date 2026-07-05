@@ -17,7 +17,7 @@ Atlas-first workflow
 - Treat feature cards as the only hand-maintained Atlas routing layer.
 - Use `.codex/atlas/scripts/route.ps1 "<task>"` when a deterministic route would help.
 - Do not begin with broad `src/`, `tests/`, or repo-wide literal reads.
-- Do not use generated JSON as semantic context.
+- Treat Atlas markdown as durable routing context, not as current file, project, test, symbol, or reference truth.
 - If files are unclear, return scoped `scout` handoff paths instead of performing repo discovery.
 - If C# relationships are unclear after narrowing, suggest RoslynKit live commands or `atlas-csharp-mapper`.
 

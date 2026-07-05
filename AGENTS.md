@@ -68,13 +68,13 @@ Every scout prompt must include `assigned_scope`, `search_goal`, known keywords 
 - Prefer symbol and line-range reads over full-file reads.
 - Stop after five source files and state a hypothesis before reading more.
 - Feature cards are the only hand-maintained Atlas routing layer.
-- Atlas does not store repo-wide symbol inventories; use RoslynKit live queries for symbols, definitions, references, implementations, quick-info, and exact source slices.
-- Generated Atlas indexes are file/project/test metadata for deterministic scripts, not semantic context or prose summaries.
+- Atlas does not store file, project, test, symbol, reference, or source-slice inventories; use `git ls-files`, `rg`, RoslynKit live queries, build/test output, or direct file inspection for current facts.
+- Keep `repo-map.md`, `test-index.md`, and feature cards focused on durable architecture, source-to-test routing, and feature ownership facts.
 - Update feature cards only with durable discoveries.
 - When a task changes durable Atlas facts for a covered feature or domain, update the matching feature card and refresh `Last verified` before finishing.
 - When durable repo shape or source-to-test mapping facts change, update `.codex/atlas/repo-map.md` or `.codex/atlas/test-index.md` in the same change.
-- When Atlas workflow, routing scripts, feature-card schema, or generated index expectations change, update `.codex/atlas/README.md`, `.codex/atlas/USAGE.md`, `.codex/atlas/feature-cards/README.md`, or `.codex/atlas/indexes/README.md` in the same change.
-- Use PowerShell scripts under `.codex/atlas/scripts/` for Atlas routing and rebuilding.
+- When Atlas workflow, routing scripts, or feature-card schema changes, update `.codex/atlas/README.md`, `.codex/atlas/USAGE.md`, or `.codex/atlas/feature-cards/README.md` in the same change.
+- Use PowerShell scripts under `.codex/atlas/scripts/` for Atlas routing.
 
 ## State-Changing Git Command Safety
 
