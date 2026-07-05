@@ -8,9 +8,24 @@ namespace RoslynKit;
 /// </summary>
 public static class DocumentKindNames
 {
+    /// <summary>
+    /// Workspace document kind for source files compiled directly by a project.
+    /// </summary>
     public const string Source = "source";
+
+    /// <summary>
+    /// Workspace document kind for source files produced by generators during workspace load.
+    /// </summary>
     public const string SourceGenerated = "sourceGenerated";
+
+    /// <summary>
+    /// Workspace document kind for non-source additional files supplied to analyzers.
+    /// </summary>
     public const string Additional = "additional";
+
+    /// <summary>
+    /// Workspace document kind for analyzer configuration inputs such as <c>.editorconfig</c>.
+    /// </summary>
     public const string AnalyzerConfig = "analyzerConfig";
 }
 
@@ -33,14 +48,29 @@ public sealed class WorkspaceResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Absolute path to the solution or project loaded for the command.
+    /// </summary>
     public string TargetPath { get; }
 
+    /// <summary>
+    /// Target file kind reported by workspace output.
+    /// </summary>
     public string TargetKind { get; }
 
+    /// <summary>
+    /// Loaded projects after RoslynKit ordering and target-framework labeling.
+    /// </summary>
     public IReadOnlyList<WorkspaceProject> Projects { get; }
 
+    /// <summary>
+    /// Command-addressable documents discovered in the loaded workspace.
+    /// </summary>
     public IReadOnlyList<DocumentDescriptor> Documents { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -65,16 +95,34 @@ public sealed class DiagnosticsResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Absolute path to the solution or project inspected for compiler diagnostics.
+    /// </summary>
     public string TargetPath { get; }
 
+    /// <summary>
+    /// Total matching diagnostic count before <c>--max-results</c> limiting.
+    /// </summary>
     public int TotalCount { get; }
 
+    /// <summary>
+    /// Number of diagnostics included in this command payload.
+    /// </summary>
     public int ReturnedCount { get; }
 
+    /// <summary>
+    /// Indicates whether diagnostics were omitted because of the result limit.
+    /// </summary>
     public bool Truncated { get; }
 
+    /// <summary>
+    /// Ordered compiler diagnostics projected into RoslynKit output.
+    /// </summary>
     public IReadOnlyList<DiagnosticItem> Diagnostics { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -101,18 +149,39 @@ public sealed class SymbolsResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Absolute path to the solution or project searched for declarations.
+    /// </summary>
     public string TargetPath { get; }
 
+    /// <summary>
+    /// Symbol-name query text after parser binding.
+    /// </summary>
     public string Query { get; }
 
+    /// <summary>
+    /// Total matching declaration count before <c>--max-results</c> limiting.
+    /// </summary>
     public int TotalCount { get; }
 
+    /// <summary>
+    /// Number of symbol items included in this command payload.
+    /// </summary>
     public int ReturnedCount { get; }
 
+    /// <summary>
+    /// Indicates whether symbol matches were omitted because of the result limit.
+    /// </summary>
     public bool Truncated { get; }
 
+    /// <summary>
+    /// Matching source declarations projected into RoslynKit symbol output.
+    /// </summary>
     public IReadOnlyList<SymbolItem> Symbols { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -135,14 +204,29 @@ public sealed class DocumentTextResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Descriptor for the resolved document whose full text was read.
+    /// </summary>
     public DocumentDescriptor Document { get; }
 
+    /// <summary>
+    /// One-based span covered by the returned document text.
+    /// </summary>
     public DocumentRange ResolvedRange { get; }
 
+    /// <summary>
+    /// Returned document text, fenced verbatim by the markdown renderer.
+    /// </summary>
     public string Text { get; }
 
+    /// <summary>
+    /// Indicates whether the returned text was shortened for output safety.
+    /// </summary>
     public bool Truncated { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -163,12 +247,24 @@ public sealed class DocumentLinesResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Descriptor for the resolved document whose line range was read.
+    /// </summary>
     public DocumentDescriptor Document { get; }
 
+    /// <summary>
+    /// One-based line span actually returned after range validation.
+    /// </summary>
     public DocumentRange Range { get; }
 
+    /// <summary>
+    /// Returned line-window text, fenced verbatim by the markdown renderer.
+    /// </summary>
     public string Text { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -187,10 +283,19 @@ public sealed class DocumentSymbolsResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Descriptor for the semantic document whose declarations were listed.
+    /// </summary>
     public DocumentDescriptor Document { get; }
 
+    /// <summary>
+    /// Source-declared symbols found inside the selected document.
+    /// </summary>
     public IReadOnlyList<SymbolItem> Symbols { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -215,16 +320,34 @@ public sealed class DefinitionResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Document descriptor for position-mode lookups, or <c>null</c> when a symbol selector was used.
+    /// </summary>
     public DocumentDescriptor? Document { get; }
 
+    /// <summary>
+    /// One-based source line for position-mode lookups, or <c>null</c> for selector-mode lookups.
+    /// </summary>
     public int? Line { get; }
 
+    /// <summary>
+    /// One-based source column for position-mode lookups, or <c>null</c> for selector-mode lookups.
+    /// </summary>
     public int? Column { get; }
 
+    /// <summary>
+    /// Symbol selector used for selector-mode lookups, or <c>null</c> for position-mode lookups.
+    /// </summary>
     public string? Selector { get; }
 
+    /// <summary>
+    /// Resolved definition symbol projected into RoslynKit output.
+    /// </summary>
     public SymbolItem Symbol { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -247,14 +370,29 @@ public sealed class TypeDefinitionResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Descriptor for the document containing the original position lookup.
+    /// </summary>
     public DocumentDescriptor Document { get; }
 
+    /// <summary>
+    /// One-based source line used to resolve the expression or symbol type.
+    /// </summary>
     public int Line { get; }
 
+    /// <summary>
+    /// One-based source column used to resolve the expression or symbol type.
+    /// </summary>
     public int Column { get; }
 
+    /// <summary>
+    /// Type symbol resolved from the selected source position.
+    /// </summary>
     public SymbolItem Symbol { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -281,18 +419,39 @@ public sealed class QuickInfoResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Descriptor for the document containing the quick-info position.
+    /// </summary>
     public DocumentDescriptor Document { get; }
 
+    /// <summary>
+    /// One-based source line used for the quick-info request.
+    /// </summary>
     public int Line { get; }
 
+    /// <summary>
+    /// One-based source column used for the quick-info request.
+    /// </summary>
     public int Column { get; }
 
+    /// <summary>
+    /// One-based span Roslyn associated with the returned quick-info item.
+    /// </summary>
     public DocumentRange ResolvedRange { get; }
 
+    /// <summary>
+    /// Roslyn quick-info tags that classify the returned item.
+    /// </summary>
     public IReadOnlyList<string> Tags { get; }
 
+    /// <summary>
+    /// Formatted quick-info sections such as description and documentation.
+    /// </summary>
     public IReadOnlyList<QuickInfoSectionItem> Sections { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -325,24 +484,54 @@ public sealed class ReferencesResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Document descriptor for position-mode lookups, or <c>null</c> when a symbol selector was used.
+    /// </summary>
     public DocumentDescriptor? Document { get; }
 
+    /// <summary>
+    /// One-based source line for position-mode lookups, or <c>null</c> for selector-mode lookups.
+    /// </summary>
     public int? Line { get; }
 
+    /// <summary>
+    /// One-based source column for position-mode lookups, or <c>null</c> for selector-mode lookups.
+    /// </summary>
     public int? Column { get; }
 
+    /// <summary>
+    /// Symbol selector used for selector-mode lookups, or <c>null</c> for position-mode lookups.
+    /// </summary>
     public string? Selector { get; }
 
+    /// <summary>
+    /// Symbol whose references were searched.
+    /// </summary>
     public SymbolItem Symbol { get; }
 
+    /// <summary>
+    /// Total matching reference count before <c>--max-results</c> limiting.
+    /// </summary>
     public int TotalCount { get; }
 
+    /// <summary>
+    /// Number of reference locations included in this command payload.
+    /// </summary>
     public int ReturnedCount { get; }
 
+    /// <summary>
+    /// Indicates whether reference locations were omitted because of the result limit.
+    /// </summary>
     public bool Truncated { get; }
 
+    /// <summary>
+    /// Source reference locations projected into deterministic order.
+    /// </summary>
     public IReadOnlyList<ReferenceItem> Locations { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -375,24 +564,54 @@ public sealed class ImplementationsResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Document descriptor for position-mode lookups, or <c>null</c> when a symbol selector was used.
+    /// </summary>
     public DocumentDescriptor? Document { get; }
 
+    /// <summary>
+    /// One-based source line for position-mode lookups, or <c>null</c> for selector-mode lookups.
+    /// </summary>
     public int? Line { get; }
 
+    /// <summary>
+    /// One-based source column for position-mode lookups, or <c>null</c> for selector-mode lookups.
+    /// </summary>
     public int? Column { get; }
 
+    /// <summary>
+    /// Symbol selector used for selector-mode lookups, or <c>null</c> for position-mode lookups.
+    /// </summary>
     public string? Selector { get; }
 
+    /// <summary>
+    /// Symbol whose implementations were searched.
+    /// </summary>
     public SymbolItem Symbol { get; }
 
+    /// <summary>
+    /// Total matching implementation count before <c>--max-results</c> limiting.
+    /// </summary>
     public int TotalCount { get; }
 
+    /// <summary>
+    /// Number of implementation symbols included in this command payload.
+    /// </summary>
     public int ReturnedCount { get; }
 
+    /// <summary>
+    /// Indicates whether implementation symbols were omitted because of the result limit.
+    /// </summary>
     public bool Truncated { get; }
 
+    /// <summary>
+    /// Implementation symbols projected into RoslynKit symbol output.
+    /// </summary>
     public IReadOnlyList<SymbolItem> Symbols { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -415,14 +634,29 @@ public sealed class SymbolSourceResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Absolute path to the solution or project inspected for the selector.
+    /// </summary>
     public string TargetPath { get; }
 
+    /// <summary>
+    /// Symbol selector used to resolve the declaration source.
+    /// </summary>
     public string Selector { get; }
 
+    /// <summary>
+    /// Symbol resolved from the selector before declaration text extraction.
+    /// </summary>
     public SymbolItem Symbol { get; }
 
+    /// <summary>
+    /// Declaration blocks returned for the resolved symbol, including partial declarations.
+    /// </summary>
     public IReadOnlyList<SymbolSourceDeclaration> Declarations { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -438,10 +672,19 @@ public sealed class SymbolSourceDeclaration
         Text = text;
     }
 
+    /// <summary>
+    /// Descriptor for the document containing this declaration block.
+    /// </summary>
     public DocumentDescriptor Document { get; }
 
+    /// <summary>
+    /// One-based span covering the returned declaration text.
+    /// </summary>
     public DocumentRange Range { get; }
 
+    /// <summary>
+    /// Full declaration source text returned for the symbol.
+    /// </summary>
     public string Text { get; }
 }
 
@@ -470,20 +713,44 @@ public sealed class SignatureHelpResult
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Descriptor for the document containing the signature-help position.
+    /// </summary>
     public DocumentDescriptor Document { get; }
 
+    /// <summary>
+    /// One-based source line used for the signature-help request.
+    /// </summary>
     public int Line { get; }
 
+    /// <summary>
+    /// One-based source column used for the signature-help request.
+    /// </summary>
     public int Column { get; }
 
+    /// <summary>
+    /// One-based argument-list span Roslyn associated with the signature-help result.
+    /// </summary>
     public DocumentRange ResolvedRange { get; }
 
+    /// <summary>
+    /// Zero-based index of the selected signature in the returned signature list.
+    /// </summary>
     public int ActiveSignature { get; }
 
+    /// <summary>
+    /// Zero-based index of the active parameter within the selected signature.
+    /// </summary>
     public int ActiveParameter { get; }
 
+    /// <summary>
+    /// Callable signatures available at the requested source position.
+    /// </summary>
     public IReadOnlyList<SignatureHelpSignatureItem> Signatures { get; }
 
+    /// <summary>
+    /// Non-fatal workspace load diagnostics emitted while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 }
 
@@ -510,18 +777,39 @@ public sealed class DocumentDescriptor
         Path = path;
     }
 
+    /// <summary>
+    /// Stable opaque key that can reselect this document when file paths are ambiguous or unavailable.
+    /// </summary>
     public string DocumentKey { get; }
 
+    /// <summary>
+    /// Name of the project that owns the document.
+    /// </summary>
     public string ProjectName { get; }
 
+    /// <summary>
+    /// Absolute path to the owning project file, when Roslyn exposes one.
+    /// </summary>
     public string? ProjectPath { get; }
 
+    /// <summary>
+    /// Target framework label for the project context, when the load supplied one.
+    /// </summary>
     public string? TargetFramework { get; }
 
+    /// <summary>
+    /// RoslynKit document-kind name used to route semantic and text commands.
+    /// </summary>
     public string DocumentKind { get; }
 
+    /// <summary>
+    /// Roslyn document name as reported by the loaded workspace.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Absolute file path for path-backed documents, or <c>null</c> for generated documents without a path.
+    /// </summary>
     public string? Path { get; }
 }
 
@@ -538,12 +826,24 @@ public sealed class DocumentRange
         EndColumn = endColumn;
     }
 
+    /// <summary>
+    /// One-based starting line of the span.
+    /// </summary>
     public int Line { get; }
 
+    /// <summary>
+    /// One-based starting column of the span.
+    /// </summary>
     public int Column { get; }
 
+    /// <summary>
+    /// One-based ending line of the span.
+    /// </summary>
     public int EndLine { get; }
 
+    /// <summary>
+    /// One-based ending column of the span.
+    /// </summary>
     public int EndColumn { get; }
 }
 
@@ -568,16 +868,34 @@ public sealed class WorkspaceProject
         ProjectReferences = projectReferences;
     }
 
+    /// <summary>
+    /// Project display name from the loaded Roslyn workspace.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Absolute project file path, when Roslyn exposes one.
+    /// </summary>
     public string? Path { get; }
 
+    /// <summary>
+    /// Target framework label associated with this project context, when available.
+    /// </summary>
     public string? TargetFramework { get; }
 
+    /// <summary>
+    /// Roslyn language name for the project.
+    /// </summary>
     public string Language { get; }
 
+    /// <summary>
+    /// Count of command-addressable documents owned by this project.
+    /// </summary>
     public int DocumentCount { get; }
 
+    /// <summary>
+    /// Project references listed by project name in deterministic order.
+    /// </summary>
     public IReadOnlyList<string> ProjectReferences { get; }
 }
 
@@ -592,8 +910,14 @@ public sealed class WorkspaceLoadDiagnostic
         Message = message;
     }
 
+    /// <summary>
+    /// Workspace diagnostic severity or category reported by Roslyn.
+    /// </summary>
     public string Kind { get; }
 
+    /// <summary>
+    /// Workspace diagnostic message emitted during target load.
+    /// </summary>
     public string Message { get; }
 }
 
@@ -624,24 +948,54 @@ public sealed class DiagnosticItem
         EndColumn = endColumn;
     }
 
+    /// <summary>
+    /// Project name associated with the diagnostic.
+    /// </summary>
     public string ProjectName { get; }
 
+    /// <summary>
+    /// Compiler diagnostic identifier, such as <c>CS1002</c>.
+    /// </summary>
     public string Id { get; }
 
+    /// <summary>
+    /// Roslyn diagnostic severity projected as text.
+    /// </summary>
     public string Severity { get; }
 
+    /// <summary>
+    /// Diagnostic message text from Roslyn.
+    /// </summary>
     public string Message { get; }
 
+    /// <summary>
+    /// Absolute source path for source diagnostics, or <c>null</c> for non-source diagnostics.
+    /// </summary>
     public string? Path { get; }
 
+    /// <summary>
+    /// One-based starting line for source diagnostics.
+    /// </summary>
     public int? Line { get; }
 
+    /// <summary>
+    /// One-based starting column for source diagnostics.
+    /// </summary>
     public int? Column { get; }
 
+    /// <summary>
+    /// One-based ending line for source diagnostics.
+    /// </summary>
     public int? EndLine { get; }
 
+    /// <summary>
+    /// One-based ending column for source diagnostics.
+    /// </summary>
     public int? EndColumn { get; }
 
+    /// <summary>
+    /// Converts a Roslyn diagnostic into the command-output shape with normalized source coordinates.
+    /// </summary>
     public static DiagnosticItem FromDiagnostic(string projectName, Diagnostic diagnostic)
     {
         var span = diagnostic.Location.IsInSource ? diagnostic.Location.GetLineSpan() : default;
@@ -696,35 +1050,77 @@ public sealed class SymbolItem
         SymbolId = symbolId;
     }
 
+    /// <summary>
+    /// Project name used to scope the symbol in command output.
+    /// </summary>
     public string ProjectName { get; }
 
+    /// <summary>
+    /// Simple symbol name reported by Roslyn.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Metadata name used by Roslyn for overloads, generics, and emitted identity.
+    /// </summary>
     public string MetadataName { get; }
 
+    /// <summary>
+    /// Fully qualified display name rendered with RoslynKit's deterministic symbol format.
+    /// </summary>
     public string DisplayName { get; }
 
+    /// <summary>
+    /// Roslyn symbol kind projected as text.
+    /// </summary>
     public string Kind { get; }
 
+    /// <summary>
+    /// Declared accessibility projected as text.
+    /// </summary>
     public string Accessibility { get; }
 
+    /// <summary>
+    /// Indicates whether the Roslyn symbol is static.
+    /// </summary>
     public bool IsStatic { get; }
 
+    /// <summary>
+    /// Fully qualified containing type name for member symbols.
+    /// </summary>
     public string? ContainingType { get; }
 
+    /// <summary>
+    /// Fully qualified containing namespace name, excluding the global namespace.
+    /// </summary>
     public string? ContainingNamespace { get; }
 
+    /// <summary>
+    /// First declaration location after RoslynKit filtering and deterministic ordering.
+    /// </summary>
     public SourceRange? PrimaryLocation { get; }
 
+    /// <summary>
+    /// Declaration locations that remain after command-specific source filtering.
+    /// </summary>
     public IReadOnlyList<SourceRange> Declarations { get; }
 
+    /// <summary>
+    /// Documentation-comment ID that can be reused as a symbol selector when Roslyn can create one.
+    /// </summary>
     public string? SymbolId { get; }
 
+    /// <summary>
+    /// Converts a Roslyn symbol into command-output metadata with all source declarations included.
+    /// </summary>
     public static SymbolItem FromSymbol(ISymbol symbol, string projectName)
     {
         return FromSymbol(symbol, projectName, includeDeclaration: static location => location.IsInSource);
     }
 
+    /// <summary>
+    /// Converts a Roslyn symbol while keeping declaration locations only from one normalized path.
+    /// </summary>
     public static SymbolItem FromSymbol(ISymbol symbol, string projectName, string? restrictDeclarationsToPath)
     {
         return FromSymbol(
@@ -733,6 +1129,9 @@ public sealed class SymbolItem
             location => restrictDeclarationsToPath is null || RoslynDocumentFilters.LocationMatchesPath(location, restrictDeclarationsToPath));
     }
 
+    /// <summary>
+    /// Converts a Roslyn symbol while keeping declaration locations only from a project or solution source path set.
+    /// </summary>
     public static SymbolItem FromSymbol(ISymbol symbol, string projectName, ISet<string> restrictDeclarationsToPaths)
     {
         return FromSymbol(
@@ -741,6 +1140,9 @@ public sealed class SymbolItem
             location => RoslynDocumentFilters.LocationMatchesAnyPath(location, restrictDeclarationsToPaths));
     }
 
+    /// <summary>
+    /// Converts a Roslyn symbol while keeping declaration locations only from one syntax tree.
+    /// </summary>
     public static SymbolItem FromSymbol(ISymbol symbol, string projectName, SyntaxTree restrictDeclarationsToSyntaxTree)
     {
         return FromSymbol(
@@ -790,16 +1192,34 @@ public sealed class SourceRange
         EndColumn = endColumn;
     }
 
+    /// <summary>
+    /// Absolute source path for the location, when available.
+    /// </summary>
     public string? Path { get; }
 
+    /// <summary>
+    /// One-based starting line of the source span.
+    /// </summary>
     public int Line { get; }
 
+    /// <summary>
+    /// One-based starting column of the source span.
+    /// </summary>
     public int Column { get; }
 
+    /// <summary>
+    /// One-based ending line of the source span.
+    /// </summary>
     public int EndLine { get; }
 
+    /// <summary>
+    /// One-based ending column of the source span.
+    /// </summary>
     public int EndColumn { get; }
 
+    /// <summary>
+    /// Converts a Roslyn source location into normalized output coordinates.
+    /// </summary>
     public static SourceRange FromLocation(Location location)
     {
         var span = location.GetLineSpan();
@@ -846,20 +1266,44 @@ public sealed class ReferenceItem
         Definition = definition;
     }
 
+    /// <summary>
+    /// Absolute source path for the reference location, when available.
+    /// </summary>
     public string? Path { get; }
 
+    /// <summary>
+    /// One-based starting line for the reference span.
+    /// </summary>
     public int Line { get; }
 
+    /// <summary>
+    /// One-based starting column for the reference span.
+    /// </summary>
     public int Column { get; }
 
+    /// <summary>
+    /// One-based ending line for the reference span.
+    /// </summary>
     public int EndLine { get; }
 
+    /// <summary>
+    /// One-based ending column for the reference span.
+    /// </summary>
     public int EndColumn { get; }
 
+    /// <summary>
+    /// Indicates whether Roslyn reported the reference as implicit rather than explicit source text.
+    /// </summary>
     public bool IsImplicit { get; }
 
+    /// <summary>
+    /// Fully qualified display name of the referenced definition symbol.
+    /// </summary>
     public string Definition { get; }
 
+    /// <summary>
+    /// Converts a Roslyn reference location into deterministic command-output coordinates.
+    /// </summary>
     public static ReferenceItem FromReferenceLocation(ISymbol definition, ReferenceLocation referenceLocation)
     {
         var location = SourceRange.FromLocation(referenceLocation.Location);
@@ -885,8 +1329,14 @@ public sealed class QuickInfoSectionItem
         Text = text;
     }
 
+    /// <summary>
+    /// Quick-info section kind, such as description or documentation.
+    /// </summary>
     public string Kind { get; }
 
+    /// <summary>
+    /// Formatted section text returned by Roslyn quick-info.
+    /// </summary>
     public string Text { get; }
 }
 
@@ -907,12 +1357,24 @@ public sealed class SignatureHelpSignatureItem
         Parameters = parameters;
     }
 
+    /// <summary>
+    /// Display label for the callable signature.
+    /// </summary>
     public string Label { get; }
 
+    /// <summary>
+    /// Documentation text associated with the signature, when Roslyn provides it.
+    /// </summary>
     public string Documentation { get; }
 
+    /// <summary>
+    /// Indicates whether the signature accepts a variadic or <c>params</c> argument list.
+    /// </summary>
     public bool IsVariadic { get; }
 
+    /// <summary>
+    /// Parameter entries rendered under this signature.
+    /// </summary>
     public IReadOnlyList<SignatureHelpParameterItem> Parameters { get; }
 }
 
@@ -933,12 +1395,24 @@ public sealed class SignatureHelpParameterItem
         IsOptional = isOptional;
     }
 
+    /// <summary>
+    /// Parameter name reported by Roslyn.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Display label for the parameter, including type and modifiers when available.
+    /// </summary>
     public string Label { get; }
 
+    /// <summary>
+    /// Documentation text associated with the parameter, when Roslyn provides it.
+    /// </summary>
     public string Documentation { get; }
 
+    /// <summary>
+    /// Indicates whether callers may omit this parameter.
+    /// </summary>
     public bool IsOptional { get; }
 }
 
@@ -947,10 +1421,16 @@ public sealed class SignatureHelpParameterItem
 /// </summary>
 public static class SymbolDisplayFormats
 {
+    /// <summary>
+    /// Fully qualified format used for stable symbol names without global namespace prefixes.
+    /// </summary>
     public static readonly SymbolDisplayFormat Qualified = SymbolDisplayFormat.FullyQualifiedFormat
         .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Omitted)
         .WithMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers);
 
+    /// <summary>
+    /// Fully qualified member format that includes the containing type for member identities.
+    /// </summary>
     public static readonly SymbolDisplayFormat QualifiedMember = Qualified
         .WithMemberOptions(SymbolDisplayMemberOptions.IncludeContainingType);
 }

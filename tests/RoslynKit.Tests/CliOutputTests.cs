@@ -116,8 +116,8 @@ public sealed class CliOutputTests
             "--column", "1",
         ], expectedLineCount: 3);
 
-        Assert.Contains("Line 70 is outside the document range 1..13.", output, StringComparison.Ordinal);
-        Assert.Contains("hint: Retry with --line between 1 and 13", output, StringComparison.Ordinal);
+        Assert.Contains("Line 70 is outside the document range 1..16.", output, StringComparison.Ordinal);
+        Assert.Contains("hint: Retry with --line between 1 and 16", output, StringComparison.Ordinal);
         Assert.Contains("document-lines", output, StringComparison.Ordinal);
     }
 

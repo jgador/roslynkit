@@ -337,13 +337,22 @@ public sealed record ParsedCommand(
     IReadOnlyDictionary<string, string> Options,
     BuiltinCommand? HelpSubject)
 {
+    /// <summary>
+    /// Indicates whether this parsed invocation should render top-level or command-specific help.
+    /// </summary>
     public bool IsHelp => Name == "help";
 
+    /// <summary>
+    /// Creates a parsed help request, optionally scoped to one built-in command.
+    /// </summary>
     public static ParsedCommand Help(BuiltinCommand? subject = null)
     {
         return new ParsedCommand("help", null, new Dictionary<string, string>(StringComparer.Ordinal), subject);
     }
 
+    /// <summary>
+    /// Reads a validated required option value or raises the same usage error shape as parser validation.
+    /// </summary>
     public string Required(string name)
     {
         if (!Options.TryGetValue(name, out var value) || string.IsNullOrWhiteSpace(value))
@@ -354,16 +363,25 @@ public sealed record ParsedCommand(
         return value;
     }
 
+    /// <summary>
+    /// Reads an optional option value when it was supplied with non-empty text.
+    /// </summary>
     public string? Optional(string name)
     {
         return Options.TryGetValue(name, out var value) && !string.IsNullOrWhiteSpace(value) ? value : null;
     }
 
+    /// <summary>
+    /// Reads a boolean flag after parser binding has normalized switch presence to text.
+    /// </summary>
     public bool Flag(string name)
     {
         return Options.TryGetValue(name, out var value) && bool.TryParse(value, out var parsed) && parsed;
     }
 
+    /// <summary>
+    /// Reads an optional integer option and applies command-specific minimum value validation.
+    /// </summary>
     public int? OptionalInt(string name, int minimumValue)
     {
         if (!Options.TryGetValue(name, out var value))
@@ -379,6 +397,9 @@ public sealed record ParsedCommand(
         return parsed;
     }
 
+    /// <summary>
+    /// Reads an integer option or returns the command default when the option was omitted.
+    /// </summary>
     public int OptionalInt(string name, int defaultValue, int minimumValue)
     {
         return OptionalInt(name, minimumValue) ?? defaultValue;
@@ -397,7 +418,13 @@ public sealed class CliUsageException : Exception
         Hint = hint;
     }
 
+    /// <summary>
+    /// Command name used to render the usage error context.
+    /// </summary>
     public string CommandName { get; }
 
+    /// <summary>
+    /// Optional retry guidance rendered after the usage error message.
+    /// </summary>
     public string? Hint { get; }
 }

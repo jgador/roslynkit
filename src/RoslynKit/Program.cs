@@ -5,6 +5,9 @@ namespace RoslynKit;
 /// </summary>
 internal static class Program
 {
+    /// <summary>
+    /// Runs the command-line application using standard output as the rendering target.
+    /// </summary>
     public static Task<int> Main(string[] args)
     {
         return new CliApplication(Console.Out).RunAsync(args);

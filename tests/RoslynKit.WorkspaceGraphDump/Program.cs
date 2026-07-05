@@ -8,6 +8,9 @@ namespace RoslynKit.WorkspaceGraphDump;
 /// </summary>
 internal static class Program
 {
+    /// <summary>
+    /// Loads the requested target and writes workspace diagnostics plus the project dependency graph.
+    /// </summary>
     public static async Task<int> Main(string[] args)
     {
         try

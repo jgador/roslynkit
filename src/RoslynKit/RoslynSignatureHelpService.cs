@@ -32,6 +32,9 @@ internal static class RoslynSignatureHelpService
         parameterOptions: SymbolDisplayParameterOptions.IncludeType | SymbolDisplayParameterOptions.IncludeName | SymbolDisplayParameterOptions.IncludeParamsRefOut,
         miscellaneousOptions: SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
 
+    /// <summary>
+    /// Resolves signature-help items using Roslyn's internal service and falls back to public semantic analysis when necessary.
+    /// </summary>
     public static async Task<ReflectedSignatureHelp?> GetSignatureHelpAsync(Document document, int position, CancellationToken cancellationToken)
     {
         try

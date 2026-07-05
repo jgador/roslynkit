@@ -37,16 +37,34 @@ public sealed class RoslynWorkspaceLoader : IDisposable
         WorkspaceDiagnostics = workspaceDiagnostics;
     }
 
+    /// <summary>
+    /// Active MSBuild workspace used by Roslyn semantic APIs after target load.
+    /// </summary>
     public MSBuildWorkspace Workspace { get; }
 
+    /// <summary>
+    /// Loaded solution graph, whether the original target was a solution or a project.
+    /// </summary>
     public Solution Solution { get; }
 
+    /// <summary>
+    /// Absolute path to the solution or project target supplied on the command line.
+    /// </summary>
     public string TargetPath { get; }
 
+    /// <summary>
+    /// Target file kind reported in workspace output, such as <c>slnx</c> or <c>csproj</c>.
+    /// </summary>
     public string TargetKind { get; }
 
+    /// <summary>
+    /// Repository or target-root path used to filter workspace-visible documents.
+    /// </summary>
     public string RootPath { get; }
 
+    /// <summary>
+    /// Workspace load diagnostics captured from MSBuild and Roslyn while opening the target.
+    /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 
     /// <summary>
@@ -108,6 +126,9 @@ public sealed class RoslynWorkspaceLoader : IDisposable
         throw new CliUsageException("unknown", "Target must be a .sln, .slnx, or .csproj file.");
     }
 
+    /// <summary>
+    /// Resolves the target framework label associated with a loaded project context.
+    /// </summary>
     public string? GetTargetFramework(Project project)
     {
         return _projectTargetFrameworks.TryGetValue(project.Id, out var targetFramework)
@@ -236,6 +257,9 @@ public sealed class RoslynWorkspaceLoader : IDisposable
         };
     }
 
+    /// <summary>
+    /// Releases the underlying MSBuild workspace and its loaded solution state.
+    /// </summary>
     public void Dispose()
     {
         Workspace.Dispose();
@@ -331,14 +355,29 @@ public sealed class WorkspaceDocumentContext
         Descriptor = descriptor;
     }
 
+    /// <summary>
+    /// Roslyn text document used for source, generated, additional, or analyzer-config reads.
+    /// </summary>
     public TextDocument TextDocument { get; }
 
+    /// <summary>
+    /// Stable command-output descriptor for the resolved Roslyn text document.
+    /// </summary>
     public DocumentDescriptor Descriptor { get; }
 
+    /// <summary>
+    /// Project context that owns the resolved Roslyn text document.
+    /// </summary>
     public Project Project => TextDocument.Project;
 
+    /// <summary>
+    /// Semantic C# document when the resolved text document supports semantic operations.
+    /// </summary>
     public Document? Document => TextDocument as Document;
 
+    /// <summary>
+    /// RoslynKit document-kind name used to route document and semantic commands.
+    /// </summary>
     public string DocumentKind => Descriptor.DocumentKind;
 
     /// <summary>

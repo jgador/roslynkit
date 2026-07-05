@@ -166,8 +166,14 @@ public static class BuiltinCommandRegistry
     private static readonly IReadOnlyDictionary<string, BuiltinCommand> Lookup =
         Builtins.ToDictionary(command => command.Name, StringComparer.Ordinal);
 
+    /// <summary>
+    /// Ordered built-in command metadata used by top-level help and parser lookup.
+    /// </summary>
     public static IReadOnlyList<BuiltinCommand> Commands => Builtins;
 
+    /// <summary>
+    /// Resolves command metadata by the exact command name accepted on the CLI.
+    /// </summary>
     public static BuiltinCommand? GetBuiltin(string name)
     {
         return Lookup.TryGetValue(name, out var command) ? command : null;

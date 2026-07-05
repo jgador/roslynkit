@@ -66,7 +66,7 @@ public static class RoslynSymbolSearch
     }
 
     /// <summary>
-    /// Identifies constructors so document outlines and symbol lists can avoid noisy constructor-only hops.
+    /// Identifies constructors so document outlines and symbol lists can suppress constructor-only entries.
     /// </summary>
     public static bool IsConstructor(ISymbol symbol)
     {

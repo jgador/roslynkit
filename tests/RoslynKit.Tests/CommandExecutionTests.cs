@@ -190,10 +190,10 @@ public sealed class CommandExecutionTests
             "--column", "1"));
 
         Assert.Equal("quick-info", exception.CommandName);
-        Assert.Equal("Line 70 is outside the document range 1..13.", exception.Message);
+        Assert.Equal("Line 70 is outside the document range 1..16.", exception.Message);
         var hint = exception.Hint;
         Assert.NotNull(hint);
-        Assert.Contains("--line between 1 and 13", hint!, StringComparison.Ordinal);
+        Assert.Contains("--line between 1 and 16", hint!, StringComparison.Ordinal);
         Assert.Contains("document-lines", hint!, StringComparison.Ordinal);
     }
 

@@ -9,6 +9,9 @@ public static class RoslynDocumentFilters
 {
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
+    /// <summary>
+    /// Maps Roslyn text document runtime types to RoslynKit document-kind names.
+    /// </summary>
     public static string GetDocumentKind(TextDocument document)
     {
         return document switch
@@ -21,17 +24,26 @@ public static class RoslynDocumentFilters
         };
     }
 
+    /// <summary>
+    /// Detects generated source documents by Roslyn document type or generated-file path conventions.
+    /// </summary>
     public static bool IsGenerated(Document document)
     {
         return document is SourceGeneratedDocument || IsGeneratedSourcePath(document.FilePath);
     }
 
+    /// <summary>
+    /// Determines whether a resolved document can participate in semantic C# commands.
+    /// </summary>
     public static bool IsSemanticDocument(Document document, string documentKind)
     {
         return document.Project.Language == LanguageNames.CSharp
             && documentKind is DocumentKindNames.Source or DocumentKindNames.SourceGenerated;
     }
 
+    /// <summary>
+    /// Applies workspace enumeration flags and repository-root filtering to one Roslyn text document.
+    /// </summary>
     public static bool ShouldIncludeWorkspaceDocument(TextDocument document, string documentKind, string rootPath, DocumentEnumerationOptions options)
     {
         return documentKind switch
@@ -44,6 +56,9 @@ public static class RoslynDocumentFilters
         };
     }
 
+    /// <summary>
+    /// Detects generated source paths that should be hidden unless generated documents are requested.
+    /// </summary>
     public static bool IsGeneratedSourcePath(string? filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath))
@@ -65,6 +80,9 @@ public static class RoslynDocumentFilters
             || fileName.EndsWith(".AssemblyAttributes.cs", StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Collects normalized non-generated source paths declared directly by one project.
+    /// </summary>
     public static HashSet<string> GetProjectSourcePaths(Project project)
     {
         return project.Documents
@@ -73,6 +91,9 @@ public static class RoslynDocumentFilters
             .ToHashSet(PathComparer);
     }
 
+    /// <summary>
+    /// Collects normalized non-generated source paths declared by every project in a solution.
+    /// </summary>
     public static HashSet<string> GetSolutionSourcePaths(Solution solution)
     {
         return solution.Projects
@@ -80,11 +101,17 @@ public static class RoslynDocumentFilters
             .ToHashSet(PathComparer);
     }
 
+    /// <summary>
+    /// Checks whether any source declaration for a symbol belongs to the supplied project source set.
+    /// </summary>
     public static bool IsDeclaredInProject(ISymbol symbol, ISet<string> projectSourcePaths)
     {
         return symbol.Locations.Any(location => LocationMatchesAnyPath(location, projectSourcePaths));
     }
 
+    /// <summary>
+    /// Compares one Roslyn source location against a normalized path using platform path casing rules.
+    /// </summary>
     public static bool LocationMatchesPath(Location location, string path)
     {
         var locationPath = GetLocationPath(location);
@@ -95,6 +122,9 @@ public static class RoslynDocumentFilters
             && PathComparer.Equals(locationPath, comparisonPath);
     }
 
+    /// <summary>
+    /// Checks whether one Roslyn source location is contained in a normalized path set.
+    /// </summary>
     public static bool LocationMatchesAnyPath(Location location, ISet<string> paths)
     {
         var locationPath = GetLocationPath(location);
@@ -103,6 +133,9 @@ public static class RoslynDocumentFilters
             && paths.Contains(locationPath);
     }
 
+    /// <summary>
+    /// Converts a non-empty path to the absolute path form used for document and symbol comparisons.
+    /// </summary>
     public static string? NormalizePath(string? path)
     {
         return string.IsNullOrWhiteSpace(path)
@@ -178,7 +211,22 @@ public static class RoslynDocumentFilters
 /// Controls which workspace document kinds RoslynKit enumerates.
 /// </summary>
 public readonly record struct DocumentEnumerationOptions(
+    /// <summary>
+    /// Includes source-generated and generated source documents in workspace enumeration.
+    /// </summary>
     bool IncludeGenerated,
+
+    /// <summary>
+    /// Includes additional documents when workspace output should expose non-source inputs.
+    /// </summary>
     bool IncludeAdditional,
+
+    /// <summary>
+    /// Includes analyzer config documents such as <c>.editorconfig</c>.
+    /// </summary>
     bool IncludeAnalyzerConfig,
+
+    /// <summary>
+    /// Restricts workspace output to files rooted under the loaded repository target.
+    /// </summary>
     bool RepositoryRelevantOnly);
