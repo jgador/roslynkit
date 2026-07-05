@@ -131,6 +131,11 @@ public static class MarkdownProjection
         builder.Append("command: references");
         AppendSelector(builder, result.Selector, result.Document, result.Line, result.Column);
         builder.Append("\nsymbol: ").Append(CodeSpan(result.Symbol.SymbolId ?? result.Symbol.DisplayName));
+        if (result.Symbol.Documentation is { Length: > 0 } documentation)
+        {
+            builder.Append("\ndocumentation: ").Append(documentation);
+        }
+
         AppendCounts(builder, result.TotalCount, result.ReturnedCount, result.Truncated);
         if (result.Locations.Count > 0)
         {

@@ -89,7 +89,7 @@ For repeated items, output uses compact bullets:
 - kind: Method name: `MyApp.MyService.Execute` loc: `src/MyApp/MyService.cs:12:17-12:24` id: `M:MyApp.MyService.Execute(System.String)`
 ```
 
-`name:` carries the fully qualified display name, and `id:` carries the documentation-comment ID that chains into `--symbol`. For `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations`, a non-empty XML summary may render as an indented `documentation:` continuation line below the symbol bullet. When a symbol has more than one declaration (partial types), extra `- decl:` bullets follow with one location each.
+`name:` carries the fully qualified display name, and `id:` carries the documentation-comment ID that chains into `--symbol`. For `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations`, a non-empty XML summary may render as an indented `documentation:` continuation line below the symbol bullet. `references` renders documentation once in the command header for the searched symbol. When a symbol has more than one declaration (partial types), extra `- decl:` bullets follow with one location each.
 
 For source text, output uses fenced code blocks with a fence longer than any backtick run inside the payload:
 
@@ -168,12 +168,13 @@ selector: `src/MyApp/Program.cs:10:20-10:20`
 
 ### `references`
 
-The selector, the resolved symbol, counts, and reference bullets. Implicit references carry `implicit: true`.
+The selector, the resolved symbol, optional documentation for the searched symbol, counts, and reference bullets. Implicit references carry `implicit: true`.
 
 ```markdown
 command: references
 selector: `M:MyApp.MyService.Execute(System.String)`
 symbol: `M:MyApp.MyService.Execute(System.String)`
+documentation: Executes the requested service operation.
 returned: 25/31
 truncated: true
 

@@ -111,6 +111,14 @@ When the task is a semantic C# question, prefer this order and stop as soon as y
 7. Use `document-text` only when a full document read is still justified after the symbol or file is already resolved.
 8. Use `symbol-source` when exactly one declaration body is needed; read larger source regions only when symbol locations, quick info, document structure, and targeted cross-references are still insufficient.
 
+## Documentation Hints
+
+- Treat `documentation:` lines in RoslynKit output as routing hints, not as proof that a route is complete.
+- In `references`, a header-level `documentation:` line describes the searched symbol; it does not describe each `- loc:` usage.
+- In `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations`, an indented `documentation:` line describes the symbol bullet directly above it.
+- Do not run `quick-info` just to retrieve documentation already present in the current command output.
+- Use documentation to choose the next semantic hop, then verify with `definition`, `references`, `symbol-source`, or a narrow `document-lines` read.
+
 ## Token Discipline
 
 - Do not read an entire `.cs` file through `document-text` by default.

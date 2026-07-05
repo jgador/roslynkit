@@ -31,6 +31,30 @@ public sealed class MarkdownFormatTests
     }
 
     [Fact]
+    public async Task RunAsync_WritesDocumentation_ForReferencesCommand()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(
+            [
+                "references",
+                "--target", TestPaths.SolutionPath(),
+                "--symbol", "RoslynKit.PositionResolver.GetPositionAsync",
+                "--max-results", "1",
+            ],
+            TestContext.Current.CancellationToken);
+
+        var output = writer.ToString();
+
+        Assert.True(exitCode == 0, $"Expected exit code 0 but got {exitCode}. Output: {output}");
+        Assert.Contains("command: references", output, StringComparison.Ordinal);
+        Assert.Contains("symbol: `M:RoslynKit.PositionResolver.GetPositionAsync(", output, StringComparison.Ordinal);
+        Assert.Contains(
+            "documentation: Validates one-based CLI coordinates and converts them into a Roslyn document position.",
+            output,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Render_EmitsQueryAndCountHeader_ForSymbols()
     {
         var result = new SymbolsResult(
@@ -166,7 +190,7 @@ public sealed class MarkdownFormatTests
             line: null,
             column: null,
             selector: "M:App.Widget.Run",
-            CreateSymbol(),
+            CreateSymbol("Runs application work for the current request."),
             totalCount: 2,
             returnedCount: 2,
             truncated: false,
@@ -181,12 +205,33 @@ public sealed class MarkdownFormatTests
         var expected = "command: references\n"
             + "selector: `M:App.Widget.Run`\n"
             + "symbol: `T:App.Widget`\n"
+            + "documentation: Runs application work for the current request.\n"
             + "returned: 2/2\n"
             + "truncated: false\n"
             + "\n"
             + "- loc: `" + ProgramPath + ":10:5-10:8`\n"
             + "- loc: `" + ProgramPath + ":20:5-20:8` implicit: true";
         Assert.Equal(expected, rendered);
+    }
+
+    [Fact]
+    public void Render_OmitsEmptyDocumentation_ForReferences()
+    {
+        var result = new ReferencesResult(
+            document: null,
+            line: null,
+            column: null,
+            selector: "M:App.Widget.Run",
+            CreateSymbol("   "),
+            totalCount: 0,
+            returnedCount: 0,
+            truncated: false,
+            [],
+            []);
+
+        var rendered = MarkdownProjection.Render(result);
+
+        Assert.DoesNotContain("documentation:", rendered, StringComparison.Ordinal);
     }
 
     [Fact]

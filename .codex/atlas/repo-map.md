@@ -50,7 +50,7 @@ Resident architecture context for first-pass navigation. Atlas stores durable ro
 - Use `roslynkit-dev` for repo-local C# semantic inspection unless the task is explicitly about the stable global tool.
 - Prefer tests before implementation when available.
 - Prefer RoslynKit `symbols`, `document-symbols`, `definition`, `references`, `implementations`, `type-definition`, `quick-info`, `signature-help`, `document-lines`, and `symbol-source` over broad source reads.
-- Use sparse XML comments surfaced by `quick-info` as next-hop hints, not as exhaustive documentation.
+- Use sparse XML comments surfaced by documentation-enabled RoslynKit output as next-hop hints, not as exhaustive documentation.
 - Do not use Atlas as a file inventory, test inventory, symbol graph, reference graph, or source cache.
 - Ignore first: `artifacts/`, `TestResults/`, `.vs/`, `Visual Studio 18/`, `bin/`, `obj/`, `*.nupkg`.
 

@@ -5,6 +5,17 @@ description: Use the stable global RoslynKit tool first for ordinary C# semantic
 
 # RoslynKit
 
+## Hard Limits (read first)
+
+These override every other section when they conflict. They exist because reading whole files and re-reading files is the dominant token cost.
+
+- Output is always token-saving markdown-flavored text; there is no `--format` option. Do not pass `--format` — it fails as an unknown option.
+- Never read a whole `.cs` file when a position-based command (`quick-info`, `definition`, `references`) answers the question.
+- Never read the same file twice. Capture what you need the first time.
+- Resolve positions with RoslynKit instead of falling back to `Read`/grep on `.cs` source once the file is loaded.
+- Prefer single-target commands (`definition`, `quick-info`, `type-definition`) over `symbols`; `symbols` returns verbose arrays. When you must use `symbols` or `references`, always cap output with the smallest useful `--max-results` (often `--max-results 1` to confirm one known declaration).
+- Stop as soon as you can answer. Do not gather extra members, siblings, or confirmation reads.
+
 Use this skill for ordinary C# semantic inspection when the stable global `roslynkit` command is available.
 
 ## Routing Rule
@@ -29,7 +40,7 @@ Hard rule: coordinates must come from tool output, a diagnostic, or the user. If
 
 When a coordinate usage error includes a `hint:` line, do not retry the same `--line`/`--column`. Use the valid range in `hint:` and pick a new coordinate with `document-lines` or `document-symbols` before retrying semantic commands.
 
-Chain by identity: every symbol payload carries `symbolId` (`id` in compact format). Pass it straight to the next `--symbol` command. After editing a file, cached line and column values are stale; `symbolId` stays valid.
+Chain by identity: every symbol bullet carries its documentation-comment ID as `id:`. Pass it straight to the next `--symbol` command. After editing a file, cached line and column values are stale; the ID stays valid.
 
 ## Default File Scope
 
@@ -94,11 +105,19 @@ When the task is a semantic C# question, prefer this order and stop as soon as y
 7. Use `document-text` only when a full document read is still justified after the symbol or file is already resolved.
 8. Use `symbol-source` when exactly one declaration body is needed; read larger source regions only when symbol locations, quick info, document structure, and targeted cross-references are still insufficient.
 
+## Documentation Hints
+
+- Treat `documentation:` lines in RoslynKit output as routing hints, not as proof that a route is complete.
+- In `references`, a header-level `documentation:` line describes the searched symbol; it does not describe each `- loc:` usage.
+- In `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations`, an indented `documentation:` line describes the symbol bullet directly above it.
+- Do not run `quick-info` just to retrieve documentation already present in the current command output.
+- Use documentation to choose the next semantic hop, then verify with `definition`, `references`, `symbol-source`, or a narrow `document-lines` read.
+
 ## Token Discipline
 
 - Do not read an entire `.cs` file through `document-text` by default.
 - Do not read a whole class body by default.
-- Chain follow-up lookups with `symbolId` from previous output instead of re-resolving the same symbol through `symbols` or a fresh position lookup.
+- Chain follow-up lookups with the `id:` value from previous output instead of re-resolving the same symbol through `symbols` or a fresh position lookup.
 - Prefer `symbol-source` over `document-text` or shell reads when exactly one declaration body is needed.
 - Use `symbols` for name discovery inside the loaded target, not to convert a known name into coordinates and not to inspect external Roslyn APIs or other non-declared implementation details.
 - Do not start with `document-symbols` unless you already know the file and still need local structure to choose a member or range.

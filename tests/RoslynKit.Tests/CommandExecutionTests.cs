@@ -460,6 +460,7 @@ public sealed class CommandExecutionTests
         Assert.Null(result.Column);
         Assert.Equal("RoslynKit.PositionResolver.GetPositionAsync", result.Selector);
         Assert.StartsWith("M:RoslynKit.PositionResolver.GetPositionAsync(", result.Symbol.SymbolId, StringComparison.Ordinal);
+        Assert.Contains("Validates one-based CLI coordinates", result.Symbol.Documentation!, StringComparison.Ordinal);
         Assert.True(result.Locations.Count >= 3);
         Assert.Contains(result.Locations, location => location.Path?.EndsWith("RoslynCommandExecutor.cs", StringComparison.OrdinalIgnoreCase) == true);
     }

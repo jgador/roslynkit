@@ -96,7 +96,7 @@ Follow `.editorconfig`: UTF-8, spaces, final newline, 4-space indentation for C#
 
 Follow the existing style in touched files. Prefer clear names and structure over commentary. Use sparse XML documentation comments in C#: add a brief `summary` comment to each class, do not add comments or XML docs to constructors, add a brief `summary` comment to a public method only when its behavior is complex or non-obvious, and do not add parameter documentation comments.
 
-Navigation comments should help RoslynKit `quick-info` guide the next hop. Add or refine public-method summaries only for entrypoints, orchestration points, cross-boundary adapters, Roslyn workspace/symbol/position resolution boundaries, or helpers whose name alone does not explain when to jump there. Keep summaries architectural and specific; avoid generic comments such as "Executes the method" and avoid documenting every public member for coverage.
+Navigation comments should help RoslynKit documentation-enabled navigation output guide the next hop. Add or refine public-method summaries only for entrypoints, orchestration points, cross-boundary adapters, Roslyn workspace/symbol/position resolution boundaries, or helpers whose name alone does not explain when to jump there. Keep summaries architectural and specific; avoid generic comments such as "Executes the method" and avoid documenting every public member for coverage.
 
 - Preserve the CLI-first architecture: no MCP server, no LSP client, no background daemon, and no editor-specific protocol coupling.
 - Prefer direct Roslyn/MSBuild APIs over shelling out to editors, language servers, or IDEs.
