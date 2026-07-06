@@ -1,5 +1,7 @@
 # RoslynKit Skill Maintenance
 
+This is a coding-agent workflow document. Root `AGENTS.md` owns active repo policy; this file owns the longer synchronization rules for reusable skill files and wrappers.
+
 RoslynKit keeps two checked-in RoslynKit command skills:
 
 - `.agents\skills\roslynkit\SKILL.md` for the stable global `roslynkit` command.
@@ -48,7 +50,7 @@ Update both skill files together when any of these change:
 - reusable cursor-choice guidance or generic examples;
 - fallback guidance for non-C# or non-semantic tasks.
 
-Exact runtime command names, usage strings, and options are generated in `docs/roslynkit-command-reference.md` from `BuiltinCommandRegistry`. When command metadata changes, regenerate that file and keep the skills focused on compact routing guidance instead of duplicating the full reference.
+Exact runtime command names, usage strings, and options are generated in `docs/agents/roslynkit-command-reference.md` from `BuiltinCommandRegistry`. When command metadata changes, regenerate that file and keep the skills focused on compact routing guidance instead of duplicating the full reference.
 
 When you edit one skill file for command-shape guidance, mirror the same structural change in the other skill file in the same commit.
 

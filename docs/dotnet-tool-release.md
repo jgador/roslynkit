@@ -14,7 +14,7 @@ The release version comes from `Directory.Build.props`. The public package metad
 
 1. Set the new `<Version>` in `Directory.Build.props` using a bare NuGet version such as `0.1.0` or a prerelease such as `0.1.0-dev.1`. Use the leading `v` only for Git tags or release titles such as `v0.1.0`.
 2. Confirm `src/RoslynKit/RoslynKit.csproj` still has the correct public package metadata: `PackageId` is `roslynkit`, `ToolCommandName` is `roslynkit`, and the repository URL, license, tags, and package readme values are still correct.
-3. If the public CLI surface, repo-local skill workflow, or install story changed, update `README.md`, `docs/skill-maintenance.md`, and `docs/dev-install.md` in the same change when applicable.
+3. If the public CLI surface, repo-local skill workflow, or install story changed, update `README.md`, `docs/agents/skill-maintenance.md`, and `docs/dev-install.md` in the same change when applicable.
 
 ## 2. Validate the repo before packing
 
@@ -85,7 +85,7 @@ That script:
 
 The stable global `roslynkit` install can remain in place. The dev tool path is intentionally separate so stable and prerelease builds stay side-by-side, and `Directory.Build.props` can stay on the stable release version while the installer packs a temporary prerelease override.
 
-See `docs/dev-install.md` for the operator-facing dev install flow and `docs/skill-maintenance.md` for the checked-in `roslynkit` and `roslynkit-dev` skill update rules.
+See `docs/dev-install.md` for the operator-facing dev install flow and `docs/agents/skill-maintenance.md` for the checked-in `roslynkit` and `roslynkit-dev` skill update rules.
 
 ## 6. Publish later if needed
 

@@ -38,7 +38,7 @@ public sealed class CommandReferenceMarkdownTests
     public void Render_MatchesCheckedInCommandReference()
     {
         var expected = NormalizeNewlines(CommandReferenceMarkdown.Render());
-        var path = TestPaths.RepoFile("docs", "roslynkit-command-reference.md");
+        var path = TestPaths.RepoFile("docs", "agents", "roslynkit-command-reference.md");
 
         Assert.True(File.Exists(path), "Run `dotnet run --file .\\tools\\RoslynKit.CommandDocs.cs -- --write` to create the generated command reference.");
 

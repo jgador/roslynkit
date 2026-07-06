@@ -5,17 +5,23 @@
 Use one source of truth per topic:
 
 - `README.md`: user-facing overview, output format, packaging, and quick-start commands.
-- `docs/roslynkit-command-reference.md`: generated runtime command reference from `BuiltinCommandRegistry`; regenerate with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --write`.
+- `docs/agents/roslynkit-command-reference.md`: generated runtime command reference from `BuiltinCommandRegistry`; regenerate with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --write`.
+- `docs/markdown-output-format.md`: shared command output contract for humans and agents.
 - `docs/dev-install.md`: semi-manual side-by-side prerelease installation for RoslynKit development.
-- `docs/local-repository-reference.md`: local reference repositories for Roslyn APIs, Git CLI style, EF Core tooling conventions, and VS Code C# language-server wiring.
-- `docs/skill-maintenance.md`: ownership and synchronization rules for the checked-in RoslynKit skill files.
-- `AGENTS.md`: agent-specific working rules, safety rules, and repo workflow expectations.
+- `docs/dotnet-tool-release.md`: maintainer packaging and release workflow.
+- `docs/agents/README.md`: index for coding-agent workflow docs that agents may discover and apply on their own.
+- `docs/agents/roslynkit-command-reference.md`: generated command facts agents can use for exact runtime command names, usage strings, and options.
+- `docs/agents/skill-maintenance.md`: ownership and synchronization rules for checked-in RoslynKit skill files.
+- `docs/local-repository-reference.md`: user-owned local repository reference map; use only when explicitly named or tagged by the user.
+- `docs/roslyn-lsp-commands.md`: human-facing Roslyn language-server inventory and RoslynKit planning coverage; do not use for current command routing.
+- `docs/token-efficiency-benchmark.md`: manual benchmark procedure; use only when the user asks to measure token efficiency.
+- `AGENTS.md`: active coding-agent rules, safety rules, and repo workflow expectations.
 
-Keep this file focused on contributor and agent workflow rules. Do not restate full command reference material here.
+Keep this file focused on the rules agents need during execution. Put longer agent guidance under `docs/agents/`, and do not restate full command reference material here.
 
 ## Project Structure & Module Organization
 
-RoslynKit is a .NET 10 command-line tool. Production code lives under `src/RoslynKit`, with the console entrypoint in `Program.cs`, CLI parsing in `CliParser.cs`, command metadata in `BuiltinCommandRegistry.cs`, and Roslyn execution logic in `RoslynCommandExecutor.cs`. Tests live under `tests/RoslynKit.Tests`, repo-local test-side utilities live under `tests/`, and small repo tooling lives under `tools/`. Repository documentation lives under `docs/`; use `docs/local-repository-reference.md` before searching remote repositories for Roslyn, Git CLI style, EF Core tooling conventions, or VS Code C# implementation references.
+RoslynKit is a .NET 10 command-line tool. Production code lives under `src/RoslynKit`, with the console entrypoint in `Program.cs`, CLI parsing in `CliParser.cs`, command metadata in `BuiltinCommandRegistry.cs`, and Roslyn execution logic in `RoslynCommandExecutor.cs`. Tests live under `tests/RoslynKit.Tests`, repo-local test-side utilities live under `tests/`, and small repo tooling lives under `tools/`. Shared product docs live under `docs/`; coding-agent support docs live under `docs/agents/`. Manual reference, roadmap, and benchmark docs live directly under `docs/` and are opt-in unless the user names them.
 
 ## Build, Test, and Development Commands
 
@@ -30,7 +36,11 @@ RoslynKit is a .NET 10 command-line tool. Production code lives under `src/Rosly
 
 Verify conclusions against current files, tests, docs, and command output.
 
-For exact runtime command names, usage strings, and options, read generated `docs/roslynkit-command-reference.md`. Keep agent guidance concise and route-oriented; do not duplicate full command reference material in `AGENTS.md` or skill files.
+For exact runtime command names, usage strings, and options, read generated `docs/agents/roslynkit-command-reference.md`. Keep agent guidance concise and route-oriented; do not duplicate full command reference material in `AGENTS.md` or skill files.
+
+For longer agent-only guidance, start at `docs/agents/README.md`.
+
+Do not read `docs/local-repository-reference.md`, `docs/roslyn-lsp-commands.md`, or `docs/token-efficiency-benchmark.md` by default. Use those docs only when the user explicitly names or tags them, or when the task is specifically about local reference repositories, RoslynKit roadmap coverage, or token-efficiency measurement.
 
 Do not use Repository Synapse in this repository. Do not run `synapse ensure`, `synapse recall`, `synapse tests`, or any other command that creates `.synapse/` repo-local cache files. Use Atlas, RoslynKit, scout agents, and direct file/test inspection instead.
 
@@ -71,7 +81,7 @@ Skip `scout` when one obvious target file is already known or the task is a sing
 
 When using `scout`:
 
-- ground first in `AGENTS.md`, `README.md`, `docs/local-repository-reference.md`, and any directly named files;
+- ground first in `AGENTS.md`, `README.md`, and any directly named files; include `docs/agents/README.md` for agent workflow or skill-maintenance tasks;
 - normalize and de-overlap scopes before spawning;
 - spawn one `scout` per disjoint scope;
 - prefer these default scopes when the area is unclear: `src/RoslynKit/`, `tests/RoslynKit.Tests/`, `docs/`, repo-root config files, and `.agents/` or `.codex/` if agent packaging is involved.
@@ -125,7 +135,7 @@ Navigation comments should help RoslynKit documentation-enabled navigation outpu
 - Keep command execution separate from argument parsing.
 - Keep the markdown output contract (`docs/markdown-output-format.md`) stable, deterministic, and covered by parser/renderer tests when changed.
 - Pass `CancellationToken` through async Roslyn operations when available.
-- If a public CLI option, command, output shape, package surface, or documented workflow changes, update `README.md` or the relevant docs in the same change. When command metadata changes, regenerate `docs/roslynkit-command-reference.md` and verify it with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --check`.
+- If a public CLI option, command, output shape, package surface, or documented workflow changes, update `README.md` or the relevant docs in the same change. When command metadata changes, regenerate `docs/agents/roslynkit-command-reference.md` and verify it with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --check`.
 
 ## Post-Change Formatting
 
@@ -159,4 +169,4 @@ Recent history uses short imperative subjects and conventional prefixes such as 
 
 Do not commit secrets, local credentials, generated caches, package outputs, or accidental binaries.
 
-Treat every repository listed in `docs/local-repository-reference.md` as a strict read-only reference while working in RoslynKit. Never suggest making changes in any of those reference repositories as part of a RoslynKit task, even when issues, gaps, or possible improvements are noticed there. Keep all recommended changes scoped to RoslynKit unless the user explicitly changes the task to one of those repositories.
+If the task explicitly uses `docs/local-repository-reference.md`, treat every repository listed there as a strict read-only reference while working in RoslynKit. Never suggest making changes in any of those reference repositories as part of a RoslynKit task, even when issues, gaps, or possible improvements are noticed there. Keep all recommended changes scoped to RoslynKit unless the user explicitly changes the task to one of those repositories.

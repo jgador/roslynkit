@@ -56,7 +56,7 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 
 ## RoslynKit Runtime Command Reference
 
-The current RoslynKit command surface is generated from `BuiltinCommandRegistry` in `docs/roslynkit-command-reference.md`. Do not duplicate the runtime command list here; use the generated reference when comparing implemented commands with this planning inventory.
+The current RoslynKit command surface is generated from `BuiltinCommandRegistry` in `docs/agents/roslynkit-command-reference.md`. Do not duplicate the runtime command list here; use the generated reference when comparing implemented commands with this planning inventory.
 
 `version` is a Git-style tool metadata command and does not correspond to a Roslyn LSP method. `symbol-source` is a RoslynKit-specific command built on `SymbolFinder` and declaration syntax spans rather than a single Roslyn LSP method.
 

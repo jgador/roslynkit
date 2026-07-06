@@ -7,7 +7,7 @@ namespace RoslynKit;
 /// </summary>
 public static class CommandReferenceMarkdown
 {
-    public const string RelativePath = "docs/roslynkit-command-reference.md";
+    public const string RelativePath = "docs/agents/roslynkit-command-reference.md";
 
     /// <summary>
     /// Renders deterministic markdown for the registered command names, usage strings, and options.
