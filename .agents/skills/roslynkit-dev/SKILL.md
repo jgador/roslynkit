@@ -64,6 +64,7 @@ $roslynkitDev = Join-Path $roslynkitDev ($(if ($IsWindows) { "roslynkit.exe" } e
 
 Always pass `--target` explicitly. RoslynKit does not infer a solution or project path for you.
 When a command accepts `--file`, pass a `.cs` path by default.
+Use `& $roslynkitDev help <command>` for exact runtime syntax and options. In the RoslynKit repository, `docs/roslynkit-command-reference.md` is the generated checked-in command reference.
 
 The dev tool install and update workflow is documented separately in `docs/dev-install.md`.
 

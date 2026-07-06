@@ -4,7 +4,8 @@
 
 Use one source of truth per topic:
 
-- `README.md`: user-facing command list, output format overview, packaging, and quick-start commands.
+- `README.md`: user-facing overview, output format, packaging, and quick-start commands.
+- `docs/roslynkit-command-reference.md`: generated runtime command reference from `BuiltinCommandRegistry`; regenerate with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --write`.
 - `docs/dev-install.md`: semi-manual side-by-side prerelease installation for RoslynKit development.
 - `docs/local-repository-reference.md`: local reference repositories for Roslyn APIs, Git CLI style, EF Core tooling conventions, and VS Code C# language-server wiring.
 - `docs/skill-maintenance.md`: ownership and synchronization rules for the checked-in RoslynKit skill files.
@@ -14,7 +15,7 @@ Keep this file focused on contributor and agent workflow rules. Do not restate f
 
 ## Project Structure & Module Organization
 
-RoslynKit is a .NET 10 command-line tool. Production code lives under `src/RoslynKit`, with the console entrypoint in `Program.cs`, CLI parsing in `CliParser.cs`, command metadata in `BuiltinCommandRegistry.cs`, and Roslyn execution logic in `RoslynCommandExecutor.cs`. Tests live under `tests/RoslynKit.Tests`, and repo-local test-side utilities live under `tests/`. Repository documentation lives under `docs/`; use `docs/local-repository-reference.md` before searching remote repositories for Roslyn, Git, EF Core, or VS Code C# implementation references.
+RoslynKit is a .NET 10 command-line tool. Production code lives under `src/RoslynKit`, with the console entrypoint in `Program.cs`, CLI parsing in `CliParser.cs`, command metadata in `BuiltinCommandRegistry.cs`, and Roslyn execution logic in `RoslynCommandExecutor.cs`. Tests live under `tests/RoslynKit.Tests`, repo-local test-side utilities live under `tests/`, and small repo tooling lives under `tools/`. Repository documentation lives under `docs/`; use `docs/local-repository-reference.md` before searching remote repositories for Roslyn, Git CLI style, EF Core tooling conventions, or VS Code C# implementation references.
 
 ## Build, Test, and Development Commands
 
@@ -22,11 +23,14 @@ RoslynKit is a .NET 10 command-line tool. Production code lives under `src/Rosly
 - `dotnet build .\RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"` builds the CLI and tests with concise output.
 - `dotnet test .\RoslynKit.slnx` runs the xUnit test suite through Microsoft Testing Platform.
 - `dotnet run --project .\src\RoslynKit -- help` runs the CLI locally.
+- `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --check` verifies the generated command reference is in sync with runtime command metadata.
 - `dotnet pack .\src\RoslynKit\RoslynKit.csproj` creates the .NET tool package.
 
 ## Agent Workflow
 
 Verify conclusions against current files, tests, docs, and command output.
+
+For exact runtime command names, usage strings, and options, read generated `docs/roslynkit-command-reference.md`. Keep agent guidance concise and route-oriented; do not duplicate full command reference material in `AGENTS.md` or skill files.
 
 Do not use Repository Synapse in this repository. Do not run `synapse ensure`, `synapse recall`, `synapse tests`, or any other command that creates `.synapse/` repo-local cache files. Use Atlas, RoslynKit, scout agents, and direct file/test inspection instead.
 
@@ -121,7 +125,7 @@ Navigation comments should help RoslynKit documentation-enabled navigation outpu
 - Keep command execution separate from argument parsing.
 - Keep the markdown output contract (`docs/markdown-output-format.md`) stable, deterministic, and covered by parser/renderer tests when changed.
 - Pass `CancellationToken` through async Roslyn operations when available.
-- If a public CLI option, command, output shape, package surface, or documented workflow changes, update `README.md` or the relevant docs in the same change.
+- If a public CLI option, command, output shape, package surface, or documented workflow changes, update `README.md` or the relevant docs in the same change. When command metadata changes, regenerate `docs/roslynkit-command-reference.md` and verify it with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --check`.
 
 ## Post-Change Formatting
 

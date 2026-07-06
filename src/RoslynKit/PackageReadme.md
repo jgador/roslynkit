@@ -28,16 +28,12 @@ To update an existing local install:
 dotnet tool update --global roslynkit --add-source <local-feed-path> --version <version> --ignore-failed-sources
 ```
 
-## Main commands
+## Main workflows
 
-- `version`, `--version`: print the installed RoslynKit version
-- `workspace`: enumerate repo-relevant source documents and opt into generated, additional, or analyzer-config documents
-- `symbols`: search the target workspace for named types or members
-- `document-symbols`: inspect the structure of one document
-- `document-text`: read a full file-backed or generated document without shelling out to text tools
-- `document-lines`: read from `--start-line` through the lesser of `--end-line` and EOF in one resolved document
-- `definition`, `references`, `implementations`, `quick-info`, `type-definition`, `signature-help`: C# semantic inspection commands for source and source-generated documents
-- `symbol-source`: read the full declaration source for a symbol selector
+- Print tool metadata with `version` or top-level `--version`.
+- Enumerate workspace documents with `workspace`, including generated, additional, or analyzer-config documents when requested.
+- Search, navigate, and inspect C# symbols with commands such as `symbols`, `definition`, `references`, `quick-info`, and `symbol-source`.
+- Read resolved documents with `document-text`, `document-lines`, or `document-symbols`.
 
 Document commands use `--file <path>` as the document selector. Relative paths resolve from the current working directory, and ambiguous linked or multi-targeted files can be narrowed with `--project`, `--tfm`, or `--document-kind`.
 
@@ -47,6 +43,6 @@ Document commands use `--file <path>` as the document selector. Relative paths r
 roslynkit workspace --target .\MySolution.slnx
 ```
 
-See the repository README for the full command reference and usage guide. Side-by-side prerelease dev installs live in `docs/dev-install.md`, and maintainer packaging steps live in `docs/dotnet-tool-release.md` in the same repository:
+See the repository README for usage guidance and the generated runtime command reference. Side-by-side prerelease dev installs live in `docs/dev-install.md`, and maintainer packaging steps live in `docs/dotnet-tool-release.md` in the same repository:
 
 [RoslynKit on GitHub](https://github.com/jgador/roslynkit)

@@ -54,24 +54,9 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 | Defer | Visual Studio extension methods | `_vs_*` extension activation, dispatch, spell check, data tips, map code, breakable ranges | Mostly client/editor/VS-specific behavior rather than C# code-intelligence CLI primitives. |
 | Defer | client command identifiers | `roslyn.client.*`, `dotnet.test.run`, `_ms_*`, `csharp.showOutputWindow` | These are commands for clients to execute, not RoslynKit server-side intelligence commands. |
 
-## RoslynKit Commands Today
+## RoslynKit Runtime Command Reference
 
-RoslynKit currently registers these commands:
-
-- `version`
-- `workspace`
-- `diagnostics`
-- `symbols`
-- `document-symbols`
-- `document-text`
-- `document-lines`
-- `definition`
-- `references`
-- `implementations`
-- `quick-info`
-- `type-definition`
-- `signature-help`
-- `symbol-source`
+The current RoslynKit command surface is generated from `BuiltinCommandRegistry` in `docs/roslynkit-command-reference.md`. Do not duplicate the runtime command list here; use the generated reference when comparing implemented commands with this planning inventory.
 
 `version` is a Git-style tool metadata command and does not correspond to a Roslyn LSP method. `symbol-source` is a RoslynKit-specific command built on `SymbolFinder` and declaration syntax spans rather than a single Roslyn LSP method.
 

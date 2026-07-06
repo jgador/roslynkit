@@ -48,6 +48,8 @@ Update both skill files together when any of these change:
 - reusable cursor-choice guidance or generic examples;
 - fallback guidance for non-C# or non-semantic tasks.
 
+Exact runtime command names, usage strings, and options are generated in `docs/roslynkit-command-reference.md` from `BuiltinCommandRegistry`. When command metadata changes, regenerate that file and keep the skills focused on compact routing guidance instead of duplicating the full reference.
+
 When you edit one skill file for command-shape guidance, mirror the same structural change in the other skill file in the same commit.
 
 ## Stable skill workflow

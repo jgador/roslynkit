@@ -55,31 +55,28 @@ roslynkit version <informational-version>
 
 The printed value comes from the assembly informational version and may include build metadata after `+`.
 
-Available commands:
+Common examples:
 
 ```powershell
 roslynkit version
-roslynkit --version
 roslynkit workspace --target .\MySolution.slnx
 roslynkit workspace --target .\MySolution.slnx --include-generated --include-additional --include-analyzer-config
 roslynkit diagnostics --target .\MySolution.slnx
 roslynkit symbols --target .\MySolution.slnx --query MyType
 roslynkit symbols --target .\MySolution.slnx --query MyService --exact --kind class
 roslynkit document-symbols --target .\MySolution.slnx --file .\src\MyApp\Program.cs
-roslynkit document-text --target .\MySolution.slnx --file .\src\MyApp\Service.cs
 roslynkit document-lines --target .\MySolution.slnx --file .\src\MyApp\Service.cs --start-line 40 --end-line 52
 roslynkit definition --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20
 roslynkit definition --target .\MySolution.slnx --symbol MyApp.MyService
-roslynkit references --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20
 roslynkit references --target .\MySolution.slnx --symbol MyApp.MyService.Execute
-roslynkit implementations --target .\src\MyApp\MyApp.csproj --file .\src\MyApp\Service.cs --line 23 --column 23
 roslynkit implementations --target .\MySolution.slnx --symbol MyApp.IMyService
 roslynkit quick-info --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 10 --column 20
-roslynkit type-definition --target .\src\MyApp\MyApp.csproj --file .\src\MyApp\Service.cs --line 27 --column 22
 roslynkit signature-help --target .\MySolution.slnx --file .\src\MyApp\Program.cs --line 42 --column 17
 roslynkit symbol-source --target .\MySolution.slnx --symbol "M:MyApp.MyService.Execute(System.String)"
 roslynkit document-text --target .\src\MyApp\MyApp.csproj --file .\obj\Debug\net10.0\Generated.g.cs --document-kind sourceGenerated
 ```
+
+The exact runtime command reference is generated from `BuiltinCommandRegistry` in `docs/roslynkit-command-reference.md`. Use that file or `roslynkit help <command>` for complete usage strings and options.
 
 Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-based. `version` and top-level `--version` do not require `--target`.
 
@@ -95,7 +92,7 @@ Symbol bullets include an `id:` field when Roslyn can provide a documentation-co
 
 The markdown output is the only format; there is no `--format` option. Locations render as one-based `path:line:column-endLine:endColumn` ranges, and `symbol-source`, `document-text`, `document-lines`, and `quick-info` payloads stay verbatim inside fenced code blocks — real newlines and quotes, no string escaping. A zero exit code means stdout is command output; a non-zero exit code means stdout is the plain-text error. See `docs/markdown-output-format.md` for the full per-command output contract.
 
-See `docs/roslyn-lsp-commands.md` for the exhaustive Roslyn language-server method inventory used to compare RoslynKit's current command set with Roslyn's broader code intelligence surface.
+See `docs/roslyn-lsp-commands.md` for the exhaustive Roslyn language-server method inventory used to compare RoslynKit with Roslyn's broader code intelligence surface.
 
 ## Command Model
 
@@ -121,6 +118,7 @@ roslynkit symbols --help
 - `docs/dev-install.md`: side-by-side prerelease dev install for users who want a separate dev build.
 - `docs/dotnet-tool-release.md`: maintainer packaging and release workflow.
 - `docs/markdown-output-format.md`: the markdown output contract for all CLI command results.
+- `docs/roslynkit-command-reference.md`: generated runtime command reference from `BuiltinCommandRegistry`.
 - `docs/roslyn-lsp-commands.md`: Roslyn language-server method inventory and coverage comparison.
 
 ## Repo-Local Skills
