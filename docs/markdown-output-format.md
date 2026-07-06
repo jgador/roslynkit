@@ -91,6 +91,19 @@ For repeated items, output uses compact bullets:
 
 `name:` carries the fully qualified display name, and `id:` carries the documentation-comment ID that chains into `--symbol` when Roslyn can provide one. For `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations`, a non-empty XML summary may render as an indented `documentation:` continuation line below the symbol bullet. `references` renders documentation once in the command header for the searched symbol. When a symbol has more than one declaration (partial types), extra `- decl:` bullets follow with one location each.
 
+### Documentation-Comment ID Prefixes
+
+This is the canonical prefix legend for RoslynKit `id:` values and `--symbol` selectors that use Roslyn documentation-comment IDs:
+
+- `N:` namespace
+- `T:` type, including class, struct, interface, enum, delegate, or record
+- `M:` method-like member, including method, constructor, operator, or conversion; constructors use `#ctor`
+- `P:` property or indexer
+- `F:` field
+- `E:` event
+
+Treat the complete `id:` value as opaque when chaining it into `--symbol`; keep the prefix, containing type, member name, and signature suffix exactly as emitted.
+
 For source text, output uses fenced code blocks with a fence longer than any backtick run inside the payload:
 
 ````markdown

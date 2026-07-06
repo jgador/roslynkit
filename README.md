@@ -101,7 +101,7 @@ roslynkit definition --target .\MySolution.slnx --file .\src\MyApp\Service.cs --
 roslynkit definition --target .\MySolution.slnx --symbol "M:MyApp.MyService.Execute(System.String)"
 ```
 
-The `--symbol` selector can be a Roslyn documentation-comment ID such as `T:MyApp.MyService` or `M:MyApp.MyService.Execute(System.String)`, or a qualified symbol name such as `MyApp.MyService.Execute`.
+The `--symbol` selector can be a Roslyn documentation-comment ID emitted as `id:` in command output, such as `T:MyApp.MyService` or `M:MyApp.MyService.Execute(System.String)`, or a qualified symbol name such as `MyApp.MyService.Execute`. Prefix meanings are defined in [docs/markdown-output-format.md](docs/markdown-output-format.md).
 
 If a qualified name is ambiguous, RoslynKit fails with candidate documentation-comment IDs so you can rerun the command with the exact symbol. Symbol IDs are more stable than saved line and column coordinates when files are changing.
 

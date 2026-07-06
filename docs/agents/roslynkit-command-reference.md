@@ -4,7 +4,7 @@
 
 Source: `src/RoslynKit/BuiltinCommandRegistry.cs`
 
-This reference lists the runtime command metadata used by parser binding and help output. Agent routing guidance remains in [.agents/skills/roslynkit/SKILL.md](../../.agents/skills/roslynkit/SKILL.md) and [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md); planning coverage remains in [docs/roslyn-lsp-commands.md](../roslyn-lsp-commands.md).
+This reference lists the runtime command metadata used by parser binding and help output. For emitted `id:` values and documentation-comment ID prefix meanings, see [docs/markdown-output-format.md](../markdown-output-format.md). Agent routing guidance remains in [.agents/skills/roslynkit/SKILL.md](../../.agents/skills/roslynkit/SKILL.md) and [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md); planning coverage remains in [docs/roslyn-lsp-commands.md](../roslyn-lsp-commands.md).
 
 ## Commands
 
@@ -167,7 +167,7 @@ roslynkit definition --target <target> --symbol <selector>
 - `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
 - `--line` `<n>`: one-based source line
 - `--column` `<n>`: one-based source column
-- `--symbol` `<selector>`: documentation-comment ID (T:/M:/P:/F:/E:/N:) or qualified symbol name
+- `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
 
 ## `type-definition`
 
@@ -209,7 +209,7 @@ roslynkit references --target <target> --symbol <selector> [--max-results <n>]
 - `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
 - `--line` `<n>`: one-based source line
 - `--column` `<n>`: one-based source column
-- `--symbol` `<selector>`: documentation-comment ID (T:/M:/P:/F:/E:/N:) or qualified symbol name
+- `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
 - `--max-results` `<n>`: maximum results to return
 
 ## `implementations`
@@ -232,7 +232,7 @@ roslynkit implementations --target <target> --symbol <selector> [--max-results <
 - `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
 - `--line` `<n>`: one-based source line
 - `--column` `<n>`: one-based source column
-- `--symbol` `<selector>`: documentation-comment ID (T:/M:/P:/F:/E:/N:) or qualified symbol name
+- `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
 - `--max-results` `<n>`: maximum results to return
 
 ## `quick-info`
@@ -288,4 +288,4 @@ roslynkit symbol-source --target <target> --symbol <selector>
 ### Options
 
 - `--target` / `-t` `<target>` (required): solution or project file to load
-- `--symbol` `<selector>` (required): documentation-comment ID (T:/M:/P:/F:/E:/N:) or qualified symbol name
+- `--symbol` `<selector>` (required): documentation-comment ID or qualified symbol name

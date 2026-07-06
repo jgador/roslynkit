@@ -33,7 +33,7 @@ Do not default to `Get-Content`, `Select-String`, or grep-style file reads for q
 - The target has no global name (local variable, parameter, lambda parameter): position mode is the only way to address it.
 - `signature-help` and mid-expression `quick-info` are always position-based: they answer questions about a spot in the code, not about a declaration.
 
-`--symbol` takes a documentation-comment ID (`T:`, `M:`, `P:`, `F:`, `E:`, or `N:` prefix) or a qualified name such as `SomeNamespace.SomeType.SomeMethod`. An ambiguous qualified name (for example method overloads) fails with the candidate documentation-comment IDs; retry with the exact ID. Constructors need the `M:...#ctor(...)` ID form.
+`--symbol` takes a documentation-comment ID from RoslynKit `id:` output or a qualified name such as `SomeNamespace.SomeType.SomeMethod`. Prefix meanings for documentation-comment IDs are defined in `docs/markdown-output-format.md`. An ambiguous qualified name (for example method overloads) fails with the candidate documentation-comment IDs; retry with the exact ID. Constructors need the emitted `M:...#ctor(...)` ID form.
 
 Hard rule: coordinates must come from tool output, a diagnostic, or the user. If reading or searching a file would be required to find a line number, use `--symbol` instead.
 

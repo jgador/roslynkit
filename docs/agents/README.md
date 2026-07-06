@@ -19,7 +19,7 @@ Keep manual references, roadmap inventories, and benchmark procedures outside th
 
 Do not duplicate shared runtime facts in hand-written agent docs. Link to these shared contracts instead:
 
-- [docs/markdown-output-format.md](../markdown-output-format.md): deterministic command output contract.
+- [docs/markdown-output-format.md](../markdown-output-format.md): deterministic command output contract, including documentation-comment ID prefix meanings.
 - [docs/dev-install.md](../dev-install.md): side-by-side prerelease development install.
 
 When command metadata changes, regenerate [docs/agents/roslynkit-command-reference.md](roslynkit-command-reference.md) with:

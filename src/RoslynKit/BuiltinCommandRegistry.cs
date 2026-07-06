@@ -244,7 +244,7 @@ public static class BuiltinCommandRegistry
 
     private static OptionSpec SymbolOption(bool required = false)
     {
-        return OptionSpec.String(null, "symbol", "selector", "documentation-comment ID (T:/M:/P:/F:/E:/N:) or qualified symbol name", required);
+        return OptionSpec.String(null, "symbol", "selector", "documentation-comment ID or qualified symbol name", required);
     }
 
     private static OptionSpec MaxResultsOption()
