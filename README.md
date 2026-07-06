@@ -101,7 +101,7 @@ roslynkit definition --target .\MySolution.slnx --file .\src\MyApp\Service.cs --
 roslynkit definition --target .\MySolution.slnx --symbol "M:MyApp.MyService.Execute(System.String)"
 ```
 
-The `--symbol` selector can be a Roslyn documentation-comment ID emitted as `id:` in command output, such as `T:MyApp.MyService` or `M:MyApp.MyService.Execute(System.String)`, or a qualified symbol name such as `MyApp.MyService.Execute`. Prefix meanings are defined in [docs/markdown-output-format.md](docs/markdown-output-format.md).
+The `--symbol` selector can be a Roslyn documentation-comment ID emitted as `id:` in command output, such as `T:MyApp.MyService` or `M:MyApp.MyService.Execute(System.String)`, or a qualified symbol name such as `MyApp.MyService.Execute`. Prefix meanings are defined in [docs/agents/markdown-output-format.md](docs/agents/markdown-output-format.md).
 
 If a qualified name is ambiguous, RoslynKit fails with candidate documentation-comment IDs so you can rerun the command with the exact symbol. Symbol IDs are more stable than saved line and column coordinates when files are changing.
 
@@ -126,12 +126,12 @@ error: usage
 message: Missing required option '--target'.
 ```
 
-Exit codes are `0` for success, `2` for usage errors, `130` for cancellation, and `1` for other failures. See [docs/markdown-output-format.md](docs/markdown-output-format.md) for the complete output contract.
+Exit codes are `0` for success, `2` for usage errors, `130` for cancellation, and `1` for other failures. See [docs/agents/markdown-output-format.md](docs/agents/markdown-output-format.md) for the complete output contract.
 
 ## Documentation
 
 - [docs/agents/roslynkit-command-reference.md](docs/agents/roslynkit-command-reference.md): generated command names, usage strings, and options.
-- [docs/markdown-output-format.md](docs/markdown-output-format.md): command output contract.
+- [docs/agents/markdown-output-format.md](docs/agents/markdown-output-format.md): command output contract.
 - [docs/dev-install.md](docs/dev-install.md): side-by-side prerelease development install.
 - [docs/dotnet-tool-release.md](docs/dotnet-tool-release.md): maintainer packaging and release workflow.
 - [docs/roslyn-lsp-commands.md](docs/roslyn-lsp-commands.md): Roslyn language-server inventory and RoslynKit planning coverage.

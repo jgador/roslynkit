@@ -6,7 +6,7 @@ Use one source of truth per topic:
 
 - [README.md](README.md): user-facing overview, output format, packaging, and quick-start commands.
 - [docs/agents/roslynkit-command-reference.md](docs/agents/roslynkit-command-reference.md): generated runtime command reference from `BuiltinCommandRegistry`; regenerate with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --write`.
-- [docs/markdown-output-format.md](docs/markdown-output-format.md): shared command output contract for humans and agents.
+- [docs/agents/markdown-output-format.md](docs/agents/markdown-output-format.md): shared command output contract for humans, scripts, tests, and agents.
 - [docs/dev-install.md](docs/dev-install.md): semi-manual side-by-side prerelease installation for RoslynKit development.
 - [docs/dotnet-tool-release.md](docs/dotnet-tool-release.md): maintainer packaging and release workflow.
 - [docs/agents/README.md](docs/agents/README.md): index for coding-agent workflow docs that agents may discover and apply on their own.
@@ -21,7 +21,7 @@ Keep this file focused on the rules agents need during execution. Put longer age
 
 ## Project Structure & Module Organization
 
-RoslynKit is a .NET 10 command-line tool. Production code lives under `src/RoslynKit`, with the console entrypoint in `Program.cs`, CLI parsing in `CliParser.cs`, command metadata in `BuiltinCommandRegistry.cs`, and Roslyn execution logic in `RoslynCommandExecutor.cs`. Tests live under `tests/RoslynKit.Tests`, repo-local test-side utilities live under `tests/`, and small repo tooling lives under `tools/`. Shared product docs live under `docs/`; coding-agent support docs live under `docs/agents/`. Manual reference, roadmap, and benchmark docs live directly under `docs/` and are opt-in unless the user names them.
+RoslynKit is a .NET 10 command-line tool. Production code lives under `src/RoslynKit`, with the console entrypoint in `Program.cs`, CLI parsing in `CliParser.cs`, command metadata in `BuiltinCommandRegistry.cs`, and Roslyn execution logic in `RoslynCommandExecutor.cs`. Tests live under `tests/RoslynKit.Tests`, repo-local test-side utilities live under `tests/`, and small repo tooling lives under `tools/`. Shared product docs live under `docs/`; coding-agent support docs and agent-suitable shared runtime contracts live under `docs/agents/`. Manual reference, roadmap, and benchmark docs live directly under `docs/` and are opt-in unless the user names them.
 
 ## Build, Test, and Development Commands
 
@@ -41,6 +41,8 @@ When adding or editing prose in Markdown docs, checked-in agent prompts, or skil
 When writing or editing agent-facing prose, avoid second-person pronouns for coding agents. Do not use `you` or `your` to refer to an agent, sub-agent, coding tool, or future agent reader; use explicit nouns such as `the agent`, `the sub-agent`, `Codex`, or `coding agents` instead.
 
 For exact runtime command names, usage strings, and options, read generated [docs/agents/roslynkit-command-reference.md](docs/agents/roslynkit-command-reference.md). Keep agent guidance concise and route-oriented; do not duplicate full command reference material in [AGENTS.md](AGENTS.md) or skill files.
+
+For RoslynKit output semantics, failure shape, location format, and documentation-comment ID prefix meanings, read [docs/agents/markdown-output-format.md](docs/agents/markdown-output-format.md). Treat it as agent-suitable shared runtime contract context before interpreting command output or changing output shape.
 
 For longer agent-only guidance, start at [docs/agents/README.md](docs/agents/README.md).
 
@@ -137,7 +139,7 @@ Navigation comments should help RoslynKit documentation-enabled navigation outpu
 - Prioritize read-only Roslyn intelligence: inspect, navigate, understand, and verify C# code before edit-producing workflows.
 - If formatting, rename, or code-action features are added, return deterministic proposed edits before adding any source-mutating apply mode.
 - Keep command execution separate from argument parsing.
-- Keep the markdown output contract ([docs/markdown-output-format.md](docs/markdown-output-format.md)) stable, deterministic, and covered by parser/renderer tests when changed.
+- Keep the markdown output contract ([docs/agents/markdown-output-format.md](docs/agents/markdown-output-format.md)) stable, deterministic, and covered by parser/renderer tests when changed.
 - Pass `CancellationToken` through async Roslyn operations when available.
 - If a public CLI option, command, output shape, package surface, or documented workflow changes, update [README.md](README.md) or the relevant docs in the same change. When command metadata changes, regenerate [docs/agents/roslynkit-command-reference.md](docs/agents/roslynkit-command-reference.md) and verify it with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --check`.
 

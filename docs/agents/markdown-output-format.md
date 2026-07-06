@@ -1,6 +1,6 @@
 # Markdown Output Format
 
-This document is the output contract for RoslynKit. Every command writes this token-saving markdown-flavored text to stdout; there is no JSON output. The renderer lives in `src/RoslynKit/MarkdownProjection.cs`.
+This document is the output contract for RoslynKit. Every command writes this token-saving markdown-flavored text to stdout; there is no JSON output. The renderer lives in [src/RoslynKit/MarkdownProjection.cs](../../src/RoslynKit/MarkdownProjection.cs).
 
 The output stays close to GitHub Flavored Markdown, but it uses only the smallest useful subset for coding-agent consumption.
 

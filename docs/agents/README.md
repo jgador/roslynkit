@@ -1,10 +1,11 @@
 # RoslynKit Agents Documentation
 
-These docs are for guidance that coding agents should discover and apply during normal RoslynKit repo work. Keep root [AGENTS.md](../../AGENTS.md) concise and operational; put longer agent workflow rules here only when they are safe for agents to use without a manual user tag.
+These docs are for guidance and shared runtime contracts that coding agents should discover and apply during normal RoslynKit repo work. Keep root [AGENTS.md](../../AGENTS.md) concise and operational; put longer agent workflow rules here only when they are safe for agents to use without a manual user tag.
 
 ## Agent Docs
 
 - [docs/agents/roslynkit-command-reference.md](roslynkit-command-reference.md): generated runtime command names, usage strings, and options from `BuiltinCommandRegistry`.
+- [docs/agents/markdown-output-format.md](markdown-output-format.md): deterministic command output contract, including documentation-comment ID prefix meanings.
 - [docs/agents/skill-maintenance.md](skill-maintenance.md): ownership and synchronization rules for checked-in RoslynKit skills and Claude skill wrappers.
 
 ## Not Agent-Autoloaded
@@ -15,11 +16,10 @@ Keep manual references, roadmap inventories, and benchmark procedures outside th
 - [docs/roslyn-lsp-commands.md](../roslyn-lsp-commands.md): Roslyn language-server method inventory and RoslynKit command planning coverage.
 - [docs/token-efficiency-benchmark.md](../token-efficiency-benchmark.md): manual Codex token-efficiency benchmark procedure.
 
-## Shared Contracts
+## Linked Shared Docs
 
-Do not duplicate shared runtime facts in hand-written agent docs. Link to these shared contracts instead:
+Do not duplicate shared runtime or workflow facts in hand-written agent docs. Link to the canonical source instead:
 
-- [docs/markdown-output-format.md](../markdown-output-format.md): deterministic command output contract, including documentation-comment ID prefix meanings.
 - [docs/dev-install.md](../dev-install.md): side-by-side prerelease development install.
 
 When command metadata changes, regenerate [docs/agents/roslynkit-command-reference.md](roslynkit-command-reference.md) with:
