@@ -15,10 +15,11 @@ Purpose
 
 Atlas-first workflow
 - Start with `.codex/atlas/repo-map.md`.
+- Before returning `preferred_commands` or composing RoslynKit command suggestions, read [docs/agents/roslynkit-command-reference.md](../../docs/agents/roslynkit-command-reference.md) and treat it as the generated source of truth for runtime command names, usage strings, required options, and option names.
 - If the task or handoff is language-ambiguous, do not assume C# from generic API, endpoint, implementation, component, or test wording; return a note asking the main agent to apply the no-primer C# tool gate first.
 - When the map has a runtime or architecture spine relevant to the task, turn that spine into the first semantic read order before raw source reads.
 - For command and feature tracing, start from the spine symbols/files, then use RoslynKit to verify only the unclear hop.
-- Prefer RoslynKit commands when available: `workspace`, `symbols`, `document-symbols`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, `signature-help`, `document-lines`, and `symbol-source`.
+- Prefer RoslynKit commands when available, using the generated command reference for the exact command surface instead of a hard-coded list.
 - Use `workspace` only for solution/project grounding; do not use it as a broad source dump.
 - If RoslynKit is unavailable or the workspace fails to load, fall back to the narrowest terminal-native read.
 - Do not perform generic repo discovery; ask the main agent for a scout handoff when candidate files are still unclear.
