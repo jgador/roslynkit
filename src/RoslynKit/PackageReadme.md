@@ -43,6 +43,6 @@ Document commands use `--file <path>` as the document selector. Relative paths r
 roslynkit workspace --target .\MySolution.slnx
 ```
 
-See the repository README for usage guidance and the generated runtime command reference. Side-by-side prerelease dev installs live in `docs/dev-install.md`, and maintainer packaging steps live in `docs/dotnet-tool-release.md` in the same repository:
+See [README.md](https://github.com/jgador/roslynkit#readme) for usage guidance and [docs/agents/roslynkit-command-reference.md](https://github.com/jgador/roslynkit/blob/master/docs/agents/roslynkit-command-reference.md) for the generated runtime command reference. Side-by-side prerelease dev installs live in [docs/dev-install.md](https://github.com/jgador/roslynkit/blob/master/docs/dev-install.md), and maintainer packaging steps live in [docs/dotnet-tool-release.md](https://github.com/jgador/roslynkit/blob/master/docs/dotnet-tool-release.md) in the same repository:
 
 [RoslynKit on GitHub](https://github.com/jgador/roslynkit)

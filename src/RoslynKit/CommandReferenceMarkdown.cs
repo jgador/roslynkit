@@ -21,7 +21,7 @@ public static class CommandReferenceMarkdown
         AppendLine(builder);
         AppendLine(builder, "Source: `src/RoslynKit/BuiltinCommandRegistry.cs`");
         AppendLine(builder);
-        AppendLine(builder, "This reference lists the runtime command metadata used by parser binding and help output. Agent routing guidance remains in `.agents/skills/roslynkit*/SKILL.md`; planning coverage remains in `docs/roslyn-lsp-commands.md`.");
+        AppendLine(builder, "This reference lists the runtime command metadata used by parser binding and help output. Agent routing guidance remains in [.agents/skills/roslynkit/SKILL.md](../../.agents/skills/roslynkit/SKILL.md) and [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md); planning coverage remains in [docs/roslyn-lsp-commands.md](../roslyn-lsp-commands.md).");
         AppendLine(builder);
         AppendLine(builder, "## Commands");
         AppendLine(builder);

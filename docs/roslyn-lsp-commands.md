@@ -4,7 +4,7 @@ This inventory captures the command-like surfaces found in the local Roslyn chec
 
 Roslyn does not have a CLI command registry equivalent to RoslynKit's `BuiltinCommandRegistry`. For RoslynKit planning, the closest exhaustive command surface is the Roslyn language-server protocol handler table under `src\LanguageServer\Protocol\Handler`, plus LSP `Command` identifiers emitted by handlers.
 
-Use this document as reference material when deciding which Roslyn capabilities RoslynKit may expose as CLI commands. RoslynKit is intended to give coding agents C# language intelligence through a deterministic CLI and accompanying `SKILL.md`; it is not a design commitment to make RoslynKit a JSON-RPC LSP client or server.
+Use this document as reference material when deciding which Roslyn capabilities RoslynKit may expose as CLI commands. RoslynKit is intended to give coding agents C# language intelligence through a deterministic CLI and accompanying [.agents/skills/roslynkit/SKILL.md](../.agents/skills/roslynkit/SKILL.md); it is not a design commitment to make RoslynKit a JSON-RPC LSP client or server.
 
 RoslynKit should prioritize read-only Roslyn functionality. The near-term surface should help agents inspect, navigate, understand, and verify C# code without modifying source files or project state. Edit-producing features such as formatting, rename, and code actions are lower priority; if exposed later, they should produce deterministic proposed edits before any apply mode exists.
 
@@ -56,7 +56,7 @@ Priorities are assigned for RoslynKit as a C#-specific CLI used by coding agents
 
 ## RoslynKit Runtime Command Reference
 
-The current RoslynKit command surface is generated from `BuiltinCommandRegistry` in `docs/agents/roslynkit-command-reference.md`. Do not duplicate the runtime command list here; use the generated reference when comparing implemented commands with this planning inventory.
+The current RoslynKit command surface is generated from `BuiltinCommandRegistry` in [docs/agents/roslynkit-command-reference.md](agents/roslynkit-command-reference.md). Do not duplicate the runtime command list here; use the generated reference when comparing implemented commands with this planning inventory.
 
 `version` is a Git-style tool metadata command and does not correspond to a Roslyn LSP method. `symbol-source` is a RoslynKit-specific command built on `SymbolFinder` and declaration syntax spans rather than a single Roslyn LSP method.
 

@@ -138,7 +138,7 @@ High-signal paths:
 - `C:\repo\GitHub\vscode-csharp\src\lsptoolshost\extensions\roslynLanguageServerExportChannel.ts` - post-start request bridge.
 - `C:\repo\GitHub\vscode-csharp\src\shared\options.ts` - canonical `dotnet.server.*` setting names.
 - `C:\repo\GitHub\vscode-csharp\package.json` - contributed settings for server path, component paths, activation context, and command/menu gating.
-- `C:\repo\GitHub\vscode-csharp\CONTRIBUTING.md` - local Roslyn server debugging and C# Dev Kit override guidance.
+- [CONTRIBUTING.md](file:///C:/repo/GitHub/vscode-csharp/CONTRIBUTING.md) - local Roslyn server debugging and C# Dev Kit override guidance.
 - `C:\repo\GitHub\vscode-csharp\test\lsptoolshost\integrationTests` - integration tests for definitions, references, document symbols, diagnostics, source generators, formatting, and more.
 
 Useful searches:

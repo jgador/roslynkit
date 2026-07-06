@@ -1,11 +1,11 @@
 ---
 name: commit-context
-description: Refresh the ignored `artifacts/commit-context.md` file from the current git change set. Use as an end-of-session maintenance step, before `$git-commit-push`, or when the user asks to summarize current changes for faster commit preparation.
+description: Refresh the ignored commit context file from the current git change set. Use as an end-of-session maintenance step, before `$git-commit-push`, or when the user asks to summarize current changes for faster commit preparation.
 ---
 
 # Commit Context
 
-Update `artifacts/commit-context.md` as a commit-ready message. Run this near the end of a meaningful coding session, similar to post-change formatting. The file is advisory only: future commit/push work must still inspect the live git status and diffs.
+Update [artifacts/commit-context.md](../../../artifacts/commit-context.md) as a commit-ready message. Run this near the end of a meaningful coding session, similar to post-change formatting. The file is advisory only: future commit/push work must still inspect the live git status and diffs.
 
 ## Workflow
 
@@ -29,7 +29,7 @@ Update `artifacts/commit-context.md` as a commit-ready message. Run this near th
    - two to four imperative body paragraphs
    - concise paragraphs describing what changed, with no markdown headings or bullets
 
-4. Write or refresh `artifacts/commit-context.md` as a ready-to-use commit message:
+4. Write or refresh [artifacts/commit-context.md](../../../artifacts/commit-context.md) as a ready-to-use commit message:
    - first line: subject
    - second line: blank
    - remaining lines: body paragraphs matching recent commit structure
@@ -40,7 +40,7 @@ Update `artifacts/commit-context.md` as a commit-ready message. Run this near th
 
 5. Do not stage, commit, push, stash, reset, or otherwise mutate git state.
 
-6. Do not treat `artifacts/commit-context.md` as authoritative. It accelerates commit-message drafting, but the actual commit workflow must re-check the live diff.
+6. Do not treat [artifacts/commit-context.md](../../../artifacts/commit-context.md) as authoritative. It accelerates commit-message drafting, but the actual commit workflow must re-check the live diff.
 
 ## Template
 

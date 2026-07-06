@@ -7,7 +7,7 @@ The benchmark uses actual Codex accounting. Each trial starts paired `codex --mo
 ## What It Compares
 
 - Baseline arm: native repo inspection with `rg`, `Get-Content`, `Select-String`, and ordinary PowerShell only.
-- RoslynKit arm: the side-by-side `roslynkit-dev` executable plus one required read of `.agents/skills/roslynkit-dev/SKILL.md` before C# inspection.
+- RoslynKit arm: the side-by-side `roslynkit-dev` executable plus one required read of [.agents/skills/roslynkit-dev/SKILL.md](../.agents/skills/roslynkit-dev/SKILL.md) before C# inspection.
 
 Both arms run under the same Codex full-access mode so MSBuild/Roslyn workspace loading can create temporary files if needed. The prompts still forbid repository edits. Both arms also forbid Codex memory, prior session artifacts, repo-local memory/cache tools, Atlas files/tools, subagents, and web search. Benchmark artifacts are written under ignored `artifacts/token-efficiency/<timestamp>/`.
 
@@ -86,7 +86,7 @@ Treat a run as invalid when:
 - either arm uses repo-local memory/cache tools or generated repo-local memory/cache directories.
 - either arm uses Atlas files or tools such as `.codex/atlas`, `atlas-router`, `atlas-csharp-mapper`, or Atlas scripts.
 - either arm uses subagents such as `scout`, `explorer`, or `worker`.
-- the RoslynKit arm uses text/source inspection commands such as `rg`, `Get-Content`, or `Select-String`, except for the exact `.agents/skills/roslynkit-dev/SKILL.md` read required by the prompt.
+- the RoslynKit arm uses text/source inspection commands such as `rg`, `Get-Content`, or `Select-String`, except for the exact [.agents/skills/roslynkit-dev/SKILL.md](../.agents/skills/roslynkit-dev/SKILL.md) read required by the prompt.
 - the RoslynKit arm does not issue a RoslynKit command.
 - a RoslynKit semantic command exits non-zero or reports a workspace/remote invocation error.
 - the final answer reports blocked or incomplete semantic evidence.

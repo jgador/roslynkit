@@ -2,7 +2,7 @@
 
 This document is the operator-facing source of truth for the side-by-side RoslynKit development install.
 
-It is intentionally separate from `.agents\skills\roslynkit-dev\SKILL.md`. The skill file tells Codex how to use an already-installed dev tool. This document tells a human how to install or update that tool.
+It is intentionally separate from [.agents/skills/roslynkit-dev/SKILL.md](../.agents/skills/roslynkit-dev/SKILL.md). The skill file tells Codex how to use an already-installed dev tool. This document tells a human how to install or update that tool.
 
 ## Install location
 
@@ -85,8 +85,8 @@ The reported version should include the prerelease suffix, for example `0.1.0-de
 
 ## Relationship to the checked-in skills
 
-- `.agents\skills\roslynkit-dev\SKILL.md` is the repo-default usage guide for Codex inside this repo.
-- `.agents\skills\roslynkit\SKILL.md` is the stable/reference skill.
-- `AGENTS.md` is the source of truth for which skill is the repo-default.
+- [.agents/skills/roslynkit-dev/SKILL.md](../.agents/skills/roslynkit-dev/SKILL.md) is the repo-default usage guide for Codex inside this repo.
+- [.agents/skills/roslynkit/SKILL.md](../.agents/skills/roslynkit/SKILL.md) is the stable/reference skill.
+- [AGENTS.md](../AGENTS.md) is the source of truth for which skill is the repo-default.
 
 Do not move these install steps into the dev skill file. Keep installation here and usage guidance in the skill.

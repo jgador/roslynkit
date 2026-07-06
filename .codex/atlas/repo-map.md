@@ -9,8 +9,8 @@ Resident architecture context for first-pass navigation. Atlas stores durable ro
 - Tests: `tests/RoslynKit.Tests/`
 - Test utility: `tests/RoslynKit.WorkspaceGraphDump/`
 - Fixture input: `tests/FixtureWorkspace/App/`
-- Docs and packaging: `README.md`, `docs/`, `docs/agents/`, `scripts/`
-- Agent assets: `AGENTS.md`, `.agents/skills/roslynkit*/`, `.agents/skills/commit-context/`, `.agents/skills/git-commit-push/`, `.codex/agents/`, `.codex/atlas/repo-map.md`
+- Docs and packaging: [README.md](../../README.md), `docs/`, `docs/agents/`, `scripts/`
+- Agent assets: [AGENTS.md](../../AGENTS.md), `.agents/skills/roslynkit*/`, `.agents/skills/commit-context/`, `.agents/skills/git-commit-push/`, `.codex/agents/`, [.codex/atlas/repo-map.md](repo-map.md)
 
 ## Runtime Flow
 
@@ -76,9 +76,9 @@ flowchart TD
 
 - CLI routing: `Program.cs`, `CliApplication.cs`, `CliParser.cs`, `BuiltinCommandRegistry.cs`, `RoslynCommandExecutor.cs`; start symbols `Program.Main`, `CliApplication.RunAsync`, `CliParser.Parse`, `RoslynCommandExecutor.ExecuteAsync`; tests `CliParserTests.cs`, `CliOutputTests.cs`, `CommandExecution/`, `MarkdownFormatTests.cs`.
 - Workspace/navigation: `RoslynCommandExecutor.cs`, `RoslynWorkspaceLoader.cs`, `PositionResolver.cs`, `RoslynSymbolResolver.cs`, `RoslynDocumentFilters.cs`, `RoslynSymbolSearch.cs`, `RoslynSignatureHelpService.cs`; start symbols `RoslynWorkspaceLoader.LoadAsync`, `PositionResolver.GetPositionAsync`, `RoslynSymbolResolver.ResolveAsync`, `RoslynSymbolSearch.EnumerateSourceSymbols`; tests `CommandExecution/`, `SymbolsCommandTests.cs`, `CliOutputTests.cs`.
-- Markdown output: `MarkdownProjection.cs`, result model types under `Output/`, `docs/markdown-output-format.md`; tests `MarkdownFormatTests.cs`, `CliOutputTests.cs`.
-- Tooling/packaging: `RoslynKit.csproj`, `scripts/prepare-roslynkit-package.ps1`, `scripts/install-roslynkit-dev.ps1`, `scripts/RoslynKit.Packaging.ps1`, `docs/dev-install.md`, `docs/dotnet-tool-release.md`, `docs/agents/skill-maintenance.md`; tests usually start with `CliOutputTests.cs` plus build/pack smoke commands.
-- Agent/navigation policy: `AGENTS.md`, `docs/agents/README.md`, `docs/agents/roslynkit-command-reference.md`, `.agents/skills/roslynkit*/SKILL.md`, `.codex/agents/*.toml`, this map.
+- Markdown output: `MarkdownProjection.cs`, result model types under `Output/`, [docs/markdown-output-format.md](../../docs/markdown-output-format.md); tests `MarkdownFormatTests.cs`, `CliOutputTests.cs`.
+- Tooling/packaging: `RoslynKit.csproj`, `scripts/prepare-roslynkit-package.ps1`, `scripts/install-roslynkit-dev.ps1`, `scripts/RoslynKit.Packaging.ps1`, [docs/dev-install.md](../../docs/dev-install.md), [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md), [docs/agents/skill-maintenance.md](../../docs/agents/skill-maintenance.md); tests usually start with `CliOutputTests.cs` plus build/pack smoke commands.
+- Agent/navigation policy: [AGENTS.md](../../AGENTS.md), [docs/agents/README.md](../../docs/agents/README.md), [docs/agents/roslynkit-command-reference.md](../../docs/agents/roslynkit-command-reference.md), [.agents/skills/roslynkit/SKILL.md](../../.agents/skills/roslynkit/SKILL.md), [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md), `.codex/agents/*.toml`, this map.
 
 ## Test Routing
 
