@@ -33,6 +33,8 @@ Update `artifacts/commit-context.md` as a commit-ready message. Run this near th
    - first line: subject
    - second line: blank
    - remaining lines: body paragraphs matching recent commit structure
+   - final trailer: `Co-authored-by: Codex <242516109+Codex@users.noreply.github.com>`
+   - keep one blank line between the final body paragraph and the trailer
    - include the whole current change set, not only the latest edit
    - do not include status headings, verification logs, risk lists, or template labels unless they belong in the commit message itself
 
@@ -50,4 +52,6 @@ Update `artifacts/commit-context.md` as a commit-ready message. Run this near th
 <Imperative paragraph describing related docs, tests, or workflow updates.>
 
 <Optional imperative paragraph for important constraints or follow-through.>
+
+Co-authored-by: Codex <242516109+Codex@users.noreply.github.com>
 ```
