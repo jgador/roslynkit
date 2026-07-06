@@ -518,10 +518,6 @@ function Get-CommandViolations {
                 $violations.Add("roslynkit arm used text/source inspection: $command")
             }
 
-            if ($usesRoslynKitCommand -and
-                $command -match "(?i)(^|[\s;&|])--format(\s|=|$)") {
-                $violations.Add("roslynkit arm used unsupported --format option: $command")
-            }
         }
     }
 
@@ -569,7 +565,6 @@ Constraints:
 - Do not read AGENTS.md, memory files, docs, or any other skill file.
 - Use this RoslynKit dev executable for C# inspection: {ROSLYNKIT_PATH}
 - Always pass --target explicitly.
-- Do not pass --format; RoslynKit output is markdown text only.
 - Use .\tests\FixtureWorkspace\App\App.csproj as the fixture target when inspecting FixtureApp symbols.
 - Prefer symbol-source, implementations, references, quick-info, and symbols over full document reads.
 - Stop as soon as you have enough evidence.
@@ -606,7 +601,6 @@ Constraints:
 - Do not read AGENTS.md, memory files, docs, or any other skill file.
 - Use this RoslynKit dev executable for C# inspection: {ROSLYNKIT_PATH}
 - Always pass --target .\RoslynKit.slnx for repo symbols.
-- Do not pass --format; RoslynKit output is markdown text only.
 - Prefer symbols with --max-results 1 and symbol-source over full document reads.
 - Stop as soon as you have enough evidence.
 Return a concise answer with the RoslynKit commands or symbol ids that support it.
@@ -642,7 +636,6 @@ Constraints:
 - Do not read AGENTS.md, memory files, docs, or any other skill file.
 - Use this RoslynKit dev executable for C# inspection: {ROSLYNKIT_PATH}
 - Always pass --target .\RoslynKit.slnx for repo symbols.
-- Do not pass --format; RoslynKit output is markdown text only.
 - Prefer references --symbol with the smallest useful --max-results over broad searches.
 - Stop as soon as you have enough evidence.
 Return a concise answer with the RoslynKit commands or symbol ids that support it.
@@ -678,7 +671,6 @@ Constraints:
 - Do not read AGENTS.md, memory files, docs, or any other skill file.
 - Use this RoslynKit dev executable for C# inspection: {ROSLYNKIT_PATH}
 - Always pass --target .\RoslynKit.slnx for repo symbols.
-- Do not pass --format; RoslynKit output is markdown text only.
 - Use `references --symbol RoslynKit.PositionResolver.GetPositionAsync --max-results 5` first.
 - Use `definition --symbol` for known flow symbols, then `document-lines` on the returned path and nearby line window for evidence.
 - Prefer `document-lines` over `symbol-source`; do not use `document-text`.

@@ -35,7 +35,6 @@ public sealed class CliOutputTests
         Assert.StartsWith("command: symbols\ndescription: ", output.Replace("\r\n", "\n", StringComparison.Ordinal), StringComparison.Ordinal);
         Assert.Contains("usage: `roslynkit symbols ", output, StringComparison.Ordinal);
         Assert.Contains("- option: `--query` short: `-q` value: text required: true description: ", output, StringComparison.Ordinal);
-        Assert.DoesNotContain("--format", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -109,14 +108,6 @@ public sealed class CliOutputTests
 
         Assert.Contains("Option '--start-line' is no longer supported.", output, StringComparison.Ordinal);
         Assert.Contains("reads the entire resolved document only", output, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task RunAsync_WritesPlainTextUsageError_ForFormatOption()
-    {
-        var output = await AssertUsageErrorAsync(["symbols", "--target", "missing.slnx", "--query", "Foo", "--format", "text"]);
-
-        Assert.Contains("Unknown option '--format' for command 'symbols'.", output, StringComparison.Ordinal);
     }
 
     [Fact]

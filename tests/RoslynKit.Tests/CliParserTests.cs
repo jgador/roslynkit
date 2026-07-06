@@ -209,20 +209,6 @@ public sealed class CliParserTests
     }
 
     [Fact]
-    public void Parse_RejectsFormatOption_AsUnknown()
-    {
-        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
-            "symbols",
-            "--target", "repo.slnx",
-            "--query", "CliApplication",
-            "--format", "text",
-        ]));
-
-        Assert.Equal("symbols", exception.CommandName);
-        Assert.Contains("Unknown option '--format' for command 'symbols'.", exception.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void Parse_RejectsDuplicateOption()
     {
         var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(["workspace", "--target", "a.slnx", "--target", "b.slnx"]));

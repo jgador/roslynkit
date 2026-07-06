@@ -1,6 +1,6 @@
 # Markdown Output Format
 
-This document is the output contract for RoslynKit. Every command writes this token-saving markdown-flavored text to stdout; there is no `--format` option and no JSON output. The renderer lives in `src/RoslynKit/MarkdownProjection.cs`.
+This document is the output contract for RoslynKit. Every command writes this token-saving markdown-flavored text to stdout; there is no JSON output. The renderer lives in `src/RoslynKit/MarkdownProjection.cs`.
 
 The output stays close to GitHub Flavored Markdown, but it uses only the smallest useful subset for coding-agent consumption.
 
@@ -281,5 +281,4 @@ Renderer changes need focused tests for:
 - fenced code block rendering for source text containing backtick runs;
 - command-specific rendering for `symbols`, `references`, `quick-info`, `document-text`, and `symbol-source`;
 - the plain-text error shape with non-zero exit codes, including optional `hint:` lines for deterministic usage retries;
-- rejection of the removed `--format` option as an unknown option;
 - README and package documentation updates when the public output contract changes.

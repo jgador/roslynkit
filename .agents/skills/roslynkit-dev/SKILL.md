@@ -9,7 +9,6 @@ description: Use the side-by-side prerelease RoslynKit dev tool first when seman
 
 These override every other section when they conflict. They exist because reading whole files and re-reading files is the dominant token cost.
 
-- Output is always token-saving markdown-flavored text; there is no `--format` option. Do not pass `--format` — it fails as an unknown option.
 - Never read a whole `.cs` file when a position-based command (`quick-info`, `definition`, `references`) answers the question.
 - Never read the same file twice. Capture what you need the first time.
 - Resolve positions with RoslynKit instead of falling back to `Read`/grep on `.cs` source once the file is loaded.
