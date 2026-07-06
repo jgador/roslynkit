@@ -40,6 +40,20 @@ Use `.agents\skills\roslynkit\SKILL.md` only when the task is explicitly about t
 
 For literal search, prose inspection, non-C# files, or RoslynKit workspace-load failures, fall back to the terminal-native tool for the current platform instead of forcing RoslynKit.
 
+### No-Primer C# Tool Gate
+
+When the task does not already confirm C#/.NET from the user prompt, named files, project/solution files, or known C# symbols, do not ask whether to use RoslynKit and do not mention RoslynKit in the classifier. First separate code investigation from C#/.NET confirmation with this no-primer shape:
+
+```json
+{"code_investigation":"yes|no|unknown","csharp_dotnet_confirmed":"yes|no|unknown","confidence":"low|medium|high","reason":"one sentence","next_question_if_unknown":"one question or null"}
+```
+
+- If `csharp_dotnet_confirmed=yes`, RoslynKit may be used once a symbol, file, project, or cursor position is known.
+- If `code_investigation=yes` and `csharp_dotnet_confirmed=unknown`, do not use RoslynKit yet; ask `next_question_if_unknown` or gather minimal repo evidence first.
+- Minimal repo evidence for C#/.NET is a lightweight discovery of `.sln`, `.slnx`, `.csproj`, `global.json` with .NET SDK context, or relevant `.cs` source/test files.
+- If `code_investigation=no`, do not use RoslynKit first.
+- Stop after at most five classifier or clarification exchanges; if C#/.NET is still unknown, proceed with non-RoslynKit narrowing first.
+
 ### Scout-First Repo Search
 
 Use the `scout` sub-agent for repo discovery when the current agent environment exposes it and any of these are true:
@@ -63,6 +77,7 @@ Every scout prompt must include `assigned_scope`, `search_goal`, known keywords 
 ## Repository Atlas Reading Policy
 
 - Use `.codex/atlas/repo-map.md` before broad source reading.
+- When `repo-map.md` contains a runtime or architecture spine for the task domain, convert that spine into the first read order before broad literal search or scout discovery.
 - Use `atlas-router` when the architecture/domain is unclear.
 - Use `scout` when files are unclear inside a bounded scope.
 - For C# semantic inspection after candidate files or symbols are known, prefer RoslynKit or `atlas-csharp-mapper`.

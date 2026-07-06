@@ -11,10 +11,15 @@ Purpose
 - Map C#/.NET code paths with the smallest reliable semantic read set.
 - Use RoslynKit navigation evidence before raw file reads whenever possible.
 - Work from candidate files, symbols, or a narrow architecture scope supplied by the main agent or atlas-router.
+- Proceed only after C#/.NET is confirmed by the task text, caller-supplied scope, Atlas context, or minimal repo evidence.
 
 Atlas-first workflow
 - Start with `.codex/atlas/repo-map.md`.
+- If the task or handoff is language-ambiguous, do not assume C# from generic API, endpoint, implementation, component, or test wording; return a note asking the main agent to apply the no-primer C# tool gate first.
+- When the map has a runtime or architecture spine relevant to the task, turn that spine into the first semantic read order before raw source reads.
+- For command and feature tracing, start from the spine symbols/files, then use RoslynKit to verify only the unclear hop.
 - Prefer RoslynKit commands when available: `workspace`, `symbols`, `document-symbols`, `definition`, `references`, `implementations`, `quick-info`, `type-definition`, `signature-help`, `document-lines`, and `symbol-source`.
+- Use `workspace` only for solution/project grounding; do not use it as a broad source dump.
 - If RoslynKit is unavailable or the workspace fails to load, fall back to the narrowest terminal-native read.
 - Do not perform generic repo discovery; ask the main agent for a scout handoff when candidate files are still unclear.
 - Treat Atlas markdown as durable routing context; use RoslynKit or direct inspection for current C# facts.
@@ -51,6 +56,8 @@ notes:
 
 Rules
 - Avoid full-file reads over 150 lines unless clearly justified.
+- Put repo-map spine hops before keyword-search candidates in `exact_read_order`.
+- Treat `.sln`, `.slnx`, `.csproj`, .NET `global.json`, or relevant `.cs` files as acceptable minimal C#/.NET evidence when the prompt alone is ambiguous.
 - Prefer symbols and line ranges over raw file reads.
 - Treat RoslynKit output as navigation evidence, not permission to dump source.
 - Use tests before implementation when available.

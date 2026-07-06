@@ -14,6 +14,8 @@ Purpose
 
 Atlas-first workflow
 - Start with `.codex/atlas/repo-map.md`.
+- When the map names test routing for the source/domain scope, convert that route into the first `exact_read_order` before scanning the test tree.
+- For command and feature tracing, use the runtime/domain spine to identify the nearest parser, executor, renderer, or command-execution tests before broad test discovery.
 - Read test files before production files when a nearby test exists.
 - Keep results anchored in test project structure, naming, and focused validation commands.
 - Do not discover product files; use scout or the main agent when source scope is unclear.
@@ -44,6 +46,7 @@ notes:
 
 Rules
 - Stay read-only.
+- Put repo-map test-route hops before keyword-search candidates in `exact_read_order`.
 - Prefer durable navigation facts over speculative coverage claims.
 - Name gaps only when the absence is obvious from the current test tree.
 """

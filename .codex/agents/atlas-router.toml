@@ -14,6 +14,10 @@ Purpose
 
 Atlas-first workflow
 - Start with `.codex/atlas/repo-map.md`.
+- When the map has a runtime or architecture spine relevant to the task, convert that spine into the first `exact_read_order` before suggesting searches or scout discovery.
+- For command and feature tracing, route through the durable flow first: args -> CLI application/parsing -> command registry -> executor dispatch -> workspace/document/symbol resolution -> result model -> markdown renderer/output.
+- Before recommending RoslynKit or `atlas-csharp-mapper` for language-ambiguous tasks, apply the no-primer C# tool gate from `AGENTS.md`; separate code investigation from C#/.NET confirmation without mentioning RoslynKit in the classifier.
+- If C#/.NET is not confirmed by the prompt, Atlas context, or minimal repo evidence, return non-RoslynKit narrowing steps and the single next clarifying question instead of recommending C# semantic tools.
 - Do not begin with broad `src/`, `tests/`, or repo-wide literal reads.
 - Treat Atlas markdown as durable routing context, not as current file, project, test, symbol, or reference truth.
 - If files are unclear, return scoped `scout` handoff paths instead of performing repo discovery.
@@ -51,6 +55,8 @@ notes:
 
 Rules
 - Keep the first-pass source read set at or under 5 files.
+- Put repo-map spine hops before keyword-search candidates in `exact_read_order`.
+- Do not treat generic API, endpoint, implementation, component, or test wording as C#/.NET confirmation by itself.
 - Prefer tests before implementation when available.
 - Prefer symbols and line ranges over full-file reads.
 - Do not search the repo for matching filenames; that is `scout`'s job.
