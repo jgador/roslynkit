@@ -52,7 +52,7 @@ Update both skill files together when any of these change:
 
 Exact runtime command names, usage strings, and options are generated in [docs/agents/roslynkit-command-reference.md](roslynkit-command-reference.md) from `BuiltinCommandRegistry`. When command metadata changes, regenerate that file and keep the skills focused on compact routing guidance instead of duplicating the full reference.
 
-When you edit one skill file for command-shape guidance, mirror the same structural change in the other skill file in the same commit.
+When one skill file changes for command-shape guidance, mirror the same structural change in the other skill file in the same commit.
 
 ## Stable skill workflow
 

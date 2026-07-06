@@ -546,8 +546,8 @@ Constraints:
 - Do not use subagents such as scout, explorer, or worker.
 - Do not use RoslynKit, roslynkit-dev, dotnet run, dotnet test, Atlas scripts, subagents, or web search.
 - Use only native shell/text inspection such as rg, Get-Content, Select-String, and ordinary PowerShell.
-- Stop as soon as you have enough evidence.
-Return a concise answer with the evidence paths you inspected.
+- Stop as soon as enough evidence is available.
+Return a concise answer with the inspected evidence paths.
 '@
 
     $fixtureRoslynKit = @'
@@ -567,7 +567,7 @@ Constraints:
 - Always pass --target explicitly.
 - Use .\tests\FixtureWorkspace\App\App.csproj as the fixture target when inspecting FixtureApp symbols.
 - Prefer symbol-source, implementations, references, quick-info, and symbols over full document reads.
-- Stop as soon as you have enough evidence.
+- Stop as soon as enough evidence is available.
 Return a concise answer with the RoslynKit commands or symbol ids that support it.
 '@
 
@@ -582,8 +582,8 @@ Constraints:
 - Do not use subagents such as scout, explorer, or worker.
 - Do not use RoslynKit, roslynkit-dev, dotnet run, dotnet test, Atlas scripts, subagents, or web search.
 - Use only native shell/text inspection such as rg, Get-Content, Select-String, and ordinary PowerShell.
-- Stop as soon as you have enough evidence.
-Return a concise answer with the evidence paths you inspected.
+- Stop as soon as enough evidence is available.
+Return a concise answer with the inspected evidence paths.
 '@
 
     $dispatchRoslynKit = @'
@@ -602,7 +602,7 @@ Constraints:
 - Use this RoslynKit dev executable for C# inspection: {ROSLYNKIT_PATH}
 - Always pass --target .\RoslynKit.slnx for repo symbols.
 - Prefer symbols with --max-results 1 and symbol-source over full document reads.
-- Stop as soon as you have enough evidence.
+- Stop as soon as enough evidence is available.
 Return a concise answer with the RoslynKit commands or symbol ids that support it.
 '@
 
@@ -617,8 +617,8 @@ Constraints:
 - Do not use subagents such as scout, explorer, or worker.
 - Do not use RoslynKit, roslynkit-dev, dotnet run, dotnet test, Atlas scripts, subagents, or web search.
 - Use only native shell/text inspection such as rg, Get-Content, Select-String, and ordinary PowerShell.
-- Stop as soon as you have enough evidence.
-Return a concise answer with the evidence paths you inspected.
+- Stop as soon as enough evidence is available.
+Return a concise answer with the inspected evidence paths.
 '@
 
     $referencesRoslynKit = @'
@@ -637,7 +637,7 @@ Constraints:
 - Use this RoslynKit dev executable for C# inspection: {ROSLYNKIT_PATH}
 - Always pass --target .\RoslynKit.slnx for repo symbols.
 - Prefer references --symbol with the smallest useful --max-results over broad searches.
-- Stop as soon as you have enough evidence.
+- Stop as soon as enough evidence is available.
 Return a concise answer with the RoslynKit commands or symbol ids that support it.
 '@
 
@@ -652,8 +652,8 @@ Constraints:
 - Do not use subagents such as scout, explorer, or worker.
 - Do not use RoslynKit, roslynkit-dev, dotnet run, dotnet test, Atlas scripts, subagents, or web search.
 - Use only native PowerShell/text inspection such as Get-ChildItem, Select-String, Get-Content, and ordinary PowerShell.
-- Prefer narrow line ranges and stop as soon as you have enough evidence.
-Return a concise answer with the evidence paths you inspected and the smallest relevant flow.
+- Prefer narrow line ranges and stop as soon as enough evidence is available.
+Return a concise answer with the inspected evidence paths and the smallest relevant flow.
 '@
 
     $referencesFlowRoslynKit = @'
@@ -674,9 +674,9 @@ Constraints:
 - Use `references --symbol RoslynKit.PositionResolver.GetPositionAsync --max-results 5` first.
 - Use `definition --symbol` for known flow symbols, then `document-lines` on the returned path and nearby line window for evidence.
 - Prefer `document-lines` over `symbol-source`; do not use `document-text`.
-- Do not run broad `symbols` queries. For test coverage only, you may run one narrow `symbols --query References --kind method --max-results 10` command and then `document-lines` around the relevant test methods.
+- Do not run broad `symbols` queries. For test coverage only, one narrow `symbols --query References --kind method --max-results 10` command may run, followed by `document-lines` around the relevant test methods.
 - Keep the whole investigation to 16 commands or fewer, including the required skill read.
-- Stop as soon as you have enough evidence.
+- Stop as soon as enough evidence is available.
 Return a concise answer with the RoslynKit commands or symbol ids that support it.
 '@
 
