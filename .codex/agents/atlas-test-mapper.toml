@@ -19,7 +19,7 @@ Atlas-first workflow
 - For command and feature tracing, use the runtime/domain spine to identify the nearest parser, executor, renderer, or command-execution tests before broad test discovery.
 - Read test files before production files when a nearby test exists.
 - Keep results anchored in test project structure, naming, and focused validation commands.
-- Do not discover product files; use scout or the main agent when source scope is unclear.
+- Do not discover product files or use scout to choose the product domain; ask the main agent to bound the source scope before any bounded scout handoff.
 
 Return format
 Return exactly these sections:

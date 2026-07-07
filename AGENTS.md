@@ -80,23 +80,25 @@ When the task does not already confirm C#/.NET from the user prompt, named files
 - If `code_investigation=no`, do not use RoslynKit first.
 - Stop after at most five classifier or clarification exchanges; if C#/.NET is still unknown, proceed with non-RoslynKit narrowing first.
 
-### Scout-First Repo Search
+### Bounded Scout Search
 
-Use the `scout` sub-agent for repo discovery when the current agent environment exposes it and any of these are true:
+Use the `scout` sub-agent for bounded literal discovery after the main agent's Atlas routing has identified an assigned scope and files are still unclear inside that scope. `scout` reduces a known search space; it does not choose the repository domain, architecture spine, or first read order for this repository.
 
-- the user asks to find, trace, investigate, or discover which files matter;
-- the user did not name an exact target file;
-- more than one top-level area may be relevant;
-- the likely read set is more than 3 files.
+Use `scout` when the current agent environment exposes it and any of these are true inside the bounded scope:
 
-Skip `scout` when one obvious target file is already known or the task is a single-file explanation or edit.
+- the task needs file discovery inside the assigned scope;
+- more than one disjoint path prefix remains inside the assigned scope;
+- the likely read set inside the assigned scope is more than 3 files.
+
+Skip `scout` when one obvious target file is already known, the task is a single-file explanation or edit, or the remaining question is repository-domain selection rather than file discovery.
 
 When using `scout`:
 
-- ground first in [AGENTS.md](AGENTS.md), [README.md](README.md), and any directly named files; include [docs/agents/README.md](docs/agents/README.md) for agent workflow or skill-maintenance tasks;
+- ground first in [AGENTS.md](AGENTS.md), [README.md](README.md), directly named files, and the Atlas-selected domain or read order when applicable; include [docs/agents/README.md](docs/agents/README.md) for agent workflow or skill-maintenance tasks;
 - normalize and de-overlap scopes before spawning;
 - spawn one `scout` per disjoint scope;
-- prefer these default scopes when the area is unclear: `src/RoslynKit/`, `tests/RoslynKit.Tests/`, `docs/`, repo-root config files, and `.agents/` or `.codex/` if agent packaging is involved.
+- pass exact path prefixes, exact file lists, symbols, or diff-scoped boundaries;
+- do not pass repo-wide default buckets such as `src/RoslynKit/`, `tests/RoslynKit.Tests/`, `docs/`, repo-root config files, `.agents/`, or `.codex/` until Atlas or the main agent has selected those areas as the bounded task scope.
 
 Every scout prompt must include `assigned_scope`, `search_goal`, known keywords or filenames, and the required response format. Every scout must return `assigned_scope`, `files_examined`, `likely_relevant_files`, `evidence`, `handoff_paths`, `short_summary`, and `confidence`. After scouts return, inspect `likely_relevant_files` locally before deeper tracing.
 
@@ -105,11 +107,12 @@ Every scout prompt must include `assigned_scope`, `search_goal`, known keywords 
 - Load [.codex/atlas/repo-map.md](.codex/atlas/repo-map.md) into the active agent context before broad source reading. Treat it as required structural context for this repository, not optional reference material.
 - When [.codex/atlas/repo-map.md](.codex/atlas/repo-map.md) contains a runtime or architecture spine for the task domain, convert that spine into the first read order before broad literal search or scout discovery.
 - The main agent owns Atlas routing. With [.codex/atlas/repo-map.md](.codex/atlas/repo-map.md) in context, identify the task domain, choose the first read order, and decide whether a specialist Atlas mapper should run.
+- Do not use `scout` for Atlas domain routing. Use `scout` only after the main agent has bounded a domain, path prefix, diff scope, symbol area, or mapper handoff, and only to reduce file search inside that boundary.
 - When the current environment exposes Atlas subagents, the read-only Atlas mapper roles are approved by default for RoslynKit repo work. The main agent may dispatch them without an explicit user prompt when the task benefits from specialist or parallel mapping.
 - At the start of Atlas routing, first decide whether the likely read set includes C# source or script files (`.cs`, `.csx`), C# project files (`.csproj`), .NET solution or solution-filter files (`.sln`, `.slnx`, `.slnf`), Razor files containing C# (`.razor`, `.cshtml`), C#-affecting MSBuild files (`.props`, `.targets`), analyzer configuration files (`.editorconfig`, `.globalconfig`, `.ruleset`), C# symbols, generated C# files such as `.g.cs`, `.g.i.cs`, and `.Designer.cs`, or Roslyn position/semantic data. When Atlas subagents are available, route that C# semantic mapping to `atlas-csharp-mapper` before broad C# source reads. When Atlas subagents are unavailable or the task is too small to delegate, the main agent should use [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md) and RoslynKit commands directly.
 - Route docs, config, build scripts, packaging metadata, CI-adjacent files, and agent-prompt or Atlas-policy surfaces to `atlas-doc-mapper` when Atlas subagents are available and the task benefits from delegation.
 - Route nearest-test discovery, focused validation commands, and obvious coverage-gap mapping to `atlas-test-mapper` after the source or domain scope is known.
-- Use `scout` when files are unclear inside a bounded scope.
+- If files remain unclear after a domain or scope is bounded, use `scout` for bounded literal discovery; do not call `scout` before that boundary exists.
 - Read tests before implementation when available.
 - Prefer symbol and line-range reads over full-file reads.
 - Stop after five source files and state a hypothesis before reading more.

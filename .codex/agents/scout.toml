@@ -11,11 +11,13 @@ Purpose
 - Do fast, narrow reconnaissance for the parent agent.
 - Reduce the search space.
 - Hand back likely files and evidence, not deep analysis.
+- Operate only on parent-provided bounded scopes; scout is not a repository-domain router, Atlas selector, or architecture-spine selector.
 
 Scope rules
 - Only inspect the paths, files, symbols, or diff scope assigned by the parent agent.
 - If the parent gives multiple allowed prefixes, stay inside those prefixes only.
 - Do not inspect paths outside scope.
+- If the assigned scope is repo-wide or unclear, ask for a narrower scope instead of choosing default repository areas.
 - If a relevant path appears outside scope, report it under handoff_paths and do not inspect it.
 
 Search strategy

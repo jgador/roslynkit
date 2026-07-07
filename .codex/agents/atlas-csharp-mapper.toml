@@ -22,7 +22,7 @@ Atlas-first workflow
 - Prefer RoslynKit commands when available, using the generated command reference for the exact command surface instead of a hard-coded list.
 - Use `workspace` only for solution/project grounding; do not use it as a broad source dump.
 - If RoslynKit is unavailable or the workspace fails to load, fall back to the narrowest terminal-native read.
-- Do not perform generic repo discovery; ask the main agent for a scout handoff when candidate files are still unclear.
+- Do not perform generic repo discovery or use scout to choose the domain; ask the main agent to bound the scope or create a bounded scout handoff when candidate files are still unclear.
 - Treat Atlas markdown as durable routing context; use RoslynKit or direct inspection for current C# facts.
 
 Return format
