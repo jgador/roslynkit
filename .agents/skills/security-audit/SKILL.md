@@ -5,34 +5,27 @@ description: Run a read-only security audit of the current repository, combining
 
 # Security Audit
 
-Run a read-only deep security analysis of the current repository. Do not modify any files and do not run state-changing git commands; read-only git commands such as `git log`, `git ls-files`, and `git cat-file` are allowed.
+Run a read-only deep security analysis of the current repository. Do not modify any files and do not run state-changing git commands; read-only git commands such as `git log`, `git ls-files`, and `git cat-file` are allowed. Do not print raw secret values in the final report; report only safe signatures, prefixes, file paths, line numbers, commit IDs, and remediation steps.
 
-The audit has two independent tracks that should run in parallel:
+Do not use sub-agents for this audit. Keep the code review, secret triage, and final risk judgment in the main agent. Independent read-only shell/search commands may still run in parallel when they do not depend on each other, but thoroughness takes priority over parallelism.
 
-1. A code-level vulnerability review, delegated to a sub-agent with the prompt template below.
+The audit has two main-agent tracks:
+
+1. A code-level vulnerability review using the checklist below.
 2. A three-layer secret scan: working tree, all commit diffs, and every blob in the git object database (which covers amended or rebased commits, stashes, and other unreachable objects).
 
 ## Workflow
 
-1. Size the repository first with `git rev-list --all --count` and `git ls-files`. The pipeline-based history scans below are practical for small histories (roughly under a few thousand commits); for large repositories, prefer a dedicated scanner such as gitleaks or trufflehog for layers 2 and 3.
-2. Launch the code review sub-agent (see the prompt template below), then run the secret-scan layers while it works.
-3. For any hit, locate the introducing commit with `git log --all -S '<string>' --oneline --name-only` before deciding whether history rewriting (git-filter-repo or BFG) is needed.
-4. Report findings with file or commit, severity, a one-sentence description, and a concrete exploitation scenario. Explicitly list the areas verified clean, and state whether git-history cleanup is needed.
+1. Size and scope the repository first with `git status --short --branch`, `git rev-list --all --count`, `git ls-files`, `git ls-files -o --exclude-standard`, and `Get-Command gitleaks,trufflehog -ErrorAction SilentlyContinue`. The pipeline-based history scans below are practical for small histories (roughly under a few thousand commits); for large repositories, prefer a dedicated scanner such as gitleaks or trufflehog for layers 2 and 3.
+2. Run the code-level review checklist in the main agent. Use search results to identify security-sensitive code paths, then verify every suspected issue by reading the actual code.
+3. Run all three secret-scan layers: working tree, full git history, and every blob in the object database.
+4. For .NET repositories with a solution or project file, run package metadata checks such as `dotnet list <solution-or-project> package --vulnerable --include-transitive` and `dotnet list <solution-or-project> package --deprecated --include-transitive`. For other ecosystems, run the nearest read-only package audit command when available.
+5. For any hit, locate the introducing commit with `git log --all -S '<string>' --oneline --name-only` before deciding whether history rewriting (git-filter-repo or BFG) is needed. Use the literal string locally for tracing, but keep raw secret material out of the final report.
+6. Report findings with file or commit, severity, a one-sentence description, and a concrete exploitation scenario. Explicitly list the areas verified clean, commands or checks run, limitations, and whether git-history cleanup is needed.
 
-## Sub-Agent Prompt: Code-Level Vulnerability Review
+## Code-Level Vulnerability Review Checklist
 
-Adapt the repository path, project description, and directory layout; the numbered checklist is general-purpose for .NET CLI repositories and transfers to other stacks with minor edits.
-
-```text
-Perform a READ-ONLY security code review of the repository at <REPO_PATH>.
-Do NOT modify any files. Do NOT run any state-changing git commands.
-
-<One-paragraph description of the project: language, runtime, entrypoints,
-where production code, tests, and tooling live.>
-
-Review all source under src/, tools/, and tests/ (and any .ps1/.cmd/.sh
-scripts, .csproj, .props, .targets, nuget.config, and CI workflow files
-under .github/) for security vulnerabilities. Look specifically for:
+Adapt the directory layout to the repository. Review production source, tools, tests, scripts, project files, package configuration, and CI workflow files for security vulnerabilities. Look specifically for:
 
 1. Command/process injection: any Process.Start, ProcessStartInfo, shell
    invocation where user-controlled arguments are interpolated into a
@@ -65,21 +58,19 @@ For each finding report: file path (repo-relative), line number, severity
 (critical/high/medium/low/info), a one-sentence description of the defect,
 and a concrete exploitation scenario. If an area is clean, say so briefly.
 Also list the files actually examined. Be rigorous - verify each finding by
-reading the actual code, not just pattern matches. Return the findings as
-structured markdown text.
-```
+reading the actual code, not just pattern matches.
 
 ## Secret-Scan Commands (PowerShell, read-only)
 
 All commands assume the current directory is the repository root. Define the high-confidence token pattern once per session (AWS, GitHub, Anthropic, OpenAI, Slack, Google, GitLab, npm/NuGet, Azure, private key blocks, JWTs):
 
 ```powershell
-$tokenPatterns = 'AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22,}|sk-ant-[A-Za-z0-9-]{20,}|sk-[A-Za-z0-9]{40,}|xox[baprs]-[0-9A-Za-z-]{10,}|AIza[0-9A-Za-z_-]{35}|BEGIN [A-Z ]*PRIVATE KEY|_authToken|npm_[A-Za-z0-9]{36}|glpat-[A-Za-z0-9_-]{20}|oy2[a-z0-9]{40,}|AccountKey=[A-Za-z0-9+/=]{20,}|SharedAccessSignature|eyJhbGciOi'
+$tokenPatterns = 'AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22,}|sk-ant-[A-Za-z0-9-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9_-]{20,}|xox[baprs]-[0-9A-Za-z-]{10,}|AIza[0-9A-Za-z_-]{35}|BEGIN [A-Z ]*PRIVATE KEY|_authToken|npm_[A-Za-z0-9]{36}|glpat-[A-Za-z0-9_-]{20}|oy2[a-z0-9]{40,}|AccountKey=[A-Za-z0-9+/=]{20,}|SharedAccessSignature|eyJhbGciOi'
 ```
 
 ### Layer 1: working tree
 
-Scan tracked files for `$tokenPatterns` with the session's native search tool (for example `Grep`, or `git grep -I -E`), plus a looser case-insensitive pass for `(password|passwd|secret|api[_-]?key|apikey|token|credential|connectionstring|pwd)\s*[:=]`. Expect and dismiss benign hits such as `CancellationToken`, Roslyn syntax tokens, and `Environment.GetEnvironmentVariable("SOME_API_KEY")` (reads from the environment; no value committed).
+Scan tracked files and non-ignored untracked files for `$tokenPatterns` with the session's native search tool (for example `Grep`, `rg`, or `git grep -I -E`), plus a looser case-insensitive pass for `(password|passwd|secret|api[_-]?key|apikey|token|credential|connectionstring|pwd)\s*[:=]`. Expect and dismiss benign hits such as `CancellationToken`, syntax tokens, and `Environment.GetEnvironmentVariable("SOME_API_KEY")` (reads from the environment; no value committed). Keep ignored or local-only files separate from committed evidence: enumerate them with `git status --short --ignored`, and inspect obvious sensitive filenames such as `.env`, `secrets.json`, `.vscode/launch.json`, or local credential files only when needed.
 
 ### Layer 2: full git history
 
@@ -117,6 +108,8 @@ git log --all -p --no-color -- '*.json' '*.config' '*.props' '*.targets' '*.yml'
 
 Covers unreachable objects from amended or rebased commits and stashes; this is the layer that proves nothing secret-shaped survives even in rewritten history.
 
+Optionally summarize unreachable objects first with `git fsck --no-reflogs --unreachable --no-progress`. If the all-object scan below runs successfully, those unreachable blobs are covered; the `fsck` count is useful for the report.
+
 ```powershell
 $blobs = git cat-file --batch-all-objects --batch-check='%(objecttype) %(objectname)' |
   Where-Object { $_ -like 'blob *' } |
@@ -135,5 +128,7 @@ Structure the final report as:
 - TLDR line: whether secrets were found and whether the code has exploitable vulnerabilities.
 - Secrets scan: result per layer (working tree, history diffs and filenames, all blobs), with benign hits explained.
 - Code review: findings ranked by severity with file, line, description, and exploitation scenario; then areas verified clean.
+- Dependency audit: package vulnerability/deprecation or ecosystem audit result when applicable.
 - Whether git-history cleanup (git-filter-repo or BFG) is needed.
+- Commands/checks run and explicit limitations, including whether dedicated scanners were unavailable and native git/search scans were used instead.
 - The single highest-priority recommended action, if any.

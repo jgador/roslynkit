@@ -1,6 +1,6 @@
 ---
 name: git-commit-push
-description: Stage all non-ignored RoslynKit repo changes, commit with the prepared commit context file, and push non-interactively. Use when the user invokes `$git-commit-push` or asks Codex to commit and push current RoslynKit changes using the prepared commit context.
+description: Stage all non-ignored RoslynKit repo changes, commit with the prepared commit context file, and push non-interactively. Use when the user invokes `$git-commit-push` or asks codex to commit and push current RoslynKit changes using the prepared commit context.
 ---
 
 # Git Commit and Push

@@ -38,7 +38,7 @@ Verify conclusions against current files, tests, docs, and command output.
 
 When adding or editing prose in Markdown docs, checked-in agent prompts, or skill files, write repo file references as Markdown links with the path as the link label, such as [docs/agents/README.md](docs/agents/README.md). Use code formatting only for non-file literals, globs, command arguments, generated output, or paths where Markdown links would change behavior.
 
-When writing or editing agent-facing prose, avoid second-person pronouns for coding agents. Do not use `you` or `your` to refer to an agent, sub-agent, coding tool, or future agent reader; use explicit nouns such as `the agent`, `the sub-agent`, `Codex`, or `coding agents` instead.
+When writing or editing agent-facing prose, avoid second-person pronouns for coding agents. Do not use `you` or `your` to refer to an agent, sub-agent, coding tool, or future agent reader; use explicit nouns such as `the agent`, `the sub-agent`, `codex`, or `coding agents` instead.
 
 For exact runtime command names, usage strings, and options, read generated [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md). Keep agent guidance concise and route-oriented; do not duplicate full command reference material in [AGENTS.md](AGENTS.md) or skill files.
 
