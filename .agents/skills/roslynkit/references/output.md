@@ -1,6 +1,6 @@
 # Markdown Output Format
 
-This document is the output contract for RoslynKit. Every command writes this token-saving markdown-flavored text to stdout; there is no JSON output. The renderer lives in [src/RoslynKit/MarkdownProjection.cs](../../../../src/RoslynKit/MarkdownProjection.cs).
+This document is the output contract for RoslynKit. Every command writes this token-saving markdown-flavored text to stdout; there is no JSON output.
 
 The output stays close to GitHub Flavored Markdown, but it uses only the smallest useful subset for coding-agent consumption.
 
@@ -304,15 +304,4 @@ usage: `roslynkit symbols --target <target> --query <text> [--max-results <n>]`
 - Avoid table-cell escaping entirely by not using tables.
 - Prefer code spans over links for local paths because the CLI cannot know the GitHub repository URL.
 - Do not emit relative Markdown links to source files.
-- Use `\n` as the logical line separator in tests, while accepting platform-specific writer behavior only at the process boundary.
-
-## Testing Requirements
-
-Renderer changes need focused tests for:
-
-- column-range location rendering;
-- inline code span escaping for values containing backticks;
-- fenced code block rendering for source text containing backtick runs;
-- command-specific rendering for `symbols`, `references`, `quick-info`, `document-text`, and `symbol-source`;
-- the plain-text error shape with non-zero exit codes, including optional `hint:` lines for deterministic usage retries;
-- README and package documentation updates when the public output contract changes.
+- Treat line breaks as logical line separators; process output may use the host platform's newline behavior.

@@ -61,7 +61,7 @@ roslynkit <command> --target <solution.slnx|solution.sln|project.csproj>
 
 Always pass `--target` explicitly. RoslynKit does not infer a solution or project path automatically.
 When a command accepts `--file`, pass a `.cs` path by default.
-Use `roslynkit help <command>` for exact runtime syntax and options. For the generated command reference, read [references/commands.md](references/commands.md).
+Use `roslynkit help <command>` for exact runtime syntax and options. For the bundled command reference, read [references/commands.md](references/commands.md).
 
 ## When To Start With `workspace`
 
