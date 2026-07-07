@@ -12,7 +12,7 @@ RoslynKit keeps one canonical stable command skill bundle:
 
 The stable bundle and dev skill should stay structurally aligned. They describe the same RoslynKit command surface and should diverge only where the invocation path is intentionally different. Normative guidance and examples must stay repository-agnostic so the stable bundle can be scaffolded into arbitrary C# repositories.
 
-The separate [.agents/skills/commit-context/SKILL.md](../../.agents/skills/commit-context/SKILL.md) and [.agents/skills/git-commit-push/SKILL.md](../../.agents/skills/git-commit-push/SKILL.md) files are repo workflow skills for maintaining ignored local commit notes and committing from that prepared context. They are not part of the stable/dev RoslynKit command-skill pair and do not need to mirror either RoslynKit skill.
+The separate [.agents/skills/commit-context/SKILL.md](../../.agents/skills/commit-context/SKILL.md), [.agents/skills/git-commit-push/SKILL.md](../../.agents/skills/git-commit-push/SKILL.md), and [.agents/skills/security-audit/SKILL.md](../../.agents/skills/security-audit/SKILL.md) files are repo workflow skills for maintaining ignored local commit notes, committing from that prepared context, and running read-only repository security audits. They are not part of the stable/dev RoslynKit command-skill pair and do not need to mirror either RoslynKit skill.
 
 ## Agent-Specific Scaffolding
 
@@ -33,6 +33,7 @@ Keep the ownership boundaries explicit:
 - [.agents/skills/roslynkit/SKILL.md](../../.agents/skills/roslynkit/SKILL.md) and [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md) are reusable usage-only guides. Do not embed repo-owned routing sequences, repo-local source paths, or project-specific symbol chains inside either skill.
 - [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md) and [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md) are shared stable-bundle references and must remain suitable for installed copies in other repositories.
 - [.agents/skills/commit-context/SKILL.md](../../.agents/skills/commit-context/SKILL.md) and [.agents/skills/git-commit-push/SKILL.md](../../.agents/skills/git-commit-push/SKILL.md) are repo-specific workflow guides and may reference [artifacts/commit-context.md](../../artifacts/commit-context.md) and RoslynKit commit policy directly.
+- [.agents/skills/security-audit/SKILL.md](../../.agents/skills/security-audit/SKILL.md) is a repository-agnostic read-only audit workflow; keep its prompt template and scan commands free of RoslynKit-specific paths so it stays reusable in other repositories.
 - [docs/dev-install.md](../dev-install.md) is the install/update source of truth for the side-by-side prerelease tool.
 
 ## Intentional differences
