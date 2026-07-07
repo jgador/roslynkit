@@ -24,6 +24,37 @@ public sealed class CliParserTests
     }
 
     [Fact]
+    public void Parse_AcceptsInitDefaults()
+    {
+        var command = CliParser.Parse(["init"]);
+
+        Assert.Equal("init", command.Name);
+        Assert.Equal("init", command.Builtin?.Name);
+        Assert.Null(command.Optional("agent"));
+        Assert.False(command.Flag("overwrite"));
+    }
+
+    [Fact]
+    public void Parse_AcceptsInitAgentAndOverwrite()
+    {
+        var command = CliParser.Parse(["init", "--agent", "claude", "--overwrite"]);
+
+        Assert.Equal("init", command.Name);
+        Assert.Equal("claude", command.Required("agent"));
+        Assert.True(command.Flag("overwrite"));
+    }
+
+    [Fact]
+    public void Parse_RejectsUnknownInitAgent()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(["init", "--agent", "banana"]));
+
+        Assert.Equal("init", exception.CommandName);
+        Assert.Contains("Unknown agent 'banana'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("codex, claude, copilot, all", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Parse_CollectsAliasesAndOptions()
     {
         var command = CliParser.Parse(["definition", "-t", "repo.slnx", "-f", "Program.cs", "--line", "10", "--column", "4"]);

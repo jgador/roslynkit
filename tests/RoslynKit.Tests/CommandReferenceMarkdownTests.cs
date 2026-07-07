@@ -25,6 +25,8 @@ public sealed class CommandReferenceMarkdownTests
     {
         var rendered = CommandReferenceMarkdown.Render();
 
+        Assert.Contains("roslynkit init [--agent <codex|claude|copilot|all>] [--overwrite]", rendered, StringComparison.Ordinal);
+        Assert.Contains("- `--agent` `<agent>`: agent target: codex, claude, copilot, or all", rendered, StringComparison.Ordinal);
         Assert.Contains("roslynkit symbols --target <target> --query <text>", rendered, StringComparison.Ordinal);
         Assert.Contains("- `--query` / `-q` `<text>` (required): symbol name text to search for", rendered, StringComparison.Ordinal);
         Assert.Contains("roslynkit definition --target <target> --symbol <selector>", rendered, StringComparison.Ordinal);
@@ -38,7 +40,7 @@ public sealed class CommandReferenceMarkdownTests
     public void Render_MatchesCheckedInCommandReference()
     {
         var expected = NormalizeNewlines(CommandReferenceMarkdown.Render());
-        var path = TestPaths.RepoFile("docs", "agents", "roslynkit-command-reference.md");
+        var path = TestPaths.RepoFile(".agents", "skills", "roslynkit", "references", "commands.md");
 
         Assert.True(File.Exists(path), "Run `dotnet run --file .\\tools\\RoslynKit.CommandDocs.cs -- --write` to create the generated command reference.");
 

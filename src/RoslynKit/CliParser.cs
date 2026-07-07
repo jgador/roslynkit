@@ -287,6 +287,9 @@ public static class CliParser
     {
         switch (commandName)
         {
+            case "init":
+                ValidateInitOptions(commandName, options);
+                break;
             case "document-text":
             case "document-lines":
             case "document-symbols":
@@ -300,6 +303,19 @@ public static class CliParser
             case "implementations":
                 ValidateSymbolOrPositionSelector(commandName, options);
                 break;
+        }
+    }
+
+    private static void ValidateInitOptions(string commandName, IReadOnlyDictionary<string, string> options)
+    {
+        if (!options.TryGetValue("agent", out var agent))
+        {
+            return;
+        }
+
+        if (!InitCommandExecutor.IsSupportedAgent(agent))
+        {
+            throw new CliUsageException(commandName, $"Unknown agent '{agent}'. Supported values: {InitCommandExecutor.SupportedAgentsText()}.");
         }
     }
 

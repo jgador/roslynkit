@@ -19,6 +19,7 @@ public sealed class CliOutputTests
         Assert.Equal(0, exitCode);
         Assert.StartsWith("tool: roslynkit", output, StringComparison.Ordinal);
         Assert.Contains("- command: `version` description: ", output, StringComparison.Ordinal);
+        Assert.Contains("- command: `init` description: ", output, StringComparison.Ordinal);
         Assert.Contains("- command: `symbols` description: ", output, StringComparison.Ordinal);
         Assert.DoesNotContain("\"data\"", output, StringComparison.Ordinal);
     }
@@ -63,6 +64,21 @@ public sealed class CliOutputTests
 
         Assert.Equal(0, exitCode);
         Assert.StartsWith("command: version", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesCommandHelp_ForInit()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(["help", "init"], TestContext.Current.CancellationToken);
+
+        var output = writer.ToString();
+
+        Assert.Equal(0, exitCode);
+        Assert.StartsWith("command: init", output, StringComparison.Ordinal);
+        Assert.Contains("usage: `roslynkit init [--agent <codex|claude|copilot|all>] [--overwrite]`", output, StringComparison.Ordinal);
+        Assert.Contains("- option: `--agent` value: agent description: ", output, StringComparison.Ordinal);
+        Assert.Contains("- option: `--overwrite` description: ", output, StringComparison.Ordinal);
     }
 
     [Fact]

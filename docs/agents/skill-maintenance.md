@@ -1,24 +1,28 @@
 # RoslynKit Skill Maintenance
 
-This is a coding-agent workflow document. Root [AGENTS.md](../../AGENTS.md) owns active repo policy; this file owns the longer synchronization rules for reusable skill files and wrappers.
+This is a coding-agent workflow document. Root [AGENTS.md](../../AGENTS.md) owns active repo policy; this file owns the longer synchronization rules for reusable skill files and init-scaffolded bundles.
 
-RoslynKit keeps two checked-in RoslynKit command skills:
+RoslynKit keeps one canonical stable command skill bundle:
 
-- [.agents/skills/roslynkit/SKILL.md](../../.agents/skills/roslynkit/SKILL.md) for the stable global `roslynkit` command.
-- [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md) for the side-by-side prerelease RoslynKit dev tool.
+- [.agents/skills/roslynkit/SKILL.md](../../.agents/skills/roslynkit/SKILL.md): stable global `roslynkit` command workflow.
+- [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md): generated runtime command reference.
+- [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md): shared output contract.
 
-The two skill files should stay structurally aligned. They describe the same RoslynKit command surface and should diverge only where the invocation path is intentionally different.
-Their normative guidance and examples must stay repository-agnostic so the same checked-in files can be reused in arbitrary C# repositories.
+[.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md) is the repo-local side-by-side prerelease RoslynKit dev tool guide. It shares the stable bundle references instead of duplicating command and output contract docs.
+
+The stable bundle and dev skill should stay structurally aligned. They describe the same RoslynKit command surface and should diverge only where the invocation path is intentionally different. Normative guidance and examples must stay repository-agnostic so the stable bundle can be scaffolded into arbitrary C# repositories.
 
 The separate [.agents/skills/commit-context/SKILL.md](../../.agents/skills/commit-context/SKILL.md) and [.agents/skills/git-commit-push/SKILL.md](../../.agents/skills/git-commit-push/SKILL.md) files are repo workflow skills for maintaining ignored local commit notes and committing from that prepared context. They are not part of the stable/dev RoslynKit command-skill pair and do not need to mirror either RoslynKit skill.
 
-## Claude Code exposure
+## Agent-Specific Scaffolding
 
-Claude Code discovers project skills under `.claude\skills\`. The `.agents\skills\` folder stays the single source of truth; `.claude\skills\` only exposes it:
+`roslynkit init` embeds the canonical [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/) bundle at pack time and scaffolds the same files to the selected agent root:
 
-Every `.claude\skills\<name>\SKILL.md` (`roslynkit`, `roslynkit-dev`, `commit-context`, `git-commit-push`) is a thin wrapper skill: front matter plus a dynamic context injection line, `` !`powershell.exe -NoProfile -Command "Get-Content -Raw '.agents/skills/<name>/SKILL.md'"` ``, which Claude Code executes when the skill loads so the canonical content is inlined automatically. The command is Windows-native by design, uses no environment-variable placeholders, and its relative path assumes the session starts at the repo root. Wrappers work without symlink privileges and on fresh clones; do not replace them with symlinks. The [CLAUDE.md](../../CLAUDE.md) `@path` import syntax does not apply to skill files; injection is the skill-file equivalent.
+- `codex` -> `.agents/skills/roslynkit/`
+- `claude` -> `.claude/skills/roslynkit/`
+- `copilot` -> `.github/skills/roslynkit/`
 
-Wrapper front matter duplicates only the `description`. When a canonical skill's `description` changes, update the matching wrapper file in the same commit. Never add normative guidance to a wrapper file.
+Do not check in `.claude/skills/roslynkit/` or `.github/skills/roslynkit/` duplicates in this repository. Add scripts, references, or other future bundle files only under [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/); the init command preserves every bundle-relative path when scaffolding.
 
 ## Ownership
 
@@ -27,6 +31,7 @@ Keep the ownership boundaries explicit:
 - [AGENTS.md](../../AGENTS.md) is the source of truth for which skill is the default route in this repo and for repo-specific workflow policy.
 - `.codex\atlas\` is the home for durable repo-specific tracing or routing guidance when Atlas coverage exists.
 - [.agents/skills/roslynkit/SKILL.md](../../.agents/skills/roslynkit/SKILL.md) and [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md) are reusable usage-only guides. Do not embed repo-owned routing sequences, repo-local source paths, or project-specific symbol chains inside either skill.
+- [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md) and [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md) are shared stable-bundle references and must remain suitable for installed copies in other repositories.
 - [.agents/skills/commit-context/SKILL.md](../../.agents/skills/commit-context/SKILL.md) and [.agents/skills/git-commit-push/SKILL.md](../../.agents/skills/git-commit-push/SKILL.md) are repo-specific workflow guides and may reference [artifacts/commit-context.md](../../artifacts/commit-context.md) and RoslynKit commit policy directly.
 - [docs/dev-install.md](../dev-install.md) is the install/update source of truth for the side-by-side prerelease tool.
 
@@ -50,7 +55,7 @@ Update both skill files together when any of these change:
 - reusable cursor-choice guidance or generic examples;
 - fallback guidance for non-C# or non-semantic tasks.
 
-Exact runtime command names, usage strings, and options are generated in [docs/agents/roslynkit-command-reference.md](roslynkit-command-reference.md) from `BuiltinCommandRegistry`. When command metadata changes, regenerate that file and keep the skills focused on compact routing guidance instead of duplicating the full reference.
+Exact runtime command names, usage strings, and options are generated in [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md) from `BuiltinCommandRegistry`. When command metadata changes, regenerate that file and keep the skills focused on compact routing guidance instead of duplicating the full reference.
 
 When one skill file changes for command-shape guidance, mirror the same structural change in the other skill file in the same commit.
 

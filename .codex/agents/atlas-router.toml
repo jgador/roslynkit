@@ -16,7 +16,7 @@ Atlas-first workflow
 - Start with `.codex/atlas/repo-map.md`.
 - When the map has a runtime or architecture spine relevant to the task, convert that spine into the first `exact_read_order` before suggesting searches or scout discovery.
 - For command and feature tracing, route through the durable flow first: args -> CLI application/parsing -> command registry -> executor dispatch -> workspace/document/symbol resolution -> result model -> markdown renderer/output.
-- Treat [docs/agents/roslynkit-command-reference.md](../../docs/agents/roslynkit-command-reference.md) as the generated source for exact RoslynKit command metadata, but do not load or duplicate the full command catalog unless the task is specifically about command metadata.
+- Treat [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md) as the generated source for exact RoslynKit command metadata, but do not load or duplicate the full command catalog unless the task is specifically about command metadata.
 - Before recommending RoslynKit or `atlas-csharp-mapper` for language-ambiguous tasks, apply the no-primer C# tool gate from `AGENTS.md`; separate code investigation from C#/.NET confirmation without mentioning RoslynKit in the classifier.
 - If C#/.NET is not confirmed by the prompt, Atlas context, or minimal repo evidence, return non-RoslynKit narrowing steps and the single next clarifying question instead of recommending C# semantic tools.
 - Do not begin with broad `src/`, `tests/`, or repo-wide literal reads.
@@ -62,6 +62,6 @@ Rules
 - Prefer symbols and line ranges over full-file reads.
 - Do not search the repo for matching filenames; that is `scout`'s job.
 - Do not resolve definitions or references; that is RoslynKit or `atlas-csharp-mapper`'s job.
-- If exact RoslynKit command syntax is needed after C#/.NET is confirmed, route to `atlas-csharp-mapper` or point at [docs/agents/roslynkit-command-reference.md](../../docs/agents/roslynkit-command-reference.md).
+- If exact RoslynKit command syntax is needed after C#/.NET is confirmed, route to `atlas-csharp-mapper` or point at [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md).
 - If Atlas coverage is thin, say so explicitly and name the next narrowest scope to inspect.
 """

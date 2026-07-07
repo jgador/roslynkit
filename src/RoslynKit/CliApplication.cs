@@ -44,6 +44,13 @@ public sealed class CliApplication
                 return 0;
             }
 
+            if (command.Name == "init")
+            {
+                var result = InitCommandExecutor.Execute(command);
+                await _stdout.WriteLineAsync(MarkdownProjection.Render(result)).ConfigureAwait(false);
+                return 0;
+            }
+
             var data = await RoslynCommandExecutor.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
             await _stdout.WriteLineAsync(MarkdownProjection.Render(data)).ConfigureAwait(false);
             return 0;

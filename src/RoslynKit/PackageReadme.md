@@ -34,6 +34,7 @@ dotnet tool update --global roslynkit --add-source <local-feed-path> --version <
 - Enumerate workspace documents with `workspace`, including generated, additional, or analyzer-config documents when requested.
 - Search, navigate, and inspect C# symbols with commands such as `symbols`, `definition`, `references`, `quick-info`, and `symbol-source`.
 - Read resolved documents with `document-text`, `document-lines`, or `document-symbols`.
+- Scaffold the RoslynKit skill bundle into a Git repository with `init`.
 
 Document commands use `--file <path>` as the document selector. Relative paths resolve from the current working directory, and ambiguous linked or multi-targeted files can be narrowed with `--project`, `--tfm`, or `--document-kind`.
 
@@ -43,6 +44,6 @@ Document commands use `--file <path>` as the document selector. Relative paths r
 roslynkit workspace --target .\MySolution.slnx
 ```
 
-See [README.md](https://github.com/jgador/roslynkit#readme) for usage guidance and [docs/agents/roslynkit-command-reference.md](https://github.com/jgador/roslynkit/blob/master/docs/agents/roslynkit-command-reference.md) for the generated runtime command reference. Side-by-side prerelease dev installs live in [docs/dev-install.md](https://github.com/jgador/roslynkit/blob/master/docs/dev-install.md), and maintainer packaging steps live in [docs/dotnet-tool-release.md](https://github.com/jgador/roslynkit/blob/master/docs/dotnet-tool-release.md) in the same repository:
+See [README.md](https://github.com/jgador/roslynkit#readme) for usage guidance and [.agents/skills/roslynkit/references/commands.md](https://github.com/jgador/roslynkit/blob/master/.agents/skills/roslynkit/references/commands.md) for the generated runtime command reference. Side-by-side prerelease dev installs live in [docs/dev-install.md](https://github.com/jgador/roslynkit/blob/master/docs/dev-install.md), and maintainer packaging steps live in [docs/dotnet-tool-release.md](https://github.com/jgador/roslynkit/blob/master/docs/dotnet-tool-release.md) in the same repository:
 
 [RoslynKit on GitHub](https://github.com/jgador/roslynkit)

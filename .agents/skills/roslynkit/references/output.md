@@ -1,6 +1,6 @@
 # Markdown Output Format
 
-This document is the output contract for RoslynKit. Every command writes this token-saving markdown-flavored text to stdout; there is no JSON output. The renderer lives in [src/RoslynKit/MarkdownProjection.cs](../../src/RoslynKit/MarkdownProjection.cs).
+This document is the output contract for RoslynKit. Every command writes this token-saving markdown-flavored text to stdout; there is no JSON output. The renderer lives in [src/RoslynKit/MarkdownProjection.cs](../../../../src/RoslynKit/MarkdownProjection.cs).
 
 The output stays close to GitHub Flavored Markdown, but it uses only the smallest useful subset for coding-agent consumption.
 
@@ -140,6 +140,27 @@ documents: 1
 - project: `MyApp` tfm: `net10.0` documents: 42
 - project: `src/MyApp/MyApp.csproj` tfm: `net10.0` kind: source path: `src/MyApp/Program.cs`
 ```
+
+### `init`
+
+`init` scaffolds the embedded RoslynKit skill bundle into the current Git repository. The command requires a `.git` directory or file in the current directory. Existing files are preserved when content is identical, rejected when content differs, and replaced only when `--overwrite` is supplied.
+
+```markdown
+command: init
+agent: `codex`
+root: `C:\repo\MyApp`
+files: 3
+
+- created: `.agents/skills/roslynkit/SKILL.md` agent: `codex`
+- unchanged: `.agents/skills/roslynkit/references/commands.md` agent: `codex`
+- overwritten: `.agents/skills/roslynkit/references/output.md` agent: `codex`
+```
+
+Agent values map only the outer target folder. The scaffolded bundle-relative files remain the same:
+
+- `codex` -> `.agents/skills/roslynkit/`
+- `claude` -> `.claude/skills/roslynkit/`
+- `copilot` -> `.github/skills/roslynkit/`
 
 ### `diagnostics`
 

@@ -1,12 +1,15 @@
 # RoslynKit Agents Documentation
 
-These docs are for guidance and shared runtime contracts that coding agents should discover and apply during normal RoslynKit repo work. Keep root [AGENTS.md](../../AGENTS.md) concise and operational; put longer agent workflow rules here only when they are safe for agents to use without a manual user tag.
+These docs are for repo-maintenance guidance that coding agents should discover and apply during normal RoslynKit repo work. Keep root [AGENTS.md](../../AGENTS.md) concise and operational; put reusable RoslynKit command-skill references under [.agents/skills/roslynkit/references/](../../.agents/skills/roslynkit/references/) so `roslynkit init` can scaffold the same files into other repositories.
 
 ## Agent Docs
 
-- [docs/agents/roslynkit-command-reference.md](roslynkit-command-reference.md): generated runtime command names, usage strings, and options from `BuiltinCommandRegistry`.
-- [docs/agents/markdown-output-format.md](markdown-output-format.md): deterministic command output contract, including documentation-comment ID prefix meanings.
-- [docs/agents/skill-maintenance.md](skill-maintenance.md): ownership and synchronization rules for checked-in RoslynKit skills and Claude skill wrappers.
+- [docs/agents/skill-maintenance.md](skill-maintenance.md): ownership and synchronization rules for checked-in RoslynKit skills and init-scaffolded bundles.
+
+## Skill Bundle References
+
+- [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md): generated runtime command names, usage strings, and options from `BuiltinCommandRegistry`.
+- [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md): deterministic command output contract, including documentation-comment ID prefix meanings.
 
 ## Not Agent-Autoloaded
 
@@ -22,7 +25,7 @@ Do not duplicate shared runtime or workflow facts in hand-written agent docs. Li
 
 - [docs/dev-install.md](../dev-install.md): side-by-side prerelease development install.
 
-When command metadata changes, regenerate [docs/agents/roslynkit-command-reference.md](roslynkit-command-reference.md) with:
+When command metadata changes, regenerate [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md) with:
 
 ```powershell
 dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --write

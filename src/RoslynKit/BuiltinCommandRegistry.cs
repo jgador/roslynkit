@@ -13,6 +13,14 @@ public static class BuiltinCommandRegistry
             ["roslynkit version", "roslynkit --version"],
             []),
         new BuiltinCommand(
+            "init",
+            "Scaffold the RoslynKit coding-agent skill bundle into the current Git repository.",
+            ["roslynkit init [--agent <codex|claude|copilot|all>] [--overwrite]"],
+            [
+                OptionSpec.String(null, "agent", "agent", "agent target: codex, claude, copilot, or all"),
+                OptionSpec.Flag(null, "overwrite", "replace existing scaffolded skill files when content differs"),
+            ]),
+        new BuiltinCommand(
             "workspace",
             "List projects and repo-relevant documents loaded from a solution or project.",
             ["roslynkit workspace --target <solution.slnx|solution.sln|project.csproj> [--include-generated] [--include-additional] [--include-analyzer-config]"],

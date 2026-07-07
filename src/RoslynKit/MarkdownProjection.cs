@@ -17,6 +17,7 @@ public static class MarkdownProjection
     {
         return data switch
         {
+            InitResult result => RenderInit(result),
             SymbolsResult result => RenderSymbols(result),
             DefinitionResult result => RenderDefinition(result),
             TypeDefinitionResult result => RenderTypeDefinition(result),
@@ -32,6 +33,27 @@ public static class MarkdownProjection
             WorkspaceResult result => RenderWorkspace(result),
             _ => data.ToString() ?? string.Empty,
         };
+    }
+
+    private static string RenderInit(InitResult result)
+    {
+        var builder = new StringBuilder();
+        builder.Append("command: init");
+        builder.Append("\nagent: ").Append(CodeSpan(result.AgentSelection));
+        builder.Append("\nroot: ").Append(CodeSpan(result.RepositoryRoot));
+        builder.Append("\nfiles: ").Append(result.Files.Count);
+        if (result.Files.Count > 0)
+        {
+            builder.Append('\n');
+            foreach (var file in result.Files)
+            {
+                builder.Append("\n- ").Append(InitStatusText(file.Status))
+                    .Append(": ").Append(CodeSpan(file.Path))
+                    .Append(" agent: ").Append(CodeSpan(file.Agent));
+            }
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>
@@ -420,6 +442,17 @@ public static class MarkdownProjection
         var delimiter = new string('`', LongestBacktickRun(value) + 1);
         var needsPadding = value.Length == 0 || value.StartsWith('`') || value.EndsWith('`');
         return needsPadding ? $"{delimiter} {value} {delimiter}" : $"{delimiter}{value}{delimiter}";
+    }
+
+    private static string InitStatusText(InitFileStatus status)
+    {
+        return status switch
+        {
+            InitFileStatus.Created => "created",
+            InitFileStatus.Unchanged => "unchanged",
+            InitFileStatus.Overwritten => "overwritten",
+            _ => throw new InvalidOperationException($"Unknown init file status '{status}'."),
+        };
     }
 
     private static int LongestBacktickRun(string text)
