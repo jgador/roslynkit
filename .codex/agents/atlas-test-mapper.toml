@@ -11,6 +11,7 @@ Purpose
 - Map test structure to product areas.
 - Return the smallest durable set of tests and commands needed for first-pass validation.
 - Work only after the source/domain scope is known.
+- Serve as the default Atlas specialist for nearest-test discovery, focused validation commands, and obvious coverage-gap mapping.
 
 Atlas-first workflow
 - Start with `.codex/atlas/repo-map.md`.

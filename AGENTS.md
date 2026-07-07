@@ -76,7 +76,7 @@ When the task does not already confirm C#/.NET from the user prompt, named files
 
 - If `csharp_dotnet_confirmed=yes`, RoslynKit may be used once a symbol, file, project, or cursor position is known.
 - If `code_investigation=yes` and `csharp_dotnet_confirmed=unknown`, do not use RoslynKit yet; ask `next_question_if_unknown` or gather minimal repo evidence first.
-- Minimal repo evidence for C#/.NET is a lightweight discovery of `.sln`, `.slnx`, `.csproj`, `global.json` with .NET SDK context, or relevant `.cs` source/test files.
+- Minimal repo evidence for C#/.NET is a lightweight discovery of C# source or script files (`.cs`, `.csx`), C# project files (`.csproj`), .NET solution or solution-filter files (`.sln`, `.slnx`, `.slnf`), Razor files containing C# (`.razor`, `.cshtml`), C#-affecting MSBuild files (`.props`, `.targets`), analyzer configuration files (`.editorconfig`, `.globalconfig`, `.ruleset`), `global.json` with .NET SDK context, or related generated C# files such as `.g.cs`, `.g.i.cs`, and `.Designer.cs`.
 - If `code_investigation=no`, do not use RoslynKit first.
 - Stop after at most five classifier or clarification exchanges; if C#/.NET is still unknown, proceed with non-RoslynKit narrowing first.
 
@@ -102,11 +102,14 @@ Every scout prompt must include `assigned_scope`, `search_goal`, known keywords 
 
 ## Repository Atlas Reading Policy
 
-- Use [.codex/atlas/repo-map.md](.codex/atlas/repo-map.md) before broad source reading.
+- Load [.codex/atlas/repo-map.md](.codex/atlas/repo-map.md) into the active agent context before broad source reading. Treat it as required structural context for this repository, not optional reference material.
 - When [.codex/atlas/repo-map.md](.codex/atlas/repo-map.md) contains a runtime or architecture spine for the task domain, convert that spine into the first read order before broad literal search or scout discovery.
-- Use `atlas-router` when the architecture/domain is unclear.
+- The main agent owns Atlas routing. With [.codex/atlas/repo-map.md](.codex/atlas/repo-map.md) in context, identify the task domain, choose the first read order, and decide whether a specialist Atlas mapper should run.
+- When the current environment exposes Atlas subagents, the read-only Atlas mapper roles are approved by default for RoslynKit repo work. The main agent may dispatch them without an explicit user prompt when the task benefits from specialist or parallel mapping.
+- At the start of Atlas routing, first decide whether the likely read set includes C# source or script files (`.cs`, `.csx`), C# project files (`.csproj`), .NET solution or solution-filter files (`.sln`, `.slnx`, `.slnf`), Razor files containing C# (`.razor`, `.cshtml`), C#-affecting MSBuild files (`.props`, `.targets`), analyzer configuration files (`.editorconfig`, `.globalconfig`, `.ruleset`), C# symbols, generated C# files such as `.g.cs`, `.g.i.cs`, and `.Designer.cs`, or Roslyn position/semantic data. When Atlas subagents are available, route that C# semantic mapping to `atlas-csharp-mapper` before broad C# source reads. When Atlas subagents are unavailable or the task is too small to delegate, the main agent should use [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md) and RoslynKit commands directly.
+- Route docs, config, build scripts, packaging metadata, CI-adjacent files, and agent-prompt or Atlas-policy surfaces to `atlas-doc-mapper` when Atlas subagents are available and the task benefits from delegation.
+- Route nearest-test discovery, focused validation commands, and obvious coverage-gap mapping to `atlas-test-mapper` after the source or domain scope is known.
 - Use `scout` when files are unclear inside a bounded scope.
-- For C# semantic inspection after candidate files or symbols are known, prefer RoslynKit or `atlas-csharp-mapper`.
 - Read tests before implementation when available.
 - Prefer symbol and line-range reads over full-file reads.
 - Stop after five source files and state a hypothesis before reading more.

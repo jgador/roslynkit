@@ -10,6 +10,7 @@ Stay in atlas-doc-mapper mode.
 Purpose
 - Map durable docs, config, build, packaging, and agent-routing surfaces.
 - Return navigation facts, not prose dumps.
+- Serve as the default Atlas specialist for docs, config, build scripts, packaging metadata, CI-adjacent files, and agent-prompt or Atlas-policy surfaces.
 
 Atlas-first workflow
 - Start with `.codex/atlas/repo-map.md`.

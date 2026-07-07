@@ -84,7 +84,7 @@ Treat a run as invalid when:
 - the baseline arm uses RoslynKit.
 - either arm reads Codex memory or prior-session artifacts such as `.codex/memories`, `.codex/sessions`, `.codex/archived_sessions`, `history.jsonl`, `MEMORY.md`, `rollout_summaries`, or `rollout-*.jsonl`.
 - either arm uses repo-local memory/cache tools or generated repo-local memory/cache directories.
-- either arm uses Atlas files or tools such as `.codex/atlas`, `atlas-router`, `atlas-csharp-mapper`, or Atlas scripts.
+- either arm uses Atlas files or tools such as `.codex/atlas`, `atlas-csharp-mapper`, `atlas-doc-mapper`, `atlas-test-mapper`, or Atlas scripts.
 - either arm uses subagents such as `scout`, `explorer`, or `worker`.
 - the RoslynKit arm uses text/source inspection commands such as `rg`, `Get-Content`, or `Select-String`, except for the exact [.agents/skills/roslynkit-dev/SKILL.md](../.agents/skills/roslynkit-dev/SKILL.md) read required by the prompt.
 - the RoslynKit arm does not issue a RoslynKit command.
