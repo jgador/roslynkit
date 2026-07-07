@@ -30,12 +30,22 @@ Update an existing install:
 dotnet tool update --global roslynkit
 ```
 
+Set up RoslynKit for coding-agent use from a Git repository root:
+
+```powershell
+cd C:\repo\MyApp
+roslynkit init
+```
+
+`roslynkit init` scaffolds the RoslynKit skill bundle for Codex by default. Use `--agent claude`, `--agent copilot`, or `--agent all` when another supported agent should receive the same bundle. The command checks for a `.git` directory or file in the current directory so setup happens at the repository root.
+
 For local package feeds and side-by-side prerelease development installs, see [docs/dev-install.md](docs/dev-install.md). For maintainer packaging and release steps, see [docs/dotnet-tool-release.md](docs/dotnet-tool-release.md).
 
 ## Common Tasks
 
 | Command | Use it to |
 | --- | --- |
+| `init` | Scaffold the RoslynKit skill bundle into a Git repository for Codex, Claude, GitHub Copilot, or all supported agents. |
 | `workspace` | See which projects and documents load. |
 | `diagnostics` | Check compiler diagnostics. |
 | `symbols` | Find C# declarations by name. |
@@ -52,12 +62,16 @@ For exact command syntax, use `roslynkit help`, `roslynkit help <command>`, or [
 
 ## Quick Start
 
-Start by confirming RoslynKit can load your solution or project:
+Start with repository setup, then confirm RoslynKit can load a solution or project:
 
 ```powershell
+cd C:\repo\MyApp
+roslynkit init
 roslynkit workspace --target .\MySolution.slnx
 roslynkit diagnostics --target .\MySolution.slnx
 ```
+
+Run `roslynkit init` from the repository root. The command checks the current directory for `.git` and fails from a parent folder or nested source folder that does not contain `.git`.
 
 Find a declaration by name, then reuse the returned symbol ID for more precise navigation:
 
@@ -80,18 +94,19 @@ Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-bas
 
 RoslynKit is a normal CLI process. It is not an MCP server, an LSP client, or a background daemon.
 
-If you want an AI coding tool to use RoslynKit, pair the CLI with a skill file that teaches the tool which commands to run. The stable skill lives at [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md), and the repo-local development skill lives at [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). The integration model is still just command-line execution: install `roslynkit`, then run `roslynkit <command> ...`.
+For AI coding tools, pair the CLI with a skill file that teaches the tool which commands to run. The stable skill lives at [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md), and the repo-local development skill lives at [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). The integration model is still just command-line execution: install `roslynkit`, scaffold the skill bundle with `init`, then run `roslynkit <command> ...`.
 
-Scaffold the stable skill bundle into another Git repository from that repository root:
+Scaffold the stable skill bundle from the Git repository root:
 
 ```powershell
+cd C:\repo\MyApp
 roslynkit init
 roslynkit init --agent claude
 roslynkit init --agent copilot
 roslynkit init --agent all
 ```
 
-`roslynkit init` requires a `.git` directory or file in the current directory and refuses to replace changed files unless `--overwrite` is supplied. The selected agent controls only the outer folder:
+`roslynkit init` requires a `.git` directory or file in the current directory and refuses to replace changed files unless `--overwrite` is supplied. Running the command from a parent folder or nested source folder fails unless that folder is itself the Git root. The selected agent controls only the outer folder:
 
 - `codex` -> `.agents/skills/roslynkit/`
 - `claude` -> `.claude/skills/roslynkit/`
