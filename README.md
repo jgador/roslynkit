@@ -15,6 +15,8 @@ The CLI loads .NET projects with MSBuild and asks Roslyn for source information.
 
 RoslynKit prints stable terminal output so people can read it, copy it into issues, or use it in scripts.
 
+![RoslynKit source navigation overview](docs/images/roslynkit-overview.png)
+
 ## Install
 
 Install the global .NET tool from NuGet.org:
