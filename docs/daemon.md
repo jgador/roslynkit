@@ -55,7 +55,7 @@ The committed `HEAD` is validated here but is not part of daemon compatibility i
 
 `DaemonIdentityResolver` adds the current operating-system user and local IPC runtime directory to a resolved `GitWorkspaceIdentity`. Windows users are identified by SID, Unix users by effective numeric UID, and the runtime directory is the canonical form of the process runtime directory returned by `Path.GetTempPath()`. The resolver snapshots the build-environment mapping so later mutation cannot change an already-created identity.
 
-`DaemonEndpointName` serializes every compatibility field in a fixed JSON property order, sorts build-environment entries ordinally, preserves null values, and hashes the UTF-8 bytes with SHA-256. The resulting endpoint name has the fixed format `roslynkit-v1-<64 lowercase hexadecimal characters>`. It contains no repository path, target path, environment value, or user identifier. Endpoint creation remains a pre-transport seam; CLI routing, bootstrap locking, and named-pipe creation do not consume it yet.
+`DaemonEndpointName` serializes every compatibility field in a fixed JSON property order, sorts build-environment entries ordinally, preserves null values, and hashes the UTF-8 bytes with SHA-256. The resulting endpoint name has the fixed format `roslynkit-v1-<64 lowercase hexadecimal characters>`. It contains no repository path, target path, environment value, or user identifier. The endpoint can now be passed to the named-pipe factory, but CLI routing, bootstrap locking, and daemon hosting do not consume it yet.
 
 ## Supported workspace boundary
 
@@ -120,12 +120,16 @@ Only a usable load updates the successful fingerprint baseline. A normal workspa
 
 ## Local protocol and security
 
-- Transport is a local same-user named pipe. On Unix, the .NET named-pipe implementation may use a Unix-domain socket in the selected runtime directory.
-- The server binds locally with byte transmission mode, asynchronous I/O, and current-user-only access. Remote pipe access is prohibited.
-- Frames use a four-byte little-endian length followed by strict UTF-8 JSON. The protocol defines fixed size limits, exact-read loops, request IDs, version negotiation, deadlines, and invalid-frame rejection before allocation.
-- Large logical responses remain buffered from the CLI user's perspective but may use bounded start/chunk/end frames so transport limits do not cap document output. The client publishes no stdout until a complete valid response arrives.
-- The client canonicalizes `target`, `project`, and `file` paths before sending. The server never changes global current directory per request and rejects a target that does not match its identity.
-- Client cancellation or disconnect cancels queued or running work and flows through Roslyn operations. The server waits for cancellation unwind before releasing a workspace lease.
+- `DaemonNamedPipe` creates only local asynchronous duplex streams. Server streams use byte transmission mode and `PipeOptions.CurrentUserOnly`; client streams address the local machine and also request current-user-only access. On Unix, the .NET named-pipe implementation may use a Unix-domain socket in the selected runtime directory.
+- `DaemonProtocol` frames each message as a four-byte little-endian signed length followed by strict UTF-8 JSON. Request frames are limited to 1 MiB and response frames to 64 MiB. Zero, negative, and over-limit lengths are rejected before renting payload memory, and partial headers or payloads are rejected by exact-read loops.
+- The JSON schema is case-sensitive and uses strict numeric tokens. It rejects comments, trailing commas, quoted numbers, unknown properties, unknown message discriminators, empty request IDs, invalid UTF-8, and malformed JSON. The closed message set covers handshake, command, status, and stop requests and responses. Every message carries the exact protocol version and request ID; the handshake layer calls `DaemonProtocol.EnsureCompatible` before dispatch.
+- Command requests carry an absolute UTC deadline. `DaemonCommandRequest.Create` canonicalizes `target`, `project`, and `file` paths through the same reparse-point-aware path boundary used by workspace identity before serialization, while `ToParsedCommand` rebinds the wire options through `CliParser` before server execution. Both boundaries enforce an explicit allowlist of the current read-only workspace commands; local lifecycle commands cannot be encoded as command requests.
+- Command responses carry one complete buffered `CliProcessResult`, so no process output needs to be published from a partial frame. A later aggregation layer may use bounded start/chunk/end frames if logical output must exceed the response-frame limit.
+- Framing cancellation propagates through asynchronous stream operations. A peer closing between frames is distinguished from a truncated header or payload so the future host can treat an idle disconnect normally. Client disconnect cancellation and workspace-lease unwind remain daemon-host responsibilities.
+- The future daemon host never changes global current directory per request and rejects a target that does not match its identity.
+- Client cancellation or disconnect will cancel queued or running work and flow through Roslyn operations. The daemon host will wait for cancellation unwind before releasing a workspace lease.
+
+The framed message codec and named-pipe stream factory are implemented as reusable pre-host seams. No daemon process accepts connections yet, and workspace commands, status, and stop are not routed through the transport in this phase.
 
 Daemon-eligible commands are read-only. If mutating commands are introduced, request deduplication or a stricter pre-dispatch-only fallback rule is required before those commands may use the daemon.
 
@@ -157,4 +161,4 @@ roslynkit daemon status --target <target>
 roslynkit daemon stop --target <target>
 ```
 
-Both commands are idempotent and exit successfully when no compatible daemon is running. They execute locally and never load a workspace or start a daemon. Until daemon transport is implemented, both commands report `state: not-running`. Once transport is available, status reports running state, target, process ID, workspace readiness, generation, active and queued request counts, and the latest bounded infrastructure diagnostic when available.
+Both commands are idempotent and exit successfully when no compatible daemon is running. They execute locally and never load a workspace or start a daemon. Until daemon host and control routing are implemented, both commands report `state: not-running`. Once that routing is available, status reports running state, target, process ID, workspace readiness, generation, active and queued request counts, and the latest bounded infrastructure diagnostic when available.

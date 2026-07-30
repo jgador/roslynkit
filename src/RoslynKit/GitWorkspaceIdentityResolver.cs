@@ -185,7 +185,7 @@ internal sealed class GitWorkspaceIdentityResolver
             return null;
         }
 
-        var fullPath = ResolveExistingPath(targetPath);
+        var fullPath = PathCanonicalizer.ResolveExistingPath(targetPath);
         if (!File.Exists(fullPath))
         {
             return null;
@@ -312,34 +312,7 @@ internal sealed class GitWorkspaceIdentityResolver
 
     private static string NormalizeDirectoryPath(string path)
     {
-        return Path.TrimEndingDirectorySeparator(ResolveExistingPath(path));
-    }
-
-    private static string ResolveExistingPath(string path)
-    {
-        var fullPath = Path.GetFullPath(path);
-        var root = Path.GetPathRoot(fullPath);
-        if (string.IsNullOrEmpty(root))
-        {
-            return fullPath;
-        }
-
-        var resolvedPath = root;
-        foreach (var segment in fullPath[root.Length..].Split(
-            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-            StringSplitOptions.RemoveEmptyEntries))
-        {
-            var candidate = Path.Combine(resolvedPath, segment);
-            FileSystemInfo fileSystemInfo = Directory.Exists(candidate)
-                ? new DirectoryInfo(candidate)
-                : new FileInfo(candidate);
-            var linkTarget = fileSystemInfo.ResolveLinkTarget(returnFinalTarget: false);
-            resolvedPath = linkTarget is null
-                ? candidate
-                : Path.GetFullPath(linkTarget.FullName);
-        }
-
-        return Path.GetFullPath(resolvedPath);
+        return Path.TrimEndingDirectorySeparator(PathCanonicalizer.ResolveExistingPath(path));
     }
 
     private static bool IsPathInside(string path, string root)
