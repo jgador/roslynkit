@@ -126,11 +126,11 @@ Normal command stdout remains unchanged. Because the client exposes only complet
 
 ## Public lifecycle commands
 
-The planned public control surface is:
+The public control surface is:
 
 ```text
 roslynkit daemon status --target <target>
 roslynkit daemon stop --target <target>
 ```
 
-Both commands are idempotent and exit successfully when no compatible daemon is running. Status reports running state, target, process ID, workspace readiness, generation, active and queued request counts, and the latest bounded infrastructure diagnostic when available.
+Both commands are idempotent and exit successfully when no compatible daemon is running. They execute locally and never load a workspace or start a daemon. Until daemon transport is implemented, both commands report `state: not-running`. Once transport is available, status reports running state, target, process ID, workspace readiness, generation, active and queued request counts, and the latest bounded infrastructure diagnostic when available.

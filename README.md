@@ -96,6 +96,8 @@ Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-bas
 
 RoslynKit remains a normal command-line experience. It is not an MCP server, an LSP client, or an editor service. The approved architecture permits a future same-user workspace daemon that the CLI starts on demand as a transparent performance optimization; standalone execution remains the fallback. The lifecycle and consistency contract is defined in [docs/daemon.md](docs/daemon.md).
 
+The local lifecycle surface is `roslynkit daemon status --target <target>` and `roslynkit daemon stop --target <target>`. Both commands require an explicit target, execute without loading a workspace, and never start a daemon.
+
 For AI coding tools, pair the CLI with a skill file that teaches the tool which commands to run. The stable skill lives at [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md), and the repo-local development skill lives at [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). The integration model is still just command-line execution: install `roslynkit`, scaffold the skill bundle with `init`, then run `roslynkit <command> ...`.
 
 Scaffold the stable skill bundle from the Git repository root:

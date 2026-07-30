@@ -162,6 +162,17 @@ Agent values map only the outer target folder. The scaffolded bundle-relative fi
 - `claude` -> `.claude/skills/roslynkit/`
 - `copilot` -> `.github/skills/roslynkit/`
 
+### `daemon status` And `daemon stop`
+
+Daemon lifecycle commands require an explicit target, execute locally, and never start a daemon. When no compatible daemon is running, both commands exit `0` and report the same state shape:
+
+```markdown
+command: daemon status
+state: not-running
+```
+
+`daemon stop` uses `command: daemon stop` with the same `state: not-running` line when the daemon is already absent.
+
 ### `diagnostics`
 
 Diagnostics render as bullets sorted deterministically. `loc:` is omitted for diagnostics without a source location.

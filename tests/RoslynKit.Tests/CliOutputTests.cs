@@ -94,6 +94,8 @@ public sealed class CliOutputTests
         Assert.StartsWith("tool: roslynkit", output, StringComparison.Ordinal);
         Assert.Contains("- command: `version` description: ", output, StringComparison.Ordinal);
         Assert.Contains("- command: `init` description: ", output, StringComparison.Ordinal);
+        Assert.Contains("- command: `daemon status` description: ", output, StringComparison.Ordinal);
+        Assert.Contains("- command: `daemon stop` description: ", output, StringComparison.Ordinal);
         Assert.Contains("- command: `symbols` description: ", output, StringComparison.Ordinal);
         Assert.DoesNotContain("\"data\"", output, StringComparison.Ordinal);
     }
@@ -153,6 +155,47 @@ public sealed class CliOutputTests
         Assert.Contains("usage: `roslynkit init [--agent <codex|claude|copilot|all>] [--overwrite]`", output, StringComparison.Ordinal);
         Assert.Contains("- option: `--agent` value: agent description: ", output, StringComparison.Ordinal);
         Assert.Contains("- option: `--overwrite` description: ", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesNestedCommandHelp_ForDaemonStatus()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(
+            ["help", "daemon", "status"],
+            TestContext.Current.CancellationToken);
+
+        var output = writer.ToString();
+
+        Assert.Equal(0, exitCode);
+        Assert.StartsWith("command: daemon status", output, StringComparison.Ordinal);
+        Assert.Contains("usage: `roslynkit daemon status --target <target>`", output, StringComparison.Ordinal);
+        Assert.Contains("- option: `--target` short: `-t` value: target required: true description: ", output, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("status")]
+    [InlineData("stop")]
+    public async Task ExecuteAsync_ExecutesDaemonCommandsLocally(string subcommand)
+    {
+        var workspaceCalls = 0;
+        var application = new CliApplication(
+            TextWriter.Null,
+            TextWriter.Null,
+            (_, _) =>
+            {
+                workspaceCalls++;
+                return Task.FromResult(new CliProcessResult(1, "workspace called", string.Empty));
+            });
+
+        var result = await application.ExecuteAsync(
+            ["daemon", subcommand, "--target", "repo.slnx"],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, workspaceCalls);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal($"command: daemon {subcommand}\nstate: not-running{Environment.NewLine}", result.Stdout);
+        Assert.Equal(string.Empty, result.Stderr);
     }
 
     [Fact]

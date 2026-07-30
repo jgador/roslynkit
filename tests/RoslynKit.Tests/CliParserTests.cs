@@ -44,6 +44,47 @@ public sealed class CliParserTests
         Assert.True(command.Flag("overwrite"));
     }
 
+    [Theory]
+    [InlineData("status")]
+    [InlineData("stop")]
+    public void Parse_ResolvesNestedDaemonCommand(string subcommand)
+    {
+        var command = CliParser.Parse(["daemon", subcommand, "--target", "repo.slnx"]);
+
+        Assert.Equal($"daemon {subcommand}", command.Name);
+        Assert.Equal(["daemon", subcommand], command.Builtin?.Path);
+        Assert.Equal("repo.slnx", command.Required("target"));
+    }
+
+    [Theory]
+    [InlineData("status")]
+    [InlineData("stop")]
+    public void Parse_RejectsMissingDaemonTarget(string subcommand)
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(["daemon", subcommand]));
+
+        Assert.Equal($"daemon {subcommand}", exception.CommandName);
+        Assert.Contains("Missing required option '--target'", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_RejectsIncompleteDaemonCommand()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(["daemon"]));
+
+        Assert.Equal("unknown", exception.CommandName);
+        Assert.Contains("Incomplete command 'daemon'", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_RejectsUnknownDaemonSubcommand()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(["daemon", "start"]));
+
+        Assert.Equal("unknown", exception.CommandName);
+        Assert.Contains("Unknown command 'daemon start'", exception.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Parse_RejectsUnknownInitAgent()
     {
@@ -139,6 +180,28 @@ public sealed class CliParserTests
 
         Assert.True(command.IsHelp);
         Assert.Equal("symbols", command.HelpSubject?.Name);
+    }
+
+    [Theory]
+    [InlineData("status")]
+    [InlineData("stop")]
+    public void Parse_ReturnsNestedCommandHelp_WhenDaemonCommandAsksForHelp(string subcommand)
+    {
+        var command = CliParser.Parse(["daemon", subcommand, "--help"]);
+
+        Assert.True(command.IsHelp);
+        Assert.Equal($"daemon {subcommand}", command.HelpSubject?.Name);
+    }
+
+    [Theory]
+    [InlineData("status")]
+    [InlineData("stop")]
+    public void Parse_ReturnsNestedCommandHelp_ForHelpCommand(string subcommand)
+    {
+        var command = CliParser.Parse(["help", "daemon", subcommand]);
+
+        Assert.True(command.IsHelp);
+        Assert.Equal($"daemon {subcommand}", command.HelpSubject?.Name);
     }
 
     [Fact]

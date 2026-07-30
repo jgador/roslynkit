@@ -16,9 +16,10 @@ Resident architecture context for first-pass navigation. Atlas stores durable ro
 
 - `Program.Main` creates `CliApplication` with separate stdout and stderr writers and calls `RunAsync`.
 - `CliApplication.ExecuteAsync` parses args and returns an exact buffered `CliProcessResult`; `RunAsync` writes that result to the configured process streams.
-- Help, version, and init execute locally; workspace-backed commands cross an injected function boundary.
+- Help, version, init, and daemon lifecycle controls execute locally; workspace-backed commands cross an injected function boundary.
 - `WorkspaceCommandRouter` supplies the default function, calls `RoslynCommandExecutor.ExecuteAsync`, and renders through `MarkdownProjection` without writing directly to process streams.
-- `CliParser` validates command tokens and selector/option combinations against `BuiltinCommandRegistry`.
+- `CliParser` resolves the longest registered command-token path, then validates selector/option combinations against `BuiltinCommandRegistry`; this supports leaf commands such as `daemon status` while preserving canonical string command names.
+- `DaemonCommandExecutor` handles `daemon status` and `daemon stop` without loading a workspace or starting a daemon; before transport exists, both report `state: not-running`.
 - `RoslynCommandExecutor.ExecuteAsync(command, cancellationToken)` owns standalone workspace loading and delegates to the caller-owned workspace overload; the overload resolves documents or symbols, invokes Roslyn APIs, and returns result models without disposing the workspace.
 - `MarkdownProjection` is the deterministic markdown output renderer for successful commands.
 
@@ -36,6 +37,7 @@ flowchart TD
     G -->|help| H["MarkdownProjection.RenderHelp<br/>help overview or command help"]
     G -->|version| I["VersionText"]
     G -->|init| IA["InitCommandExecutor.Execute<br/>embedded skill-bundle scaffold"]
+    G -->|daemon status / daemon stop| DC["DaemonCommandExecutor.Execute<br/>local lifecycle control"]
     G -->|semantic command| JR["Injected workspace-command function"]
     JR --> J["WorkspaceCommandRouter.ExecuteAsync<br/>current-process adapter"]
     J --> JE["RoslynCommandExecutor.ExecuteAsync<br/>standalone workspace owner"]
@@ -71,6 +73,7 @@ flowchart TD
     H --> PR
     I --> PR
     IA --> Y
+    DC --> PR
     PR --> OUT["CliApplication.RunAsync<br/>writes stdout + stderr; returns exit code"]
 
     C1 --> ERR{"Exception handling"}
@@ -84,7 +87,7 @@ flowchart TD
 
 ## Domains
 
-- CLI routing: [Program.cs](../../src/RoslynKit/Program.cs), [CliApplication.cs](../../src/RoslynKit/CliApplication.cs), [CliProcessResult.cs](../../src/RoslynKit/CliProcessResult.cs), [WorkspaceCommandRouter.cs](../../src/RoslynKit/WorkspaceCommandRouter.cs), [CliParser.cs](../../src/RoslynKit/CliParser.cs), [BuiltinCommandRegistry.cs](../../src/RoslynKit/BuiltinCommandRegistry.cs), [RoslynCommandExecutor.cs](../../src/RoslynKit/RoslynCommandExecutor.cs), [InitCommandExecutor.cs](../../src/RoslynKit/InitCommandExecutor.cs); start symbols `Program.Main`, `CliApplication.RunAsync`, `CliApplication.ExecuteAsync`, `WorkspaceCommandRouter.ExecuteAsync`, `CliParser.Parse`, `RoslynCommandExecutor.ExecuteAsync`, `InitCommandExecutor.Execute`; tests [CliParserTests.cs](../../tests/RoslynKit.Tests/CliParserTests.cs), [CliOutputTests.cs](../../tests/RoslynKit.Tests/CliOutputTests.cs), [InitCommandExecutorTests.cs](../../tests/RoslynKit.Tests/InitCommandExecutorTests.cs), [CommandExecution/](../../tests/RoslynKit.Tests/CommandExecution/), [MarkdownFormatTests.cs](../../tests/RoslynKit.Tests/MarkdownFormatTests.cs).
+- CLI routing: [Program.cs](../../src/RoslynKit/Program.cs), [CliApplication.cs](../../src/RoslynKit/CliApplication.cs), [CliProcessResult.cs](../../src/RoslynKit/CliProcessResult.cs), [WorkspaceCommandRouter.cs](../../src/RoslynKit/WorkspaceCommandRouter.cs), [DaemonCommandExecutor.cs](../../src/RoslynKit/DaemonCommandExecutor.cs), [CliParser.cs](../../src/RoslynKit/CliParser.cs), [BuiltinCommandRegistry.cs](../../src/RoslynKit/BuiltinCommandRegistry.cs), [RoslynCommandExecutor.cs](../../src/RoslynKit/RoslynCommandExecutor.cs), [InitCommandExecutor.cs](../../src/RoslynKit/InitCommandExecutor.cs); start symbols `Program.Main`, `CliApplication.RunAsync`, `CliApplication.ExecuteAsync`, `WorkspaceCommandRouter.ExecuteAsync`, `DaemonCommandExecutor.Execute`, `CliParser.Parse`, `RoslynCommandExecutor.ExecuteAsync`, `InitCommandExecutor.Execute`; tests [CliParserTests.cs](../../tests/RoslynKit.Tests/CliParserTests.cs), [CliOutputTests.cs](../../tests/RoslynKit.Tests/CliOutputTests.cs), [InitCommandExecutorTests.cs](../../tests/RoslynKit.Tests/InitCommandExecutorTests.cs), [CommandExecution/](../../tests/RoslynKit.Tests/CommandExecution/), [MarkdownFormatTests.cs](../../tests/RoslynKit.Tests/MarkdownFormatTests.cs).
 - Workspace/navigation: `RoslynCommandExecutor.cs`, `RoslynWorkspaceLoader.cs`, `PositionResolver.cs`, `RoslynSymbolResolver.cs`, `RoslynDocumentFilters.cs`, `RoslynSymbolSearch.cs`, `RoslynSignatureHelpService.cs`; start symbols `RoslynWorkspaceLoader.LoadAsync`, `PositionResolver.GetPositionAsync`, `RoslynSymbolResolver.ResolveAsync`, `RoslynSymbolSearch.EnumerateSourceSymbols`; tests `CommandExecution/`, `SymbolsCommandTests.cs`, `CliOutputTests.cs`.
 - Markdown output contract: `MarkdownProjection.cs`, result model types under `Output/`, [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md); tests `MarkdownFormatTests.cs`, `CliOutputTests.cs`.
 - Tooling/packaging: `RoslynKit.csproj`, `InitCommandExecutor.cs`, `scripts/prepare-roslynkit-package.ps1`, `scripts/install-roslynkit-dev.ps1`, `scripts/RoslynKit.Packaging.ps1`, [docs/dev-install.md](../../docs/dev-install.md), [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md), [docs/agents/skill-maintenance.md](../../docs/agents/skill-maintenance.md); tests usually start with `CliOutputTests.cs`, `InitCommandExecutorTests.cs`, plus build/pack smoke commands.

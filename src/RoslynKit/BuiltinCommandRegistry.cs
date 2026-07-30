@@ -21,6 +21,20 @@ public static class BuiltinCommandRegistry
                 OptionSpec.Flag(null, "overwrite", "replace existing scaffolded skill files when content differs"),
             ]),
         new BuiltinCommand(
+            "daemon status",
+            "Report the compatible workspace daemon state without starting it.",
+            ["roslynkit daemon status --target <target>"],
+            [
+                DaemonTargetOption(),
+            ]),
+        new BuiltinCommand(
+            "daemon stop",
+            "Stop the compatible workspace daemon if it is running.",
+            ["roslynkit daemon stop --target <target>"],
+            [
+                DaemonTargetOption(),
+            ]),
+        new BuiltinCommand(
             "workspace",
             "List projects and repo-relevant documents loaded from a solution or project.",
             ["roslynkit workspace --target <solution.slnx|solution.sln|project.csproj> [--include-generated] [--include-additional] [--include-analyzer-config]"],
@@ -192,6 +206,9 @@ public static class BuiltinCommandRegistry
     private static readonly IReadOnlyDictionary<string, BuiltinCommand> Lookup =
         Builtins.ToDictionary(command => command.Name, StringComparer.Ordinal);
 
+    private static readonly BuiltinCommand[] ResolutionOrder =
+        Builtins.OrderByDescending(command => command.Path.Count).ToArray();
+
     /// <summary>
     /// Ordered built-in command metadata used by top-level help and parser lookup.
     /// </summary>
@@ -205,9 +222,51 @@ public static class BuiltinCommandRegistry
         return Lookup.TryGetValue(name, out var command) ? command : null;
     }
 
+    /// <summary>
+    /// Resolves the longest registered command path at the requested token offset.
+    /// </summary>
+    internal static (BuiltinCommand Command, int TokenCount)? GetLongestPrefix(
+        IReadOnlyList<string> args,
+        int startIndex = 0)
+    {
+        ArgumentNullException.ThrowIfNull(args);
+        ArgumentOutOfRangeException.ThrowIfNegative(startIndex);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(startIndex, args.Count);
+
+        foreach (var command in ResolutionOrder)
+        {
+            if (command.Path.Count > args.Count - startIndex)
+            {
+                continue;
+            }
+
+            var matches = true;
+            for (var pathIndex = 0; pathIndex < command.Path.Count; pathIndex++)
+            {
+                if (!string.Equals(command.Path[pathIndex], args[startIndex + pathIndex], StringComparison.Ordinal))
+                {
+                    matches = false;
+                    break;
+                }
+            }
+
+            if (matches)
+            {
+                return (command, command.Path.Count);
+            }
+        }
+
+        return null;
+    }
+
     private static OptionSpec TargetOption()
     {
         return OptionSpec.String('t', "target", "target", "solution or project file to load", required: true);
+    }
+
+    private static OptionSpec DaemonTargetOption()
+    {
+        return OptionSpec.String('t', "target", "target", "solution or project file identifying the compatible daemon", required: true);
     }
 
     private static OptionSpec FileOption()

@@ -82,6 +82,11 @@ public sealed class CliApplication
                 return CliProcessResult.Success(MarkdownProjection.Render(result));
             }
 
+            if (command.Name is "daemon status" or "daemon stop")
+            {
+                return DaemonCommandExecutor.Execute(command);
+            }
+
             return await _executeWorkspaceCommand(command, cancellationToken).ConfigureAwait(false);
         }
         catch (CliUsageException ex)

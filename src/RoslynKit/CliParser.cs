@@ -45,18 +45,19 @@ public static class CliParser
             return ParseHelp(args);
         }
 
-        var builtin = BuiltinCommandRegistry.GetBuiltin(args[0]);
-        if (builtin is null)
+        var commandMatch = BuiltinCommandRegistry.GetLongestPrefix(args);
+        if (commandMatch is null)
         {
-            throw new CliUsageException("unknown", $"Unknown command '{args[0]}'. Use 'roslynkit help' for command metadata.");
+            throw CreateUnknownCommandException(args, startIndex: 0, errorCommandName: "unknown");
         }
 
-        if (args.Skip(1).Any(IsHelpToken))
+        var (builtin, commandTokenCount) = commandMatch.Value;
+        if (args.Skip(commandTokenCount).Any(IsHelpToken))
         {
             return ParsedCommand.Help(builtin);
         }
 
-        var options = ParseOptions(builtin, args, firstOptionIndex: 1);
+        var options = ParseOptions(builtin, args, firstOptionIndex: commandTokenCount);
         ValidateRequiredOptions(builtin, options);
         ValidateCommandOptions(builtin.Name, options);
 
@@ -77,18 +78,69 @@ public static class CliParser
 
     private static ParsedCommand ParseHelp(IReadOnlyList<string> args)
     {
-        if (args.Count == 2 && IsHelpToken(args[1]))
+        if (args.Count == 1 || (args.Count == 2 && IsHelpToken(args[1])))
         {
             return ParsedCommand.Help();
         }
 
-        return args.Count switch
+        var commandMatch = BuiltinCommandRegistry.GetLongestPrefix(args, startIndex: 1);
+        if (commandMatch is null)
         {
-            1 => ParsedCommand.Help(),
-            2 when BuiltinCommandRegistry.GetBuiltin(args[1]) is { } subject => ParsedCommand.Help(subject),
-            2 => throw new CliUsageException("help", $"Unknown command '{args[1]}'."),
-            _ => throw new CliUsageException("help", "Usage: roslynkit help [<command>]"),
-        };
+            throw CreateUnknownCommandException(args, startIndex: 1, errorCommandName: "help");
+        }
+
+        var (subject, commandTokenCount) = commandMatch.Value;
+        if (commandTokenCount != args.Count - 1)
+        {
+            throw new CliUsageException("help", "Usage: roslynkit help [<command> ...]");
+        }
+
+        return ParsedCommand.Help(subject);
+    }
+
+    private static CliUsageException CreateUnknownCommandException(
+        IReadOnlyList<string> args,
+        int startIndex,
+        string errorCommandName)
+    {
+        var suppliedPath = args
+            .Skip(startIndex)
+            .TakeWhile(token => !token.StartsWith("-", StringComparison.Ordinal) && !IsHelpToken(token))
+            .ToArray();
+
+        if (suppliedPath.Length == 0)
+        {
+            return new CliUsageException(errorCommandName, $"Unknown command '{args[startIndex]}'.{HelpSuffix(errorCommandName)}");
+        }
+
+        var hasKnownRoot = BuiltinCommandRegistry.Commands.Any(command =>
+            string.Equals(command.Path[0], suppliedPath[0], StringComparison.Ordinal));
+        var suppliedName = hasKnownRoot ? string.Join(' ', suppliedPath) : suppliedPath[0];
+        var isIncomplete = hasKnownRoot && BuiltinCommandRegistry.Commands.Any(command =>
+            suppliedPath.Length < command.Path.Count && IsPathPrefix(suppliedPath, command.Path));
+        var message = isIncomplete
+            ? $"Incomplete command '{suppliedName}'."
+            : $"Unknown command '{suppliedName}'.";
+
+        return new CliUsageException(errorCommandName, message + HelpSuffix(errorCommandName));
+    }
+
+    private static bool IsPathPrefix(IReadOnlyList<string> suppliedPath, IReadOnlyList<string> commandPath)
+    {
+        for (var index = 0; index < suppliedPath.Count; index++)
+        {
+            if (!string.Equals(suppliedPath[index], commandPath[index], StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static string HelpSuffix(string errorCommandName)
+    {
+        return errorCommandName == "unknown" ? " Use 'roslynkit help' for command metadata." : string.Empty;
     }
 
     private static Dictionary<string, string> ParseOptions(BuiltinCommand builtin, IReadOnlyList<string> args, int firstOptionIndex)

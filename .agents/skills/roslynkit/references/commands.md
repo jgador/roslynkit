@@ -6,6 +6,8 @@ This reference lists command names, usage strings, and options exposed by the in
 
 - `version`: Print the installed RoslynKit version.
 - `init`: Scaffold the RoslynKit coding-agent skill bundle into the current Git repository.
+- `daemon status`: Report the compatible workspace daemon state without starting it.
+- `daemon stop`: Stop the compatible workspace daemon if it is running.
 - `workspace`: List projects and repo-relevant documents loaded from a solution or project.
 - `diagnostics`: Return source compiler diagnostics for the loaded target.
 - `symbols`: Search source declarations by symbol name.
@@ -49,6 +51,34 @@ roslynkit init [--agent <codex|claude|copilot|all>] [--overwrite]
 
 - `--agent` `<agent>`: agent target: codex, claude, copilot, or all
 - `--overwrite`: replace existing scaffolded skill files when content differs
+
+## `daemon status`
+
+Report the compatible workspace daemon state without starting it.
+
+### Usage
+
+```powershell
+roslynkit daemon status --target <target>
+```
+
+### Options
+
+- `--target` / `-t` `<target>` (required): solution or project file identifying the compatible daemon
+
+## `daemon stop`
+
+Stop the compatible workspace daemon if it is running.
+
+### Usage
+
+```powershell
+roslynkit daemon stop --target <target>
+```
+
+### Options
+
+- `--target` / `-t` `<target>` (required): solution or project file identifying the compatible daemon
 
 ## `workspace`
 
