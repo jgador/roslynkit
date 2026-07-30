@@ -40,6 +40,38 @@ public sealed class GitWorkspaceIdentityResolverTests
     }
 
     [Fact]
+    public async Task ResolveAsync_ProducesStableEndpoint_AfterHeadChanges()
+    {
+        await using var area = GitTestArea.Create();
+        var repository = await area.CreateRepositoryAsync("head-change");
+        var workspaceResolver = new GitWorkspaceIdentityResolver();
+        var daemonResolver = new DaemonIdentityResolver(
+            () => new DaemonUserIdentity(DaemonIdentityResolver.UnixEffectiveUserIdKind, "test-user"),
+            () => Path.Combine(area.RootPath, "runtime"));
+        var initialResolution = await workspaceResolver.ResolveAsync(
+            repository.TargetPath,
+            TestContext.Current.CancellationToken);
+        Assert.True(initialResolution.IsSupported, initialResolution.Diagnostic);
+        var initialIdentity = Assert.IsType<GitWorkspaceIdentity>(initialResolution.Identity);
+
+        await File.WriteAllTextAsync(
+            Path.Combine(repository.RootPath, "notes.txt"),
+            "new commit",
+            TestContext.Current.CancellationToken);
+        await area.RunGitAsync(repository.RootPath, "add", "notes.txt");
+        await area.RunGitAsync(repository.RootPath, "commit", "-m", "Change HEAD");
+        var changedResolution = await workspaceResolver.ResolveAsync(
+            repository.TargetPath,
+            TestContext.Current.CancellationToken);
+        Assert.True(changedResolution.IsSupported, changedResolution.Diagnostic);
+        var changedIdentity = Assert.IsType<GitWorkspaceIdentity>(changedResolution.Identity);
+
+        Assert.Equal(
+            DaemonEndpointName.Create(daemonResolver.Resolve(initialIdentity)),
+            DaemonEndpointName.Create(daemonResolver.Resolve(changedIdentity)));
+    }
+
+    [Fact]
     public async Task ResolveAsync_ReturnsSupportedIdentity_ForLinkedWorktree()
     {
         await using var area = GitTestArea.Create();

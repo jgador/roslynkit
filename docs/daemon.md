@@ -49,7 +49,13 @@ flowchart LR
 
 The explicit build-environment allowlist is `Configuration`, `Platform`, `DOTNET_CLI_HOME`, `DOTNET_HOST_PATH`, `DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR`, `DOTNET_ROLL_FORWARD`, `DOTNET_ROLL_FORWARD_TO_PRERELEASE`, `DOTNET_ROOT`, `DOTNET_ROOT_X64`, `DOTNET_ROOT_X86`, `MSBUILD_EXE_PATH`, `MSBuildExtensionsPath`, `MSBuildExtensionsPath32`, `MSBuildExtensionsPath64`, `MSBuildSDKsPath`, `NUGET_FALLBACK_PACKAGES`, `NUGET_HTTP_CACHE_PATH`, `NUGET_PACKAGES`, `NUGET_PLUGINS_CACHE_PATH`, and `NUGET_PLUGIN_PATHS`. Unset values are retained as explicit null entries so set and unset environments cannot compare as the same identity accidentally. Other environment-dependent evaluation remains outside the supported boundary.
 
-The committed `HEAD` is validated here but is not part of daemon compatibility identity. `HEAD` is mutable worktree state and belongs to the per-request Git fingerprint, allowing a commit to reload the existing daemon rather than selecting a different endpoint. The later endpoint-identity phase adds current-user and IPC-runtime-directory inputs before canonical serialization and hashing.
+The committed `HEAD` is validated here but is not part of daemon compatibility identity. `HEAD` is mutable worktree state and belongs to the per-request Git fingerprint, allowing a commit to reload the existing daemon rather than selecting a different endpoint.
+
+### Endpoint identity and naming
+
+`DaemonIdentityResolver` adds the current operating-system user and local IPC runtime directory to a resolved `GitWorkspaceIdentity`. Windows users are identified by SID, Unix users by effective numeric UID, and the runtime directory is the canonical form of the process runtime directory returned by `Path.GetTempPath()`. The resolver snapshots the build-environment mapping so later mutation cannot change an already-created identity.
+
+`DaemonEndpointName` serializes every compatibility field in a fixed JSON property order, sorts build-environment entries ordinally, preserves null values, and hashes the UTF-8 bytes with SHA-256. The resulting endpoint name has the fixed format `roslynkit-v1-<64 lowercase hexadecimal characters>`. It contains no repository path, target path, environment value, or user identifier. Endpoint creation remains a pre-transport seam; CLI routing, bootstrap locking, and named-pipe creation do not consume it yet.
 
 ## Supported workspace boundary
 
