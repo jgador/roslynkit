@@ -94,7 +94,7 @@ Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-bas
 
 ## CLI Plus Skill Files
 
-RoslynKit is a normal CLI process. It is not an MCP server, an LSP client, or a background daemon.
+RoslynKit remains a normal command-line experience. It is not an MCP server, an LSP client, or an editor service. The approved architecture permits a future same-user workspace daemon that the CLI starts on demand as a transparent performance optimization; standalone execution remains the fallback. The lifecycle and consistency contract is defined in [docs/daemon.md](docs/daemon.md).
 
 For AI coding tools, pair the CLI with a skill file that teaches the tool which commands to run. The stable skill lives at [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md), and the repo-local development skill lives at [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). The integration model is still just command-line execution: install `roslynkit`, scaffold the skill bundle with `init`, then run `roslynkit <command> ...`.
 
@@ -166,6 +166,7 @@ Exit codes are `0` for success, `2` for usage errors, `130` for cancellation, an
 
 - [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md): generated command names, usage strings, and options.
 - [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md): command output contract.
+- [docs/daemon.md](docs/daemon.md): approved workspace-daemon design and supported-workspace boundary.
 - [docs/dev-install.md](docs/dev-install.md): side-by-side prerelease development install.
 - [docs/dotnet-tool-release.md](docs/dotnet-tool-release.md): maintainer packaging and release workflow.
 - [docs/roslyn-lsp-commands.md](docs/roslyn-lsp-commands.md): Roslyn language-server inventory and RoslynKit planning coverage.
@@ -176,6 +177,6 @@ Exit codes are `0` for success, `2` for usage errors, `130` for cancellation, an
 
 - No MCP transport.
 - No LSP transport.
-- No background daemon.
+- No manually launched, always-on, cross-user, or general-purpose server. The optional workspace daemon is tool-managed, same-user, on-demand, idle-shutdown, and retains standalone fallback.
 - No editor-specific protocol coupling.
 - No source mutation by default. If edit-producing features are added later, they should return deterministic proposed edits before any apply mode exists.

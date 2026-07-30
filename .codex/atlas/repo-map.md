@@ -9,15 +9,15 @@ Resident architecture context for first-pass navigation. Atlas stores durable ro
 - Tests: `tests/RoslynKit.Tests/`
 - Test utility: `tests/RoslynKit.WorkspaceGraphDump/`
 - Fixture input: `tests/FixtureWorkspace/App/`
-- Docs and packaging: [README.md](../../README.md), [docs/](../../docs/), [docs/agents/](../../docs/agents/), `scripts/`
-- Agent assets: [AGENTS.md](../../AGENTS.md), [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/), [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md), [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md), [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md), `.agents/skills/commit-context/`, `.agents/skills/git-commit-push/`, [.codex/atlas/repo-map.md](repo-map.md)
+- Docs and packaging: [README.md](../../README.md), [docs/](../../docs/), [docs/daemon.md](../../docs/daemon.md), [docs/agents/](../../docs/agents/), `scripts/`
+- Agent assets: [AGENTS.md](../../AGENTS.md), [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/), [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md), [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md), [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md), [.agents/skills/grill-me/SKILL.md](../../.agents/skills/grill-me/SKILL.md), `.agents/skills/commit-context/`, `.agents/skills/git-commit-push/`, [.codex/atlas/repo-map.md](repo-map.md)
 
 ## Runtime Flow
 
 - `Program.Main` creates `CliApplication` and calls `RunAsync`.
 - `CliApplication.RunAsync` parses args, handles help/version/init, calls `RoslynCommandExecutor.ExecuteAsync` for Roslyn-backed commands, and renders through `MarkdownProjection`.
 - `CliParser` validates command tokens and selector/option combinations against `BuiltinCommandRegistry`.
-- `RoslynCommandExecutor` loads workspaces, resolves documents or symbols, invokes Roslyn APIs, and returns result models.
+- `RoslynCommandExecutor.ExecuteAsync(command, cancellationToken)` owns standalone workspace loading and delegates to the caller-owned workspace overload; the overload resolves documents or symbols, invokes Roslyn APIs, and returns result models without disposing the workspace.
 - `MarkdownProjection` is the deterministic markdown output renderer for successful commands.
 
 ```mermaid
@@ -33,9 +33,10 @@ flowchart TD
     G -->|help| H["MarkdownProjection.RenderHelp<br/>help overview or command help"]
     G -->|version| I["VersionText"]
     G -->|init| IA["InitCommandExecutor.Execute<br/>embedded skill-bundle scaffold"]
-    G -->|semantic command| J["RoslynCommandExecutor.ExecuteAsync<br/>src/RoslynKit/RoslynCommandExecutor.cs"]
-
-    J --> K{"Command dispatch switch"}
+    G -->|semantic command| J["RoslynCommandExecutor.ExecuteAsync<br/>standalone workspace owner"]
+    J --> R["RoslynWorkspaceLoader.LoadAsync"]
+    R --> J2["RoslynCommandExecutor.ExecuteAsync<br/>caller-owned workspace overload"]
+    J2 --> K{"Command dispatch switch"}
     K --> L["workspace / diagnostics"]
     K --> M["symbols / document-symbols"]
     K --> N["definition / type-definition"]
@@ -43,14 +44,12 @@ flowchart TD
     K --> P["quick-info / signature-help"]
     K --> Q["document-text / document-lines / symbol-source"]
 
-    L --> R["RoslynWorkspaceLoader.LoadAsync"]
-    M --> R
-    N --> R
-    O --> R
-    P --> R
-    Q --> R
-
-    R --> S{"Resolution path"}
+    L --> S{"Resolution path"}
+    M --> S
+    N --> S
+    O --> S
+    P --> S
+    Q --> S
     S -->|target/project/documents| T["Workspace + Solution + Projects + Documents"]
     S -->|--file + --line + --column| U["FindTextDocumentAsync<br/>PositionResolver.GetPositionAsync"]
     S -->|--symbol| V["ResolveCommandSymbolAsync<br/>RoslynSymbolResolver"]
@@ -80,7 +79,7 @@ flowchart TD
 - Workspace/navigation: `RoslynCommandExecutor.cs`, `RoslynWorkspaceLoader.cs`, `PositionResolver.cs`, `RoslynSymbolResolver.cs`, `RoslynDocumentFilters.cs`, `RoslynSymbolSearch.cs`, `RoslynSignatureHelpService.cs`; start symbols `RoslynWorkspaceLoader.LoadAsync`, `PositionResolver.GetPositionAsync`, `RoslynSymbolResolver.ResolveAsync`, `RoslynSymbolSearch.EnumerateSourceSymbols`; tests `CommandExecution/`, `SymbolsCommandTests.cs`, `CliOutputTests.cs`.
 - Markdown output contract: `MarkdownProjection.cs`, result model types under `Output/`, [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md); tests `MarkdownFormatTests.cs`, `CliOutputTests.cs`.
 - Tooling/packaging: `RoslynKit.csproj`, `InitCommandExecutor.cs`, `scripts/prepare-roslynkit-package.ps1`, `scripts/install-roslynkit-dev.ps1`, `scripts/RoslynKit.Packaging.ps1`, [docs/dev-install.md](../../docs/dev-install.md), [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md), [docs/agents/skill-maintenance.md](../../docs/agents/skill-maintenance.md); tests usually start with `CliOutputTests.cs`, `InitCommandExecutorTests.cs`, plus build/pack smoke commands.
-- Agent/navigation policy: [AGENTS.md](../../AGENTS.md), [docs/agents/README.md](../../docs/agents/README.md), [.agents/skills/roslynkit/SKILL.md](../../.agents/skills/roslynkit/SKILL.md), [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md), [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md), [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md), this map.
+- Agent/navigation policy: [AGENTS.md](../../AGENTS.md), [docs/agents/README.md](../../docs/agents/README.md), [.agents/skills/roslynkit/SKILL.md](../../.agents/skills/roslynkit/SKILL.md), [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md), [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md), [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md), [.agents/skills/grill-me/SKILL.md](../../.agents/skills/grill-me/SKILL.md), this map.
 
 ## Test Routing
 
@@ -110,4 +109,4 @@ flowchart TD
 - Do not use Atlas as a file inventory, test inventory, symbol graph, reference graph, or source cache.
 - Ignore first: `artifacts/`, `TestResults/`, `.vs/`, `Visual Studio 18/`, `bin/`, `obj/`, `*.nupkg`.
 
-Last verified: `2026-07-07`
+Last verified: `2026-07-30`

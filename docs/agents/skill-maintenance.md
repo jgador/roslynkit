@@ -14,6 +14,8 @@ The stable bundle and dev skill should stay structurally aligned. They describe 
 
 The separate [.agents/skills/commit-context/SKILL.md](../../.agents/skills/commit-context/SKILL.md), [.agents/skills/git-commit-push/SKILL.md](../../.agents/skills/git-commit-push/SKILL.md), and [.agents/skills/security-audit/SKILL.md](../../.agents/skills/security-audit/SKILL.md) files are repo workflow skills for maintaining ignored local commit notes, committing from that prepared context, and running read-only repository security audits. They are not part of the stable/dev RoslynKit command-skill pair and do not need to mirror either RoslynKit skill.
 
+[.agents/skills/grill-me/SKILL.md](../../.agents/skills/grill-me/SKILL.md) is a self-contained repo-local productivity skill intended for explicit invocation and adapted from the upstream [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me) wrapper and [grilling](https://github.com/mattpocock/skills/tree/main/skills/productivity/grilling) primitive. It is not part of the stable RoslynKit bundle.
+
 ## Agent-Specific Scaffolding
 
 `roslynkit init` embeds the canonical [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/) bundle at pack time and scaffolds the same files to the selected agent root:
@@ -34,6 +36,7 @@ Keep the ownership boundaries explicit:
 - [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md) and [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md) are shared stable-bundle references and must remain suitable for installed copies in other repositories.
 - [.agents/skills/commit-context/SKILL.md](../../.agents/skills/commit-context/SKILL.md) and [.agents/skills/git-commit-push/SKILL.md](../../.agents/skills/git-commit-push/SKILL.md) are repo-specific workflow guides and may reference [artifacts/commit-context.md](../../artifacts/commit-context.md) and RoslynKit commit policy directly.
 - [.agents/skills/security-audit/SKILL.md](../../.agents/skills/security-audit/SKILL.md) is a repository-agnostic read-only audit workflow; keep its prompt template and scan commands free of RoslynKit-specific paths so it stays reusable in other repositories.
+- [.agents/skills/grill-me/SKILL.md](../../.agents/skills/grill-me/SKILL.md) keeps the upstream interview behavior inline without agent-specific metadata.
 - [docs/dev-install.md](../dev-install.md) is the install/update source of truth for the side-by-side prerelease tool.
 
 ## Intentional differences
