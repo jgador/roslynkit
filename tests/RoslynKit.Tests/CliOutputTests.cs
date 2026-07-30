@@ -9,6 +9,80 @@ namespace RoslynKit.Tests;
 public sealed class CliOutputTests
 {
     [Fact]
+    public async Task ExecuteAsync_ReturnsBufferedStreams_WithoutWritingThem()
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        var expected = new CliProcessResult(17, "buffered stdout", "buffered stderr");
+        var application = new CliApplication(
+            stdout,
+            stderr,
+            (_, _) => Task.FromResult(expected));
+
+        var result = await application.ExecuteAsync(
+            ["symbols", "--target", "missing.slnx", "--query", "Foo"],
+            TestContext.Current.CancellationToken);
+
+        Assert.Same(expected, result);
+        Assert.Equal(string.Empty, stdout.ToString());
+        Assert.Equal(string.Empty, stderr.ToString());
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesBufferedStreams_ToSeparateWriters()
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        var expected = new CliProcessResult(17, "buffered stdout", "buffered stderr");
+        var application = new CliApplication(
+            stdout,
+            stderr,
+            (_, _) => Task.FromResult(expected));
+
+        var exitCode = await application.RunAsync(
+            ["symbols", "--target", "missing.slnx", "--query", "Foo"],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(17, exitCode);
+        Assert.Equal(expected.Stdout, stdout.ToString());
+        Assert.Equal(expected.Stderr, stderr.ToString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FormatsCancellation_FromWorkspaceRouter()
+    {
+        var application = new CliApplication(
+            TextWriter.Null,
+            TextWriter.Null,
+            (_, _) => throw new OperationCanceledException());
+
+        var result = await application.ExecuteAsync(
+            ["symbols", "--target", "missing.slnx", "--query", "Foo"],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(130, result.ExitCode);
+        Assert.Equal($"error: canceled\nmessage: Operation was canceled.{Environment.NewLine}", result.Stdout);
+        Assert.Equal(string.Empty, result.Stderr);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FormatsUnexpectedException_FromWorkspaceRouter()
+    {
+        var application = new CliApplication(
+            TextWriter.Null,
+            TextWriter.Null,
+            (_, _) => throw new InvalidOperationException("test failure"));
+
+        var result = await application.ExecuteAsync(
+            ["symbols", "--target", "missing.slnx", "--query", "Foo"],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal($"error: InvalidOperationException\nmessage: test failure{Environment.NewLine}", result.Stdout);
+        Assert.Equal(string.Empty, result.Stderr);
+    }
+
+    [Fact]
     public async Task RunAsync_WritesMarkdownHelp_ForHelpCommand()
     {
         using var writer = new StringWriter();
@@ -174,7 +248,8 @@ public sealed class CliOutputTests
     private static async Task<string> AssertUsageErrorAsync(string[] args, int expectedLineCount = 2)
     {
         using var writer = new StringWriter();
-        var exitCode = await new CliApplication(writer).RunAsync(args, TestContext.Current.CancellationToken);
+        using var errorWriter = new StringWriter();
+        var exitCode = await new CliApplication(writer, errorWriter).RunAsync(args, TestContext.Current.CancellationToken);
 
         var output = writer.ToString();
         var lines = output.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd('\n').Split('\n');
@@ -189,6 +264,7 @@ public sealed class CliOutputTests
         }
 
         Assert.DoesNotContain("{", output, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, errorWriter.ToString());
         return output;
     }
 
@@ -215,4 +291,5 @@ public sealed class CliOutputTests
     {
         return output.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd('\n');
     }
+
 }

@@ -39,9 +39,9 @@ public sealed partial class CommandExecutionTests
             "--column", column.ToString());
 
         Assert.Equal("RunAsync", result.Symbol.Name);
-        Assert.Contains("Parses arguments, dispatches help or command execution", result.Symbol.Documentation!, StringComparison.Ordinal);
+        Assert.Contains("Processes one command and writes its buffered standard output", result.Symbol.Documentation!, StringComparison.Ordinal);
         Assert.Contains(
-            "\n  documentation: Parses arguments, dispatches help or command execution",
+            "\n  documentation: Processes one command and writes its buffered standard output",
             MarkdownProjection.Render(result).Replace("\r\n", "\n", StringComparison.Ordinal),
             StringComparison.Ordinal);
     }

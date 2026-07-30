@@ -10,6 +10,6 @@ internal static class Program
     /// </summary>
     public static Task<int> Main(string[] args)
     {
-        return new CliApplication(Console.Out).RunAsync(args);
+        return new CliApplication(Console.Out, Console.Error).RunAsync(args);
     }
 }

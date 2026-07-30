@@ -3,25 +3,59 @@ using System.Reflection;
 namespace RoslynKit;
 
 /// <summary>
-/// Owns the top-level CLI flow from argument parsing through command dispatch and stdout output.
+/// Owns the top-level CLI flow from argument parsing through buffered command results and process output.
 /// </summary>
 public sealed class CliApplication
 {
     private static readonly string VersionText = $"roslynkit version {ResolveDisplayVersion()}";
 
     private readonly TextWriter _stdout;
+    private readonly TextWriter _stderr;
+    private readonly Func<ParsedCommand, CancellationToken, Task<CliProcessResult>> _executeWorkspaceCommand;
 
     public CliApplication(TextWriter stdout)
+        : this(stdout, TextWriter.Null)
     {
+    }
+
+    public CliApplication(TextWriter stdout, TextWriter stderr)
+        : this(stdout, stderr, WorkspaceCommandRouter.ExecuteAsync)
+    {
+    }
+
+    public CliApplication(
+        TextWriter stdout,
+        TextWriter stderr,
+        Func<ParsedCommand, CancellationToken, Task<CliProcessResult>> executeWorkspaceCommand)
+    {
+        ArgumentNullException.ThrowIfNull(stdout);
+        ArgumentNullException.ThrowIfNull(stderr);
+        ArgumentNullException.ThrowIfNull(executeWorkspaceCommand);
+
         _stdout = stdout;
+        _stderr = stderr;
+        _executeWorkspaceCommand = executeWorkspaceCommand;
     }
 
     /// <summary>
-    /// Parses arguments, dispatches help or command execution, and writes markdown-flavored text output.
+    /// Processes one command and writes its buffered standard output and standard error to their configured streams.
     /// A zero exit code means stdout is command, help, or version output; a non-zero exit code means
     /// stdout is a plain-text error (<c>error:</c> code, <c>message:</c> text, and optional <c>hint:</c> text).
     /// </summary>
     public async Task<int> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteAsync(args, cancellationToken).ConfigureAwait(false);
+        await _stdout.WriteAsync(result.Stdout).ConfigureAwait(false);
+        await _stderr.WriteAsync(result.Stderr).ConfigureAwait(false);
+        return result.ExitCode;
+    }
+
+    /// <summary>
+    /// Processes one command into exact buffered process streams without writing to the configured writers.
+    /// </summary>
+    public async Task<CliProcessResult> ExecuteAsync(
+        IReadOnlyList<string> args,
+        CancellationToken cancellationToken = default)
     {
         string errorCode;
         string errorMessage;
@@ -34,26 +68,21 @@ public sealed class CliApplication
 
             if (command.IsHelp)
             {
-                await _stdout.WriteLineAsync(MarkdownProjection.RenderHelp(command.HelpSubject)).ConfigureAwait(false);
-                return 0;
+                return CliProcessResult.Success(MarkdownProjection.RenderHelp(command.HelpSubject));
             }
 
             if (command.Name == "version")
             {
-                await _stdout.WriteLineAsync(VersionText).ConfigureAwait(false);
-                return 0;
+                return CliProcessResult.Success(VersionText);
             }
 
             if (command.Name == "init")
             {
                 var result = InitCommandExecutor.Execute(command);
-                await _stdout.WriteLineAsync(MarkdownProjection.Render(result)).ConfigureAwait(false);
-                return 0;
+                return CliProcessResult.Success(MarkdownProjection.Render(result));
             }
 
-            var data = await RoslynCommandExecutor.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
-            await _stdout.WriteLineAsync(MarkdownProjection.Render(data)).ConfigureAwait(false);
-            return 0;
+            return await _executeWorkspaceCommand(command, cancellationToken).ConfigureAwait(false);
         }
         catch (CliUsageException ex)
         {
@@ -75,14 +104,7 @@ public sealed class CliApplication
             errorMessage = ex.Message;
         }
 
-        var output = $"error: {errorCode}\nmessage: {errorMessage}";
-        if (!string.IsNullOrWhiteSpace(errorHint))
-        {
-            output += $"\nhint: {errorHint}";
-        }
-
-        await _stdout.WriteLineAsync(output).ConfigureAwait(false);
-        return exitCode;
+        return CliProcessResult.Failure(exitCode, errorCode, errorMessage, errorHint);
     }
 
     private static string ResolveDisplayVersion()
