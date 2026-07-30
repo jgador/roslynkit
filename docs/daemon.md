@@ -77,7 +77,7 @@ These limitations mean the performance-only correctness claim applies inside thi
 
 Each workspace request reconciles Git state before leasing a snapshot. Concurrent requests share one in-progress fingerprint calculation. The complete operation has a five-second deadline.
 
-`GitWorktreeFingerprintService` now implements this pre-session seam. It accepts the canonical worktree root from workspace identity resolution, coalesces only concurrent captures, and returns either a structural `GitWorktreeFingerprint` or a typed failure that forbids cache reuse. Daemon routing and workspace reload coordination do not consume this service yet.
+`GitWorktreeFingerprintService` accepts the canonical worktree root from workspace identity resolution, coalesces only concurrent captures, and returns either a structural `GitWorktreeFingerprint` or a typed failure that forbids cache reuse. `WorkspaceDaemonSession` consumes this service before leasing or replacing a workspace generation. Daemon host routing does not consume the session yet.
 
 The capture uses `ProcessStartInfo.ArgumentList` and Git-native object hashing:
 
@@ -104,7 +104,9 @@ The stable capture reduces races but is not an atomic filesystem snapshot. A Git
 
 Each command leases one captured immutable Roslyn `Solution`. A reload creates a new `MSBuildWorkspace` and `Solution`; it does not mutate the snapshot held by an active command. Historical generations are released after their active leases finish.
 
-At most three clean-snapshot searches run concurrently. Coordination uses an asynchronous writer-priority gate so a pending reload prevents new searches from indefinitely leasing the old generation.
+At most three clean-snapshot searches run concurrently. Asynchronous writer-priority coordination prevents a pending reload from admitting new searches against the old generation.
+
+`WorkspaceDaemonSession` now implements this pre-host ownership boundary. It owns the current `RoslynWorkspaceLoader`, successful fingerprint baseline, monotonically increasing generation number, active and queued request counts, workspace state, and latest Git infrastructure diagnostic. A generation dispatches through the caller-owned `RoslynCommandExecutor` overload, so command execution never reloads or disposes the leased workspace.
 
 Reload behavior is:
 
@@ -113,10 +115,10 @@ Reload behavior is:
 3. Dispose the old workspace and load a fresh workspace.
 4. Compute a stable post-load fingerprint.
 5. Accept the new generation when the fingerprints match.
-6. Otherwise require 250 milliseconds of quiet, represented by two equal stable captures, and reload once more.
+6. Otherwise require 250 milliseconds of quiet, represented by two equal stable captures; restart the quiet interval while the fingerprint continues changing, then reload once more.
 7. If the retry is also unstable, keep the latest completed snapshot usable for the current request and force the next request to reconcile and reload again.
 
-Only a usable load updates the successful fingerprint baseline. A normal workspace-load or semantic command error is returned to the client; it is not converted into daemon fallback.
+Only a usable stable load updates the successful fingerprint baseline. The second completed snapshot may serve its initiating request after a second pre/post mismatch, but its baseline remains unset and no later request can reuse it. A Git failure returns a typed infrastructure result for future standalone fallback. A normal workspace-load or semantic command exception propagates unchanged and is not converted into daemon fallback. Session disposal waits for active leases and prevents a generation that finishes loading after disposal begins from being published.
 
 ## Local protocol and security
 
