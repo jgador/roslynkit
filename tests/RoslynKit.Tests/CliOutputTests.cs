@@ -186,7 +186,9 @@ public sealed class CliOutputTests
             {
                 workspaceCalls++;
                 return Task.FromResult(new CliProcessResult(1, "workspace called", string.Empty));
-            });
+            },
+            (command, _) => Task.FromResult(
+                CliProcessResult.Success($"command: {command.Name}\nstate: not-running")));
 
         var result = await application.ExecuteAsync(
             ["daemon", subcommand, "--target", "repo.slnx"],

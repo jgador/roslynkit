@@ -29,7 +29,7 @@ public sealed partial class CommandExecutionTests
     public async Task Definition_ReturnsDocumentationForCliApplicationRunAsync()
     {
         var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
-        var (line, column) = TestPaths.FindLineAndColumn(programPath, "RunAsync(args)");
+        var (line, column) = TestPaths.FindLineAndColumn(programPath, "RunAsync(args, cancellationToken)");
 
         var result = await TestPaths.ExecuteCommandAsync<DefinitionResult>(
             "definition",

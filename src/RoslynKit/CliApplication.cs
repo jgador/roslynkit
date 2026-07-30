@@ -10,6 +10,7 @@ public sealed class CliApplication
     private readonly TextWriter _stdout;
     private readonly TextWriter _stderr;
     private readonly Func<ParsedCommand, CancellationToken, Task<CliProcessResult>> _executeWorkspaceCommand;
+    private readonly Func<ParsedCommand, CancellationToken, Task<CliProcessResult>> _executeDaemonCommand;
 
     public CliApplication(TextWriter stdout)
         : this(stdout, TextWriter.Null)
@@ -25,14 +26,25 @@ public sealed class CliApplication
         TextWriter stdout,
         TextWriter stderr,
         Func<ParsedCommand, CancellationToken, Task<CliProcessResult>> executeWorkspaceCommand)
+        : this(stdout, stderr, executeWorkspaceCommand, DaemonCommandExecutor.ExecuteAsync)
+    {
+    }
+
+    internal CliApplication(
+        TextWriter stdout,
+        TextWriter stderr,
+        Func<ParsedCommand, CancellationToken, Task<CliProcessResult>> executeWorkspaceCommand,
+        Func<ParsedCommand, CancellationToken, Task<CliProcessResult>> executeDaemonCommand)
     {
         ArgumentNullException.ThrowIfNull(stdout);
         ArgumentNullException.ThrowIfNull(stderr);
         ArgumentNullException.ThrowIfNull(executeWorkspaceCommand);
+        ArgumentNullException.ThrowIfNull(executeDaemonCommand);
 
         _stdout = stdout;
         _stderr = stderr;
         _executeWorkspaceCommand = executeWorkspaceCommand;
+        _executeDaemonCommand = executeDaemonCommand;
     }
 
     /// <summary>
@@ -77,7 +89,7 @@ public sealed class CliApplication
 
             if (command.Name is "daemon status" or "daemon stop")
             {
-                return DaemonCommandExecutor.Execute(command);
+                return await _executeDaemonCommand(command, cancellationToken).ConfigureAwait(false);
             }
 
             return await _executeWorkspaceCommand(command, cancellationToken).ConfigureAwait(false);

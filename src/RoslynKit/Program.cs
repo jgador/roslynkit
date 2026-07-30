@@ -33,8 +33,12 @@ internal static class Program
         return runCliAsync(args, cancellationToken);
     }
 
-    private static Task<int> RunCliAsync(IReadOnlyList<string> args, CancellationToken _)
+    private static Task<int> RunCliAsync(IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
-        return new CliApplication(Console.Out, Console.Error).RunAsync(args);
+        return new CliApplication(
+            Console.Out,
+            Console.Error,
+            DaemonClient.Shared.ExecuteAsync,
+            DaemonCommandExecutor.ExecuteAsync).RunAsync(args, cancellationToken);
     }
 }

@@ -1,12 +1,12 @@
 # Workspace Daemon
 
-This document is the canonical design contract for RoslynKit's optional workspace daemon. The daemon is an approved architecture that is being implemented incrementally; until its routing and lifecycle are complete, workspace commands continue to execute standalone.
+This document is the canonical design contract for RoslynKit's optional workspace daemon. The hidden host, short-lived client, on-demand startup, and public lifecycle controls are implemented. Exact infrastructure-only standalone fallback remains the next implementation slice.
 
 ## Purpose
 
 Loading an `MSBuildWorkspace` reevaluates the target solution or project. Repeating that work in every short-lived CLI process dominates many read-only searches. The daemon keeps one loaded workspace and its current immutable `Solution` snapshot alive across compatible CLI invocations.
 
-The daemon is a transparent performance optimization, not a correctness authority or a new user-facing server product. If daemon infrastructure is unavailable, an eligible read-only command executes through the existing standalone path.
+The daemon is a transparent performance optimization, not a correctness authority or a new user-facing server product. The planned fallback boundary preserves correctness by executing eligible read-only commands through the existing standalone path when daemon infrastructure is unavailable; that fallback is not yet wired.
 
 ```mermaid
 flowchart LR
@@ -19,16 +19,16 @@ flowchart LR
     Fingerprint --> Session[Workspace session]
     Session --> Executor[Roslyn command executor]
     Executor --> Response[Buffered stdout / stderr / exit code]
-    Pipe -->|Infrastructure failure| Fallback[Standalone execution]
+    Pipe -.->|Planned Phase 12 infrastructure failure| Fallback[Standalone execution]
 ```
 
 ## Lifecycle and identity
 
-- Once client routing is implemented, the first workspace-backed command will connect to a compatible daemon or start the same RoslynKit executable in the implemented hidden internal server mode. There is no public `daemon start` command.
+- The first workspace-backed command connects to a compatible daemon or starts the same RoslynKit executable in the hidden internal server mode. There is no public `daemon start` command.
 - `help`, `version`, `init`, `daemon status`, and `daemon stop` execute locally. Status and stop never start a daemon.
 - A compatibility identity includes the current user, canonical Git worktree and target, exact protocol and RoslynKit code/build identity, process architecture, resolved .NET SDK and MSBuild identity, applicable `global.json`, agreed build environment values, and the runtime directory used by local IPC.
 - The endpoint is a fixed-length opaque hash of the canonical identity. Repository paths never appear in endpoint names.
-- A short-lived bootstrap lock will prevent concurrent clients from racing to start a server. The implemented `DaemonLifetimeLease` already enforces one live server for the identity with a cross-process mutex held by a dedicated owner thread; Windows uses the global mutex namespace so desktop sessions for the same identity cannot create separate owners. After acquiring the future bootstrap lock, a client will recheck connectivity before spawning.
+- A short-lived `DaemonBootstrapLease` prevents concurrent clients from racing to start a server. After acquiring it, the client rechecks connectivity before spawning and holds it only until the versioned handshake reports readiness. The separate `DaemonLifetimeLease` enforces one live server for the identity. Both use cross-process mutexes held by dedicated owner threads; Windows uses the global mutex namespace so desktop sessions for the same identity cannot create separate owners.
 - Readiness requires a versioned protocol handshake. The existence of a pipe or socket is not sufficient.
 - The daemon exits after five minutes with no active or queued requests. Status requests do not reset this timer.
 - Stop rejects new work, drains active requests, and cancels remaining work after 30 seconds.
@@ -125,7 +125,7 @@ Only a usable stable load updates the successful fingerprint baseline. The secon
 `WorkspaceDaemonHost` implements the transport-independent lifecycle boundary around one session. `WorkspaceDaemonServer` is the implemented named-pipe adapter: it dispatches decoded requests into this host rather than owning workspace generation or shutdown policy itself.
 
 - Every accepted command is registered by request ID before session execution. A duplicate active request ID is rejected instead of replacing the original registration.
-- The command's absolute UTC deadline and the connection-lifetime cancellation token both flow into `WorkspaceDaemonSession.ExecuteAsync`. `WorkspaceDaemonServer` cancels that token when the peer disconnects; the future client will close or cancel the same request path on `Ctrl+C`.
+- The command's absolute UTC deadline and the connection-lifetime cancellation token both flow into `WorkspaceDaemonSession.ExecuteAsync`. `WorkspaceDaemonServer` cancels that token when the peer disconnects; cancellation of the short-lived client closes the same request path. `Program.Main` does not yet install a process-signal handler for `Ctrl+C`.
 - Command admission cancels the current idle wait. After the final command fully unwinds, a fresh five-minute wait starts through an injected `TimeProvider`. Status snapshots do not touch this activity version or timer.
 - Stop changes lifecycle state before returning its acknowledgement, rejects later commands, and allows accepted commands 30 seconds to drain. At the deadline it cancels every remaining command and waits for lease unwind before disposing the session.
 - Direct host disposal skips the grace period, cancels accepted commands immediately, and still waits for their session leases to unwind.
@@ -140,7 +140,7 @@ Only a usable stable load updates the successful fingerprint baseline. The secon
 - Command targets are canonicalized again and must equal the target captured by daemon identity. The process never changes its global current directory for a request.
 - A clean peer disconnect, pipe failure, or unexpected byte after a command frame cancels the connection token passed into the lifecycle host. Malformed or incompatible clients close only their connection; the listener remains available.
 - Stop writes its acknowledgement before canceling the accept loop, then relies on the lifecycle host to drain or cancel existing work. When `WorkspaceDaemonServer.RunAsync` receives process-lifetime cancellation, it disposes the host before awaiting connection handlers, so active Roslyn work cannot keep that shutdown path alive indefinitely. `Program.Main` does not yet install a graceful process-signal handler.
-- A Git fingerprint infrastructure failure closes the command connection without publishing a partial result. The future client treats that transport loss as the signal for standalone fallback. Ordinary command exceptions are converted through the same buffered `CliProcessResult` error formatting used by standalone execution.
+- A Git fingerprint infrastructure failure closes the command connection without publishing a partial result. The client classifies that transport loss as infrastructure; the next fallback slice will redirect it to standalone execution. Ordinary command exceptions are converted through the same buffered `CliProcessResult` error formatting used by standalone execution.
 
 ## Local protocol and security
 
@@ -149,32 +149,32 @@ Only a usable stable load updates the successful fingerprint baseline. The secon
 - The JSON schema is case-sensitive and uses strict numeric tokens. It rejects comments, trailing commas, quoted numbers, unknown properties, unknown message discriminators, empty request IDs, invalid UTF-8, and malformed JSON. The closed message set covers handshake, command, status, and stop requests and responses. Every message carries the exact protocol version and request ID; the handshake layer calls `DaemonProtocol.EnsureCompatible` before dispatch.
 - Command requests carry an absolute UTC deadline. `DaemonCommandRequest.Create` canonicalizes `target`, `project`, and `file` paths through the same reparse-point-aware path boundary used by workspace identity before serialization, while `ToParsedCommand` rebinds the wire options through `CliParser` before server execution. Both boundaries enforce an explicit allowlist of the current read-only workspace commands; local lifecycle commands cannot be encoded as command requests.
 - Command responses carry one complete buffered `CliProcessResult`, so no process output needs to be published from a partial frame. A later aggregation layer may use bounded start/chunk/end frames if logical output must exceed the response-frame limit.
-- Framing cancellation propagates through asynchronous stream operations. A peer closing between frames is distinguished from a truncated header or payload so the future host can treat an idle disconnect normally. Client disconnect cancellation and workspace-lease unwind remain daemon-host responsibilities.
+- Framing cancellation propagates through asynchronous stream operations. A peer closing between frames is distinguished from a truncated header or payload so the server can treat an idle disconnect normally. Client disconnect cancellation and workspace-lease unwind remain daemon-host responsibilities.
 - The daemon server never changes global current directory per request and rejects a target that does not match its identity.
 - Client cancellation or disconnect cancels queued or running work and flows through Roslyn operations. The lifecycle host waits for cancellation unwind before disposing the workspace session.
 
-The framed message codec, named-pipe stream factory, transport-independent host lifecycle, hidden server runner, and concurrent accept loop are implemented as reusable seams. Short-lived workspace commands, `daemon status`, and `daemon stop` are not routed through the transport until client connection and auto-start are implemented.
+`DaemonPipeClient` opens a short-lived connection, completes the required handshake, sends one operation, verifies protocol and request correlation, and exposes only a complete buffered response. `DaemonClient` resolves the endpoint, tries the command against an existing daemon, and coordinates startup when the endpoint is absent. Startup uses a five-second readiness window with short probes and one recheck when an endpoint disappears between readiness and the command exchange. `DaemonProcessStarter` invokes either the current apphost directly or `dotnet` with the current entry assembly, passes only the hidden token and canonical target, and does not wait for or kill the long-lived child. On Windows it follows Roslyn's compiler-server launch boundary: `CreateProcess` uses `CREATE_NO_WINDOW`, disables inherited handles, and supplies invalid standard handles so the daemon cannot retain or interfere with the short-lived client's terminal streams. Other platforms use the non-waiting `Process.Start` path with redirected streams. Workspace commands and public lifecycle controls now use these seams.
 
 Daemon-eligible commands are read-only. If mutating commands are introduced, request deduplication or a stricter pre-dispatch-only fallback rule is required before those commands may use the daemon.
 
-## Fallback
+## Planned fallback
 
-Fallback is limited to daemon infrastructure failures:
+The next implementation slice will limit fallback to daemon infrastructure failures:
 
 - unsupported daemon workspace identity;
 - Git fingerprint failure or timeout;
 - daemon startup, handshake, transport, or protocol failure;
 - daemon crash or connection loss.
 
-Fallback does not apply to usage errors, ordinary workspace-load errors, semantic command errors, or explicit cancellation.
+Fallback will not apply to usage errors, ordinary workspace-load errors, semantic command errors, or explicit cancellation.
 
-For a daemon-eligible read-only command, the client writes exactly one line to stderr before standalone execution:
+For a daemon-eligible read-only command, the completed fallback client will write exactly one line to stderr before standalone execution:
 
 ```text
 warning: daemon unavailable; executing standalone
 ```
 
-Normal command stdout remains unchanged. Because the client exposes only complete daemon responses, a failed transport cannot mix partial daemon stdout with standalone output. Read-only execution makes a retry after an ambiguous disconnect logically safe; mutating commands require stronger at-most-once handling.
+Normal command stdout will remain unchanged. Because the implemented client exposes only complete daemon responses, a failed transport cannot mix partial daemon stdout with standalone output. Read-only execution makes a retry after an ambiguous disconnect logically safe; mutating commands require stronger at-most-once handling.
 
 ## Public lifecycle commands
 
@@ -185,4 +185,4 @@ roslynkit daemon status --target <target>
 roslynkit daemon stop --target <target>
 ```
 
-Both commands are idempotent and exit successfully when no compatible daemon is running. They execute locally and never load a workspace or start a daemon. Until client control routing is implemented, both commands report `state: not-running` even though the hidden server can now dispatch framed status and stop requests. Once that routing is available, status reports running state, target, process ID, workspace readiness, generation, active and queued request counts, and the latest bounded infrastructure diagnostic when available.
+Both commands are idempotent and exit successfully when no compatible daemon is running. They parse and execute from the short-lived CLI, never load a workspace there, and never start a daemon. Status reports running state, target, process ID, workspace readiness, generation, active and queued request counts, and the latest bounded infrastructure diagnostic when available. Stop reports `state: stopping` after the server acknowledges graceful shutdown; an absent compatible daemon reports `state: not-running` for either command.

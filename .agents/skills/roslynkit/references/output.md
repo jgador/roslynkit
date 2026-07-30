@@ -173,6 +173,27 @@ state: not-running
 
 `daemon stop` uses `command: daemon stop` with the same `state: not-running` line when the daemon is already absent.
 
+When a compatible daemon is running, status reports its current lifecycle and workspace snapshot:
+
+```markdown
+command: daemon status
+state: running
+target: `<canonical-target>`
+pid: <process-id>
+workspace: <notloaded|reloading|ready|disposed>
+generation: <generation>
+active-requests: <count>
+queued-requests: <count>
+diagnostic: <latest-infrastructure-diagnostic>
+```
+
+`generation` is omitted before the first usable workspace generation, and `diagnostic` is omitted when no infrastructure diagnostic is available. Diagnostic line breaks are normalized to spaces. A successful stop acknowledgement renders:
+
+```markdown
+command: daemon stop
+state: stopping
+```
+
 ### `diagnostics`
 
 Diagnostics render as bullets sorted deterministically. `loc:` is omitted for diagnostics without a source location.

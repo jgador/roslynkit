@@ -94,7 +94,7 @@ Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-bas
 
 ## CLI Plus Skill Files
 
-RoslynKit remains a normal command-line experience. It is not an MCP server, an LSP client, or an editor service. The approved architecture permits a future same-user workspace daemon that the CLI starts on demand as a transparent performance optimization; standalone execution remains the fallback. The lifecycle and consistency contract is defined in [docs/daemon.md](docs/daemon.md).
+RoslynKit remains a normal command-line experience. It is not an MCP server, an LSP client, or an editor service. For supported Git workspaces, the CLI starts a compatible same-user workspace daemon on demand as a transparent performance optimization. Exact infrastructure-only standalone fallback remains the next implementation slice. The lifecycle and consistency contract is defined in [docs/daemon.md](docs/daemon.md).
 
 The local lifecycle surface is `roslynkit daemon status --target <target>` and `roslynkit daemon stop --target <target>`. Both commands require an explicit target, execute without loading a workspace, and never start a daemon.
 
@@ -179,6 +179,6 @@ Exit codes are `0` for success, `2` for usage errors, `130` for cancellation, an
 
 - No MCP transport.
 - No LSP transport.
-- No manually launched, always-on, cross-user, or general-purpose server. The optional workspace daemon is tool-managed, same-user, on-demand, idle-shutdown, and retains standalone fallback.
+- No manually launched, always-on, cross-user, or general-purpose server. The optional workspace daemon is tool-managed, same-user, on-demand, idle-shutdown, and is designed to retain standalone fallback.
 - No editor-specific protocol coupling.
 - No source mutation by default. If edit-producing features are added later, they should return deterministic proposed edits before any apply mode exists.
