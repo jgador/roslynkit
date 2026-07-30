@@ -71,6 +71,8 @@ These limitations mean the performance-only correctness claim applies inside thi
 
 Each workspace request reconciles Git state before leasing a snapshot. Concurrent requests share one in-progress fingerprint calculation. The complete operation has a five-second deadline.
 
+`GitWorktreeFingerprintService` now implements this pre-session seam. It accepts the canonical worktree root from workspace identity resolution, coalesces only concurrent captures, and returns either a structural `GitWorktreeFingerprint` or a typed failure that forbids cache reuse. Daemon routing and workspace reload coordination do not consume this service yet.
+
 The capture uses `ProcessStartInfo.ArgumentList` and Git-native object hashing:
 
 ```text

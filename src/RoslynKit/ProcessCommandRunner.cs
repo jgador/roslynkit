@@ -14,6 +14,23 @@ internal static class ProcessCommandRunner
         IReadOnlyList<string> arguments,
         CancellationToken cancellationToken)
     {
+        var result = await RunBytesAsync(
+            fileName,
+            workingDirectory,
+            arguments,
+            cancellationToken).ConfigureAwait(false);
+        return new ProcessCommandResult(
+            result.ExitCode,
+            Encoding.UTF8.GetString(result.StandardOutput),
+            result.StandardError);
+    }
+
+    public static async Task<ProcessByteCommandResult> RunBytesAsync(
+        string fileName,
+        string workingDirectory,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken)
+    {
         var startInfo = new ProcessStartInfo
         {
             FileName = fileName,
@@ -37,15 +54,18 @@ internal static class ProcessCommandRunner
             throw new InvalidOperationException($"Failed to start process '{fileName}'.");
         }
 
-        var standardOutputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        await using var standardOutput = new MemoryStream();
+        var standardOutputTask = process.StandardOutput.BaseStream.CopyToAsync(
+            standardOutput,
+            cancellationToken);
         var standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
 
         try
         {
             await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-            var standardOutput = await standardOutputTask.ConfigureAwait(false);
+            await standardOutputTask.ConfigureAwait(false);
             var standardError = await standardErrorTask.ConfigureAwait(false);
-            return new ProcessCommandResult(process.ExitCode, standardOutput, standardError);
+            return new ProcessByteCommandResult(process.ExitCode, standardOutput.ToArray(), standardError);
         }
         catch (OperationCanceledException)
         {
@@ -84,3 +104,8 @@ internal static class ProcessCommandRunner
 /// Contains the exit code and buffered standard streams from one child process.
 /// </summary>
 internal sealed record ProcessCommandResult(int ExitCode, string StandardOutput, string StandardError);
+
+/// <summary>
+/// Contains an exit code, raw standard output, and diagnostic standard error from one child process.
+/// </summary>
+internal sealed record ProcessByteCommandResult(int ExitCode, byte[] StandardOutput, string StandardError);
