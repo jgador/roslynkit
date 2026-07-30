@@ -118,7 +118,18 @@ Reload behavior is:
 6. Otherwise require 250 milliseconds of quiet, represented by two equal stable captures; restart the quiet interval while the fingerprint continues changing, then reload once more.
 7. If the retry is also unstable, keep the latest completed snapshot usable for the current request and force the next request to reconcile and reload again.
 
-Only a usable stable load updates the successful fingerprint baseline. The second completed snapshot may serve its initiating request after a second pre/post mismatch, but its baseline remains unset and no later request can reuse it. A Git failure returns a typed infrastructure result for future standalone fallback. A normal workspace-load or semantic command exception propagates unchanged and is not converted into daemon fallback. Session disposal waits for active leases and prevents a generation that finishes loading after disposal begins from being published.
+Only a usable stable load updates the successful fingerprint baseline. The second completed snapshot may serve its initiating request after a second pre/post mismatch, but its baseline remains unset and no later request can reuse it. A Git failure returns a typed infrastructure result for future standalone fallback. A normal workspace-load or semantic command exception propagates unchanged and is not converted into daemon fallback. Session disposal waits for active leases and prevents a generation that finishes loading after disposal begins from being published. `WorkspaceDaemonSession.CaptureSnapshot` reads state, generation, active and queued request counts, and the latest diagnostic under the session coordination lock so lifecycle status cannot combine fields from different moments.
+
+## Host lifecycle coordination
+
+`WorkspaceDaemonHost` implements the transport-independent lifecycle boundary around one session. The named-pipe accept loop is still a later layer; it will dispatch decoded requests into this host rather than owning workspace or shutdown policy itself.
+
+- Every accepted command is registered by request ID before session execution. A duplicate active request ID is rejected instead of replacing the original registration.
+- The command's absolute UTC deadline and the connection-lifetime cancellation token both flow into `WorkspaceDaemonSession.ExecuteAsync`. A future pipe host cancels that token when the peer disconnects; client `Ctrl+C` closes or cancels the same request path.
+- Command admission cancels the current idle wait. After the final command fully unwinds, a fresh five-minute wait starts through an injected `TimeProvider`. Status snapshots do not touch this activity version or timer.
+- Stop changes lifecycle state before returning its acknowledgement, rejects later commands, and allows accepted commands 30 seconds to drain. At the deadline it cancels every remaining command and waits for lease unwind before disposing the session.
+- Direct host disposal skips the grace period, cancels accepted commands immediately, and still waits for their session leases to unwind.
+- Status reports the target, process ID, lifecycle state, atomic session snapshot, and at most 4,096 characters of the latest infrastructure diagnostic.
 
 ## Local protocol and security
 
@@ -129,9 +140,9 @@ Only a usable stable load updates the successful fingerprint baseline. The secon
 - Command responses carry one complete buffered `CliProcessResult`, so no process output needs to be published from a partial frame. A later aggregation layer may use bounded start/chunk/end frames if logical output must exceed the response-frame limit.
 - Framing cancellation propagates through asynchronous stream operations. A peer closing between frames is distinguished from a truncated header or payload so the future host can treat an idle disconnect normally. Client disconnect cancellation and workspace-lease unwind remain daemon-host responsibilities.
 - The future daemon host never changes global current directory per request and rejects a target that does not match its identity.
-- Client cancellation or disconnect will cancel queued or running work and flow through Roslyn operations. The daemon host will wait for cancellation unwind before releasing a workspace lease.
+- Client cancellation or disconnect cancels queued or running work and flows through Roslyn operations. The lifecycle host waits for cancellation unwind before disposing the workspace session.
 
-The framed message codec and named-pipe stream factory are implemented as reusable pre-host seams. No daemon process accepts connections yet, and workspace commands, status, and stop are not routed through the transport in this phase.
+The framed message codec, named-pipe stream factory, and transport-independent host lifecycle are implemented as reusable seams. No daemon process accepts connections yet, and workspace commands, status, and stop are not routed through the transport in this phase.
 
 Daemon-eligible commands are read-only. If mutating commands are introduced, request deduplication or a stricter pre-dispatch-only fallback rule is required before those commands may use the daemon.
 

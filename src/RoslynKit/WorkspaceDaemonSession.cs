@@ -12,6 +12,16 @@ internal enum WorkspaceDaemonSessionState
 }
 
 /// <summary>
+/// Captures one atomic view of workspace generation and request state for daemon status reporting.
+/// </summary>
+internal sealed record WorkspaceDaemonSessionSnapshot(
+    WorkspaceDaemonSessionState State,
+    long? Generation,
+    int ActiveRequests,
+    int QueuedRequests,
+    string? LastInfrastructureDiagnostic);
+
+/// <summary>
 /// Owns one loaded workspace generation and executes commands without reloading it.
 /// </summary>
 internal sealed class WorkspaceDaemonGeneration : IDisposable
@@ -206,6 +216,22 @@ internal sealed class WorkspaceDaemonSession : IAsyncDisposable
             {
                 return _lastInfrastructureDiagnostic;
             }
+        }
+    }
+
+    /// <summary>
+    /// Captures workspace state under the session coordination lock so status responses cannot tear across fields.
+    /// </summary>
+    public WorkspaceDaemonSessionSnapshot CaptureSnapshot()
+    {
+        lock (_stateGate)
+        {
+            return new WorkspaceDaemonSessionSnapshot(
+                _state,
+                _generation,
+                _activeRequests,
+                _queuedRequests,
+                _lastInfrastructureDiagnostic);
         }
     }
 
