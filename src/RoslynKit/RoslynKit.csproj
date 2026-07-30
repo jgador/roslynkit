@@ -28,6 +28,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="RoslynKit.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="PackageReadme.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 

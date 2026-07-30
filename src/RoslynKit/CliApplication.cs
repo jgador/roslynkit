@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace RoslynKit;
 
 /// <summary>
@@ -7,7 +5,7 @@ namespace RoslynKit;
 /// </summary>
 public sealed class CliApplication
 {
-    private static readonly string VersionText = $"roslynkit version {ResolveDisplayVersion()}";
+    private static readonly string VersionText = $"roslynkit version {RoslynKitBuildInfo.DisplayVersion}";
 
     private readonly TextWriter _stdout;
     private readonly TextWriter _stderr;
@@ -110,17 +108,5 @@ public sealed class CliApplication
         }
 
         return CliProcessResult.Failure(exitCode, errorCode, errorMessage, errorHint);
-    }
-
-    private static string ResolveDisplayVersion()
-    {
-        var assembly = typeof(CliApplication).Assembly;
-        var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        if (!string.IsNullOrWhiteSpace(informationalVersion))
-        {
-            return informationalVersion;
-        }
-
-        return assembly.GetName().Version?.ToString() ?? "unknown";
     }
 }
