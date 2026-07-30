@@ -55,11 +55,6 @@ public sealed class CliApplication
         IReadOnlyList<string> args,
         CancellationToken cancellationToken = default)
     {
-        string errorCode;
-        string errorMessage;
-        string? errorHint = null;
-        int exitCode;
-
         try
         {
             var command = CliParser.Parse(args);
@@ -87,26 +82,9 @@ public sealed class CliApplication
 
             return await _executeWorkspaceCommand(command, cancellationToken).ConfigureAwait(false);
         }
-        catch (CliUsageException ex)
-        {
-            exitCode = 2;
-            errorCode = "usage";
-            errorMessage = ex.Message;
-            errorHint = ex.Hint;
-        }
-        catch (OperationCanceledException)
-        {
-            exitCode = 130;
-            errorCode = "canceled";
-            errorMessage = "Operation was canceled.";
-        }
         catch (Exception ex)
         {
-            exitCode = 1;
-            errorCode = ex.GetType().Name;
-            errorMessage = ex.Message;
+            return CliProcessResult.FromException(ex);
         }
-
-        return CliProcessResult.Failure(exitCode, errorCode, errorMessage, errorHint);
     }
 }

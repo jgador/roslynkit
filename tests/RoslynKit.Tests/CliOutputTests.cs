@@ -247,17 +247,19 @@ public sealed class CliOutputTests
     public async Task RunAsync_WritesUsageErrorHint_ForLineBeyondDocumentEnd()
     {
         var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+        var lineCount = File.ReadAllLines(programPath).Length + 1;
+        var requestedLine = lineCount + 1;
 
         var output = await AssertUsageErrorAsync([
             "quick-info",
             "--target", TestPaths.SolutionPath(),
             "--file", programPath,
-            "--line", "70",
+            "--line", requestedLine.ToString(),
             "--column", "1",
         ], expectedLineCount: 3);
 
-        Assert.Contains("Line 70 is outside the document range 1..16.", output, StringComparison.Ordinal);
-        Assert.Contains("hint: Retry with --line between 1 and 16", output, StringComparison.Ordinal);
+        Assert.Contains($"Line {requestedLine} is outside the document range 1..{lineCount}.", output, StringComparison.Ordinal);
+        Assert.Contains($"hint: Retry with --line between 1 and {lineCount}", output, StringComparison.Ordinal);
         Assert.Contains("document-lines", output, StringComparison.Ordinal);
     }
 

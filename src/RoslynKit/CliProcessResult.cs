@@ -20,4 +20,15 @@ public sealed record CliProcessResult(int ExitCode, string Stdout, string Stderr
 
         return new CliProcessResult(exitCode, stdout + Environment.NewLine, string.Empty);
     }
+
+    internal static CliProcessResult FromException(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        return exception switch
+        {
+            CliUsageException usage => Failure(2, "usage", usage.Message, usage.Hint),
+            OperationCanceledException => Failure(130, "canceled", "Operation was canceled."),
+            _ => Failure(1, exception.GetType().Name, exception.Message),
+        };
+    }
 }

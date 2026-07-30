@@ -69,19 +69,21 @@ public sealed partial class CommandExecutionTests
     public async Task QuickInfo_LineBeyondDocumentEnd_HasRetryHint()
     {
         var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+        var lineCount = File.ReadAllLines(programPath).Length + 1;
+        var requestedLine = lineCount + 1;
 
         var exception = await Assert.ThrowsAsync<CliUsageException>(() => TestPaths.ExecuteCommandAsync<QuickInfoResult>(
             "quick-info",
             "--target", TestPaths.SolutionPath(),
             "--file", programPath,
-            "--line", "70",
+            "--line", requestedLine.ToString(),
             "--column", "1"));
 
         Assert.Equal("quick-info", exception.CommandName);
-        Assert.Equal("Line 70 is outside the document range 1..16.", exception.Message);
+        Assert.Equal($"Line {requestedLine} is outside the document range 1..{lineCount}.", exception.Message);
         var hint = exception.Hint;
         Assert.NotNull(hint);
-        Assert.Contains("--line between 1 and 16", hint!, StringComparison.Ordinal);
+        Assert.Contains($"--line between 1 and {lineCount}", hint!, StringComparison.Ordinal);
         Assert.Contains("document-lines", hint!, StringComparison.Ordinal);
     }
 
@@ -117,9 +119,9 @@ public sealed partial class CommandExecutionTests
             "--file", programPath);
 
         var programSymbol = Assert.Single(result.Symbols, symbol => symbol.Name == "Program");
-        Assert.Contains("Forwards the RoslynKit console entry point", programSymbol.Documentation!, StringComparison.Ordinal);
+        Assert.Contains("Routes hidden daemon mode before forwarding ordinary arguments", programSymbol.Documentation!, StringComparison.Ordinal);
         Assert.Contains(
-            "\n  documentation: Forwards the RoslynKit console entry point",
+            "\n  documentation: Routes hidden daemon mode before forwarding ordinary arguments",
             MarkdownProjection.Render(result).Replace("\r\n", "\n", StringComparison.Ordinal),
             StringComparison.Ordinal);
     }
