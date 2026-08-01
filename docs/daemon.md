@@ -37,7 +37,7 @@ flowchart LR
 
 ### Workspace identity resolution
 
-`GitWorkspaceIdentityResolver` implements the workspace and toolchain portion of the compatibility identity without loading an `MSBuildWorkspace`. Daemon routing does not consume it yet. Resolution currently:
+`GitWorkspaceIdentityResolver` implements the workspace and toolchain portion of the compatibility identity without loading an `MSBuildWorkspace`. Both the daemon client and hidden server resolve it before deriving the endpoint. Resolution currently:
 
 1. Converts an existing `.sln`, `.slnx`, or `.csproj` target to an absolute path and resolves existing symbolic-link or reparse-point components.
 2. Resolves the worktree with `git rev-parse --path-format=absolute --show-toplevel` and requires `git rev-parse --verify HEAD^{commit}` to succeed.
@@ -77,7 +77,7 @@ These limitations mean the performance-only correctness claim applies inside thi
 
 Each workspace request reconciles Git state before leasing a snapshot. Concurrent requests share one in-progress fingerprint calculation. The complete operation has a five-second deadline.
 
-`GitWorktreeFingerprintService` accepts the canonical worktree root from workspace identity resolution, coalesces only concurrent captures, and returns either a structural `GitWorktreeFingerprint` or a typed failure that forbids cache reuse. `WorkspaceDaemonSession` consumes this service before leasing or replacing a workspace generation, and the hidden daemon runner now owns that session through `WorkspaceDaemonHost`.
+`GitWorktreeFingerprintService` accepts the canonical worktree root from workspace identity resolution, coalesces only concurrent captures, and returns either a structural `GitWorktreeFingerprint` or a typed failure that forbids cache reuse. `WorkspaceDaemonSession` consumes this service before leasing or replacing a workspace generation, and the hidden daemon runner owns that session through `WorkspaceDaemonHost`.
 
 The capture uses `ProcessStartInfo.ArgumentList` and Git-native object hashing:
 
@@ -129,7 +129,7 @@ Only a usable stable load updates the successful fingerprint baseline. The secon
 - Command admission cancels the current idle wait. After the final command fully unwinds, a fresh five-minute wait starts through an injected `TimeProvider`. Status snapshots do not touch this activity version or timer.
 - Stop changes lifecycle state before returning its acknowledgement, rejects later commands, and allows accepted commands 30 seconds to drain. At the deadline it cancels every remaining command and waits for lease unwind before disposing the session.
 - Direct host disposal skips the grace period, cancels accepted commands immediately, and still waits for their session leases to unwind.
-- Status reports the target, process ID, lifecycle state, atomic session snapshot, and at most 4,096 characters of the latest infrastructure diagnostic.
+- Status reports daemon availability as `running` while the host is alive, plus the target, process ID, atomic session snapshot, and at most 4,096 characters of the latest infrastructure diagnostic.
 
 ### Hidden server process
 
@@ -144,7 +144,7 @@ Only a usable stable load updates the successful fingerprint baseline. The secon
 
 ## Local protocol and security
 
-- `DaemonNamedPipe` creates only local asynchronous duplex streams. Server streams use byte transmission mode and `PipeOptions.CurrentUserOnly`; client streams address the local machine and also request current-user-only access. On Unix, the .NET named-pipe implementation may use a Unix-domain socket in the selected runtime directory.
+- `DaemonNamedPipe` creates only local asynchronous duplex streams. Server streams use byte transmission mode and `PipeOptions.CurrentUserOnly`; client streams address the local machine and also request current-user-only access. On Unix, the .NET named-pipe implementation may use a Unix-domain socket; RoslynKit supplies the opaque endpoint name rather than choosing an explicit socket path.
 - `DaemonProtocol` frames each message as a four-byte little-endian signed length followed by strict UTF-8 JSON. Request frames are limited to 1 MiB and response frames to 64 MiB. Zero, negative, and over-limit lengths are rejected before renting payload memory, and partial headers or payloads are rejected by exact-read loops.
 - The JSON schema is case-sensitive and uses strict numeric tokens. It rejects comments, trailing commas, quoted numbers, unknown properties, unknown message discriminators, empty request IDs, invalid UTF-8, and malformed JSON. The closed message set covers handshake, command, status, and stop requests and responses. Every message carries the exact protocol version and request ID; the handshake layer calls `DaemonProtocol.EnsureCompatible` before dispatch.
 - Command requests carry an absolute UTC deadline. `DaemonCommandRequest.Create` canonicalizes `target`, `project`, and `file` paths through the same reparse-point-aware path boundary used by workspace identity before serialization, while `ToParsedCommand` rebinds the wire options through `CliParser` before server execution. Both boundaries enforce an explicit allowlist of the current read-only workspace commands; local lifecycle commands cannot be encoded as command requests.

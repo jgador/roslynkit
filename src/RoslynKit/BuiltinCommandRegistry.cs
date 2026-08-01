@@ -29,7 +29,7 @@ public static class BuiltinCommandRegistry
             ]),
         new BuiltinCommand(
             "daemon stop",
-            "Stop the compatible workspace daemon if it is running.",
+            "Stop the compatible workspace daemon if it is running, without starting one.",
             ["roslynkit daemon stop --target <target>"],
             [
                 DaemonTargetOption(),

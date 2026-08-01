@@ -98,6 +98,8 @@ RoslynKit remains a normal command-line experience. It is not an MCP server, an 
 
 The local lifecycle surface is `roslynkit daemon status --target <target>` and `roslynkit daemon stop --target <target>`. Both commands require an explicit target, execute without loading a workspace, and never start a daemon.
 
+Daemon acceleration currently requires one target inside a single Git worktree with a committed `HEAD`. Submodules, nested repositories, and workspaces spanning repositories are excluded. RoslynKit uses a Git fingerprint instead of a filesystem watcher, does not observe Git-ignored active build inputs, and performs a full MSBuild workspace reload after any detected change; incremental `Solution.WithDocumentText` updates are out of scope. Unsupported daemon workspaces execute through the standalone path as described in [docs/daemon.md](docs/daemon.md).
+
 For AI coding tools, pair the CLI with a skill file that teaches the tool which commands to run. The stable skill lives at [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md), and the repo-local development skill lives at [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). The integration model is still just command-line execution: install `roslynkit`, scaffold the skill bundle with `init`, then run `roslynkit <command> ...`.
 
 Scaffold the stable skill bundle from the Git repository root:
@@ -168,7 +170,7 @@ Exit codes are `0` for success, `2` for usage errors, `130` for cancellation, an
 
 - [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md): generated command names, usage strings, and options.
 - [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md): command output contract.
-- [docs/daemon.md](docs/daemon.md): approved workspace-daemon design and supported-workspace boundary.
+- [docs/daemon.md](docs/daemon.md): workspace-daemon lifecycle, consistency, IPC, fallback, and supported-workspace contract.
 - [docs/dev-install.md](docs/dev-install.md): side-by-side prerelease development install.
 - [docs/dotnet-tool-release.md](docs/dotnet-tool-release.md): maintainer packaging and release workflow.
 - [docs/roslyn-lsp-commands.md](docs/roslyn-lsp-commands.md): Roslyn language-server inventory and RoslynKit planning coverage.

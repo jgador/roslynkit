@@ -7,7 +7,7 @@ This reference lists command names, usage strings, and options exposed by the in
 - `version`: Print the installed RoslynKit version.
 - `init`: Scaffold the RoslynKit coding-agent skill bundle into the current Git repository.
 - `daemon status`: Report the compatible workspace daemon state without starting it.
-- `daemon stop`: Stop the compatible workspace daemon if it is running.
+- `daemon stop`: Stop the compatible workspace daemon if it is running, without starting one.
 - `workspace`: List projects and repo-relevant documents loaded from a solution or project.
 - `diagnostics`: Return source compiler diagnostics for the loaded target.
 - `symbols`: Search source declarations by symbol name.
@@ -68,7 +68,7 @@ roslynkit daemon status --target <target>
 
 ## `daemon stop`
 
-Stop the compatible workspace daemon if it is running.
+Stop the compatible workspace daemon if it is running, without starting one.
 
 ### Usage
 

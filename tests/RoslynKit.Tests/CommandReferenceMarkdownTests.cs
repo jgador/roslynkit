@@ -29,7 +29,7 @@ public sealed class CommandReferenceMarkdownTests
         Assert.Contains("- `--agent` `<agent>`: agent target: codex, claude, copilot, or all", rendered, StringComparison.Ordinal);
         Assert.Contains("## `daemon status`\n\nReport the compatible workspace daemon state without starting it.", rendered, StringComparison.Ordinal);
         Assert.Contains("roslynkit daemon status --target <target>", rendered, StringComparison.Ordinal);
-        Assert.Contains("## `daemon stop`\n\nStop the compatible workspace daemon if it is running.", rendered, StringComparison.Ordinal);
+        Assert.Contains("## `daemon stop`\n\nStop the compatible workspace daemon if it is running, without starting one.", rendered, StringComparison.Ordinal);
         Assert.Contains("roslynkit daemon stop --target <target>", rendered, StringComparison.Ordinal);
         Assert.Contains("roslynkit symbols --target <target> --query <text>", rendered, StringComparison.Ordinal);
         Assert.Contains("- `--query` / `-q` `<text>` (required): symbol name text to search for", rendered, StringComparison.Ordinal);

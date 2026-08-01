@@ -183,7 +183,7 @@ state: not-running
 
 `daemon stop` uses `command: daemon stop` with the same `state: not-running` line when the daemon is already absent.
 
-When a compatible daemon is running, status reports its current lifecycle and workspace snapshot:
+When a compatible daemon is running, status reports daemon availability and its workspace snapshot:
 
 ```markdown
 command: daemon status
