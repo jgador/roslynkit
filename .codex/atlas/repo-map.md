@@ -125,6 +125,7 @@ flowchart TD
 - Help/version/error output -> `tests/RoslynKit.Tests/CliOutputTests.cs`
 - Markdown rendering contract -> `tests/RoslynKit.Tests/MarkdownFormatTests.cs`
 - Symbol search and document-symbol behavior -> `tests/RoslynKit.Tests/SymbolsCommandTests.cs`
+- External daemon startup, lifecycle, reload, fallback, and packaged-tool behavior -> [DaemonProcessIntegrationTests.cs](../../tests/RoslynKit.Tests/DaemonProcessIntegrationTests.cs), [DaemonFallbackProcessIntegrationTests.cs](../../tests/RoslynKit.Tests/DaemonFallbackProcessIntegrationTests.cs), and [PackagedToolProcessIntegrationTests.cs](../../tests/RoslynKit.Tests/PackagedToolProcessIntegrationTests.cs), using [DaemonProcessTestArea.cs](../../tests/RoslynKit.Tests/DaemonProcessTestArea.cs)
 - Repo and fixture path helpers -> `tests/RoslynKit.Tests/TestPaths.cs`
 
 ## Commands
