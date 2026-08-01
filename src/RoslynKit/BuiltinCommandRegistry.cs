@@ -55,6 +55,29 @@ public static class BuiltinCommandRegistry
                 OptionSpec.Flag(null, "include-generated", "include diagnostics from generated and obj documents"),
             ]),
         new BuiltinCommand(
+            "index",
+            "Build or refresh a repository-local full-text search index for the loaded target.",
+            ["roslynkit index --target <target> --index-path <path> [--include-generated] [--rebuild]"],
+            [
+                TargetOption(),
+                IndexPathOption(),
+                OptionSpec.Flag(null, "include-generated", "include source-generated symbols"),
+                OptionSpec.Flag(null, "rebuild", "discard the selected target's existing index records before indexing"),
+            ]),
+        new BuiltinCommand(
+            "search",
+            "Search indexed C# symbols using English-oriented text matching and ranking.",
+            ["roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>] [--include-generated]"],
+            [
+                TargetOption(),
+                IndexPathOption(),
+                OptionSpec.String('q', "query", "text", "English-oriented text to search for", required: true),
+                SearchProjectOption(),
+                SymbolKindOption(),
+                SearchMaxResultsOption(),
+                OptionSpec.Flag(null, "include-generated", "include source-generated symbols"),
+            ]),
+        new BuiltinCommand(
             "symbols",
             "Search source declarations by symbol name.",
             ["roslynkit symbols --target <target> --query <text> [--max-results <n>] [--case-sensitive] [--exact] [--kind <kind>]"],
@@ -64,7 +87,7 @@ public static class BuiltinCommandRegistry
                 MaxResultsOption(),
                 OptionSpec.Flag(null, "case-sensitive", "match query text case-sensitively"),
                 OptionSpec.Flag(null, "exact", "match the declaration name exactly"),
-                OptionSpec.String(null, "kind", "kind", "filter declarations by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate"),
+                SymbolKindOption(),
             ]),
         new BuiltinCommand(
             "document-text",
@@ -274,9 +297,24 @@ public static class BuiltinCommandRegistry
         return OptionSpec.String('f', "file", "path", "document file path in the loaded target");
     }
 
+    private static OptionSpec IndexPathOption()
+    {
+        return OptionSpec.String(null, "index-path", "path", "Git-ignored repository-local SQLite database file path", required: true);
+    }
+
     private static OptionSpec ProjectOption()
     {
         return OptionSpec.String(null, "project", "path", "owning project file path when a document path is ambiguous");
+    }
+
+    private static OptionSpec SearchProjectOption()
+    {
+        return OptionSpec.String(null, "project", "path", "limit search to one project file within the loaded target");
+    }
+
+    private static OptionSpec SearchMaxResultsOption()
+    {
+        return OptionSpec.Integer(null, "max-results", "n", "maximum results to return (default: 20)");
     }
 
     private static OptionSpec TargetFrameworkOption()
@@ -317,6 +355,11 @@ public static class BuiltinCommandRegistry
     private static OptionSpec MaxResultsOption()
     {
         return OptionSpec.Integer(null, "max-results", "n", "maximum results to return");
+    }
+
+    private static OptionSpec SymbolKindOption()
+    {
+        return OptionSpec.String(null, "kind", "kind", "filter symbols by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate");
     }
 
 }

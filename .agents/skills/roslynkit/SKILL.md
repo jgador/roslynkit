@@ -24,6 +24,24 @@ Use this skill for ordinary C# semantic inspection when the stable global `rosly
 
 Do not default to `Get-Content`, `Select-String`, or grep-style file reads for questions that are really about C# declarations, symbol structure, definitions, references, implementations, types, signatures, or generated documents.
 
+## Intent-Based Symbol Discovery
+
+Use `search` when an English-oriented question describes a C# responsibility but no declared symbol name is known. The command requires both `--target` and `--index-path`; use a Git-ignored repository-local database such as `./artifacts/roslynkit.db`.
+
+```powershell
+roslynkit search --target .\SomeSolution.slnx --index-path .\artifacts\roslynkit.db --query "how does workspace daemon reload after source changes"
+```
+
+`search` validates and refreshes the index automatically. Use `index` to prepare the index deliberately, and add `--rebuild` only when the selected target partition must be recreated.
+
+```powershell
+roslynkit index --target .\SomeSolution.slnx --index-path .\artifacts\roslynkit.db
+```
+
+Search ranking is heuristic. Inspect several top results and compare excerpts, symbol kinds, identities, and locations before selecting a navigation target; do not assume rank 1 is correct. Follow up through existing commands with a returned `id:` or `loc:` value. RoslynKit has no standard-input pipeline for search hits; the coding agent selects the appropriate next command.
+
+Search requires projects with one target framework. Source-generated declarations require `--include-generated`. Use `--project`, `--kind`, or `--max-results` only when a narrower target, symbol kind, or result limit is needed. The generated [references/commands.md](references/commands.md) file contains the exact options.
+
 ## Selector Choice
 
 `definition`, `references`, and `implementations` accept either `--symbol <selector>` or a position (`--file` plus `--line --column`), never both. Pick by the evidence already available:

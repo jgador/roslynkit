@@ -50,6 +50,8 @@ For local package feeds and side-by-side prerelease development installs, see [d
 | `init` | Scaffold the RoslynKit skill bundle into a Git repository for Codex, Claude, GitHub Copilot, or all supported agents. |
 | `workspace` | See which projects and documents load. |
 | `diagnostics` | Check compiler diagnostics. |
+| `index` | Prepare or refresh a persistent C# search index for one target. |
+| `search` | Find C# declarations from an English-oriented code question. |
 | `symbols` | Find C# declarations by name. |
 | `document-symbols` | List declarations inside one file. |
 | `definition` | Jump from a symbol or cursor position to its definition. |
@@ -91,6 +93,25 @@ roslynkit document-lines --target .\MySolution.slnx --file .\src\MyApp\Service.c
 ```
 
 Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-based, matching editor line and column numbers.
+
+## Search Index
+
+Use `search` when the relevant declaration is not known by name but an English-oriented description is available. It builds on SQLite Full-Text Search 5 (FTS5), then uses Best Matching 25 (BM25) ranking internally to order C# symbols. The rank is a discovery heuristic, not a claim that the first result is the correct navigation target.
+
+Both `index` and `search` require an explicit target and index path. Keep one database in a Git-ignored, repository-local location. The following path is a concise convention:
+
+```powershell
+roslynkit index --target .\MySolution.slnx --index-path .\artifacts\roslynkit.db
+roslynkit search --target .\MySolution.slnx --index-path .\artifacts\roslynkit.db --query "how does workspace daemon reload after source changes"
+```
+
+Add the database to the repository's `.gitignore`. SQLite enables write-ahead logging (WAL), so an active database can also have adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files. The path must be inside the repository; RoslynKit rejects a path that is not Git-ignored and never modifies `.gitignore`.
+
+One database belongs to one repository and stores separate partitions for its targets. `search` validates the selected target before reading and automatically refreshes changed records. `index` is the strict preparation command; use `--rebuild` to discard and recreate the selected target partition. A search waits for its first index, while concurrent searches may receive the last complete data set with `index-state: stale` while another request refreshes it.
+
+The search index accepts only projects with one target framework. It rejects multi-targeted projects instead of selecting a framework implicitly. Source-generated declarations are excluded unless `--include-generated` is supplied. By default a target search covers every project; use `--project` to narrow it, `--kind` to select symbol kinds, and `--max-results` to change the default limit of 20.
+
+Search results are not command pipelines. They contain ranked symbols, locations, and, when available, `id:` values. An agent evaluates several results and follows a promising `id:` with commands such as `definition`, `references`, or `symbol-source`; a `loc:` value can guide a narrow source read. RoslynKit does not accept search hits through standard input.
 
 ## CLI Plus Skill Files
 

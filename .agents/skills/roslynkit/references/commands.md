@@ -10,6 +10,8 @@ This reference lists command names, usage strings, and options exposed by the in
 - `daemon stop`: Stop the compatible workspace daemon if it is running, without starting one.
 - `workspace`: List projects and repo-relevant documents loaded from a solution or project.
 - `diagnostics`: Return source compiler diagnostics for the loaded target.
+- `index`: Build or refresh a repository-local full-text search index for the loaded target.
+- `search`: Search indexed C# symbols using English-oriented text matching and ranking.
 - `symbols`: Search source declarations by symbol name.
 - `document-text`: Read the full text of one resolved document.
 - `document-lines`: Read a bounded one-based line range from one resolved document.
@@ -114,6 +116,43 @@ roslynkit diagnostics --target <target> [--max-results <n>] [--include-hidden] [
 - `--include-hidden`: include hidden diagnostics
 - `--include-generated`: include diagnostics from generated and obj documents
 
+## `index`
+
+Build or refresh a repository-local full-text search index for the loaded target.
+
+### Usage
+
+```powershell
+roslynkit index --target <target> --index-path <path> [--include-generated] [--rebuild]
+```
+
+### Options
+
+- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--index-path` `<path>` (required): Git-ignored repository-local SQLite database file path
+- `--include-generated`: include source-generated symbols
+- `--rebuild`: discard the selected target's existing index records before indexing
+
+## `search`
+
+Search indexed C# symbols using English-oriented text matching and ranking.
+
+### Usage
+
+```powershell
+roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>] [--include-generated]
+```
+
+### Options
+
+- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--index-path` `<path>` (required): Git-ignored repository-local SQLite database file path
+- `--query` / `-q` `<text>` (required): English-oriented text to search for
+- `--project` `<path>`: limit search to one project file within the loaded target
+- `--kind` `<kind>`: filter symbols by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate
+- `--max-results` `<n>`: maximum results to return (default: 20)
+- `--include-generated`: include source-generated symbols
+
 ## `symbols`
 
 Search source declarations by symbol name.
@@ -131,7 +170,7 @@ roslynkit symbols --target <target> --query <text> [--max-results <n>] [--case-s
 - `--max-results` `<n>`: maximum results to return
 - `--case-sensitive`: match query text case-sensitively
 - `--exact`: match the declaration name exactly
-- `--kind` `<kind>`: filter declarations by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate
+- `--kind` `<kind>`: filter symbols by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate
 
 ## `document-text`
 

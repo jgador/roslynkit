@@ -36,6 +36,31 @@ public sealed class WorkspaceDaemonSessionTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_StableLoadBindsTheGenerationWorkspaceToItsFingerprint()
+    {
+        var fingerprint = CleanFingerprint("head-a");
+        WorkspaceDaemonGeneration? generation = null;
+        var targetPath = TestPaths.FixtureProjectPath();
+        await using var session = new WorkspaceDaemonSession(
+            targetPath,
+            Capture(Successful(fingerprint), Successful(fingerprint)),
+            async cancellationToken =>
+            {
+                var loadedGeneration = await WorkspaceDaemonGeneration.LoadAsync(targetPath, cancellationToken);
+                generation = loadedGeneration;
+                return loadedGeneration;
+            },
+            static (_, _) => Task.CompletedTask);
+
+        var command = CliParser.Parse(["workspace", "--target", targetPath]);
+        var result = await session.ExecuteAsync(command, TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccessful, result.Diagnostic);
+        var loaded = Assert.IsType<RoslynWorkspaceLoader>(Assert.IsType<WorkspaceDaemonGeneration>(generation).LoadedWorkspace);
+        Assert.Equal(fingerprint, loaded.LoadedWorktreeFingerprint);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ReusesUnchangedGeneration()
     {
         var fingerprint = CleanFingerprint("head-a");

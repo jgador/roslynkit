@@ -43,6 +43,8 @@ When adding or editing prose in Markdown docs, checked-in agent prompts, or skil
 
 When writing or editing agent-facing prose, avoid second-person pronouns for coding agents. Do not use `you` or `your` to refer to an agent, sub-agent, coding tool, or future agent reader; use explicit nouns such as `the agent`, `the sub-agent`, `codex`, or `coding agents` instead.
 
+When writing prose for users or coding agents, avoid unexplained jargon and uncommon abbreviations. On first use, write the complete term followed by its abbreviation in parentheses, such as `full-text search (FTS)`; use the abbreviation alone only after that definition.
+
 For exact runtime command names, usage strings, and options, read generated [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md). Keep agent guidance concise and route-oriented; do not duplicate full command reference material in [AGENTS.md](AGENTS.md) or skill files.
 
 For RoslynKit output semantics, failure shape, location format, and documentation-comment ID prefix meanings, read [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md). Treat it as agent-suitable shared runtime contract context before interpreting command output or changing output shape.

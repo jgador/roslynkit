@@ -65,8 +65,10 @@ internal sealed record DaemonCommandRequest(
         "document-symbols",
         "document-text",
         "implementations",
+        "index",
         "quick-info",
         "references",
+        "search",
         "signature-help",
         "symbol-source",
         "symbols",
@@ -77,6 +79,7 @@ internal sealed record DaemonCommandRequest(
     private static readonly HashSet<string> PathOptionNames = new(StringComparer.Ordinal)
     {
         "file",
+        "index-path",
         "project",
         "target",
     };
@@ -99,9 +102,7 @@ internal sealed record DaemonCommandRequest(
         {
             options.Add(
                 name,
-                PathOptionNames.Contains(name)
-                    ? PathCanonicalizer.ResolveExistingPath(value, baseDirectory)
-                    : value);
+                CanonicalizeOptionPath(name, value, baseDirectory));
         }
 
         return new DaemonCommandRequest(
@@ -155,6 +156,49 @@ internal sealed record DaemonCommandRequest(
                 DaemonProtocolError.InvalidMessage,
                 $"Command '{commandName}' is not eligible for daemon execution.");
         }
+    }
+
+    private static string CanonicalizeOptionPath(string name, string value, string baseDirectory)
+    {
+        if (!PathOptionNames.Contains(name))
+        {
+            return value;
+        }
+
+        return name == "index-path"
+            ? ResolveIndexPath(value, baseDirectory)
+            : PathCanonicalizer.ResolveExistingPath(value, baseDirectory);
+    }
+
+    private static string ResolveIndexPath(string indexPath, string baseDirectory)
+    {
+        var fullPath = Path.GetFullPath(indexPath, baseDirectory);
+        if (File.Exists(fullPath) || Directory.Exists(fullPath))
+        {
+            return PathCanonicalizer.ResolveExistingPath(fullPath);
+        }
+
+        var unresolvedSegments = new Stack<string>();
+        var existingAncestor = fullPath;
+        while (!File.Exists(existingAncestor) && !Directory.Exists(existingAncestor))
+        {
+            var parent = Path.GetDirectoryName(existingAncestor);
+            if (string.IsNullOrEmpty(parent) || string.Equals(parent, existingAncestor, StringComparison.Ordinal))
+            {
+                return fullPath;
+            }
+
+            unresolvedSegments.Push(Path.GetFileName(existingAncestor));
+            existingAncestor = parent;
+        }
+
+        var canonicalPath = PathCanonicalizer.ResolveExistingPath(existingAncestor);
+        while (unresolvedSegments.TryPop(out var segment))
+        {
+            canonicalPath = Path.Combine(canonicalPath, segment);
+        }
+
+        return canonicalPath;
     }
 }
 

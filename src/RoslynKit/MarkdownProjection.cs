@@ -18,6 +18,8 @@ public static class MarkdownProjection
         return data switch
         {
             InitResult result => RenderInit(result),
+            IndexResult result => RenderIndex(result),
+            SearchResult result => RenderSearch(result),
             SymbolsResult result => RenderSymbols(result),
             DefinitionResult result => RenderDefinition(result),
             TypeDefinitionResult result => RenderTypeDefinition(result),
@@ -123,6 +125,54 @@ public static class MarkdownProjection
         builder.Append("\nquery: ").Append(CodeSpan(result.Query));
         AppendCounts(builder, result.TotalCount, result.ReturnedCount, result.Truncated);
         AppendSymbolBullets(builder, result.Symbols, includeDocumentation: true);
+        AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
+        return builder.ToString();
+    }
+
+    private static string RenderSearch(SearchResult result)
+    {
+        var builder = new StringBuilder();
+        builder.Append("command: search");
+        builder.Append("\ntarget: ").Append(CodeSpan(result.TargetPath));
+        builder.Append("\nindex-path: ").Append(CodeSpan(result.IndexPath));
+        builder.Append("\nquery: ").Append(CodeSpan(result.Query));
+        builder.Append("\nindex-state: ").Append(SearchIndexStateText(result.IndexState));
+        AppendCounts(builder, result.TotalCount, result.ReturnedCount, result.Truncated);
+        if (result.Hits.Count > 0)
+        {
+            builder.Append('\n');
+            for (var index = 0; index < result.Hits.Count; index++)
+            {
+                var hit = result.Hits[index];
+                builder.Append("\n- rank: ").Append(index + 1)
+                    .Append(" kind: ").Append(hit.Kind)
+                    .Append(" name: ").Append(CodeSpan(hit.DisplayName));
+                builder.Append(" loc: ").Append(CodeSpan(Location(hit.Location)));
+                if (hit.SymbolId is { Length: > 0 } symbolId)
+                {
+                    builder.Append(" id: ").Append(CodeSpan(symbolId));
+                }
+
+                if (hit.Excerpt is { Length: > 0 } excerpt)
+                {
+                    builder.Append("\n  excerpt: ").Append(CodeSpan(excerpt));
+                }
+            }
+        }
+
+        AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
+        return builder.ToString();
+    }
+
+    private static string RenderIndex(IndexResult result)
+    {
+        var builder = new StringBuilder();
+        builder.Append("command: index");
+        builder.Append("\ntarget: ").Append(CodeSpan(result.TargetPath));
+        builder.Append("\nindex-path: ").Append(CodeSpan(result.IndexPath));
+        builder.Append("\nindex-state: ").Append(SearchIndexStateText(result.IndexState));
+        builder.Append("\nsymbols: ").Append(result.SymbolCount);
+        builder.Append("\nrebuilt: ").Append(result.Rebuilt ? "true" : "false");
         AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
         return builder.ToString();
     }
@@ -408,6 +458,16 @@ public static class MarkdownProjection
     {
         builder.Append("\nreturned: ").Append(returned).Append('/').Append(total);
         builder.Append("\ntruncated: ").Append(truncated ? "true" : "false");
+    }
+
+    private static string SearchIndexStateText(SearchIndexState state)
+    {
+        return state switch
+        {
+            SearchIndexState.Fresh => "fresh",
+            SearchIndexState.Stale => "stale",
+            _ => throw new InvalidOperationException($"Unknown search index state '{state}'."),
+        };
     }
 
     private static void AppendWorkspaceDiagnostics(StringBuilder builder, IReadOnlyList<WorkspaceLoadDiagnostic> diagnostics)

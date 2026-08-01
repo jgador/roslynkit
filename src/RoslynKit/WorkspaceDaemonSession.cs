@@ -73,6 +73,11 @@ internal sealed class WorkspaceDaemonGeneration : IDisposable
         return _executeAsync(command, cancellationToken);
     }
 
+    internal void SetLoadedWorktreeFingerprint(GitWorktreeFingerprint fingerprint)
+    {
+        LoadedWorkspace?.SetLoadedWorktreeFingerprint(fingerprint);
+    }
+
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 0)
@@ -508,6 +513,11 @@ internal sealed class WorkspaceDaemonSession : IAsyncDisposable
         GitWorktreeFingerprint? successfulFingerprint,
         bool forceReload)
     {
+        if (successfulFingerprint is not null)
+        {
+            generation.SetLoadedWorktreeFingerprint(successfulFingerprint);
+        }
+
         lock (_stateGate)
         {
             _currentGeneration = generation;

@@ -73,6 +73,16 @@ The following cases execute standalone or remain unsupported for daemon accelera
 
 These limitations mean the performance-only correctness claim applies inside this supported boundary. A filesystem watcher and incremental `Solution.WithDocumentText` updates are explicitly out of scope. Any detected fingerprint change causes a full MSBuild workspace reload.
 
+## Search index and daemon coordination
+
+`index` and `search` use a persistent SQLite Full-Text Search 5 (FTS5) database in addition to the daemon's in-memory workspace snapshot. Both commands require an explicit `--target` and `--index-path`. A repository-local, Git-ignored path such as `artifacts/roslynkit.db` is the intended storage boundary. One database can contain separate partitions for targets in that repository; an index path outside the repository or not ignored by Git is rejected.
+
+SQLite write-ahead logging (WAL) allows readers to continue while a refresh writes a new coherent target partition. While the database is active, SQLite can create adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files. The index database is independent of the local IPC endpoint identity and does not make the daemon a general-purpose database server.
+
+`search` reconciles the target before querying. It builds the initial target index when absent and refreshes stale records automatically. `index` is the strict synchronization operation: it waits for a stable workspace before reporting success, and `--rebuild` forces a full rebuild of the selected target partition. An ongoing refresh never publishes partial records. When a previous coherent partition exists, concurrent searches can use it and report `index-state: stale`; otherwise they wait for initial indexing to finish.
+
+Search indexing supports projects with one target framework and rejects multi-targeted projects rather than selecting a framework implicitly. It covers all target projects by default, can narrow to `--project`, and excludes source-generated declarations unless `--include-generated` is set. Search returns ranked declarations for agent-mediated navigation through existing `id:` and `loc:` values; it has no standard-input pipeline contract.
+
 ## Git fingerprint
 
 Each workspace request reconciles Git state before leasing a snapshot. Concurrent requests share one in-progress fingerprint calculation. The complete operation has a five-second deadline.

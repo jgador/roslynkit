@@ -32,7 +32,9 @@ public static partial class RoslynCommandExecutor
     public static async Task<object> ExecuteAsync(ParsedCommand command, CancellationToken cancellationToken)
     {
         ValidateBeforeWorkspaceLoad(command);
-        using var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
+        using var loaded = command.Name is "index" or "search"
+            ? await SearchCommandService.LoadStableWorkspaceAsync(command, cancellationToken).ConfigureAwait(false)
+            : await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
         return await ExecuteAsync(command, loaded, cancellationToken).ConfigureAwait(false);
     }
 
@@ -54,8 +56,10 @@ public static partial class RoslynCommandExecutor
             "document-symbols" => await DocumentSymbolsAsync(command, loaded, cancellationToken).ConfigureAwait(false),
             "document-text" => await DocumentTextAsync(command, loaded, cancellationToken).ConfigureAwait(false),
             "implementations" => await ImplementationsAsync(command, loaded, cancellationToken).ConfigureAwait(false),
+            "index" => await SearchCommandService.IndexAsync(command, loaded, cancellationToken).ConfigureAwait(false),
             "quick-info" => await QuickInfoAsync(command, loaded, cancellationToken).ConfigureAwait(false),
             "references" => await ReferencesAsync(command, loaded, cancellationToken).ConfigureAwait(false),
+            "search" => await SearchCommandService.SearchAsync(command, loaded, cancellationToken).ConfigureAwait(false),
             "signature-help" => await SignatureHelpAsync(command, loaded, cancellationToken).ConfigureAwait(false),
             "symbol-source" => await SymbolSourceAsync(command, loaded, cancellationToken).ConfigureAwait(false),
             "symbols" => await SymbolsAsync(command, loaded, cancellationToken).ConfigureAwait(false),
@@ -75,6 +79,15 @@ public static partial class RoslynCommandExecutor
             case "symbols":
                 _ = command.Required("query");
                 _ = command.OptionalInt("max-results", 200, 1);
+                _ = GetSymbolFilter(command.Name, command.Optional("kind"));
+                break;
+            case "index":
+                _ = command.Required("index-path");
+                break;
+            case "search":
+                _ = command.Required("index-path");
+                _ = command.Required("query");
+                _ = command.OptionalInt("max-results", 20, 1);
                 _ = GetSymbolFilter(command.Name, command.Optional("kind"));
                 break;
             case "document-lines":
