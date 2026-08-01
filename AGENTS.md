@@ -37,6 +37,8 @@ RoslynKit is a .NET 10 command-line tool. Production code lives under `src/Rosly
 
 Verify conclusions against current files, tests, docs, and command output.
 
+Prefer concurrent sub-agent delegation for independent, non-overlapping work. When two or more bounded tasks can run independently, dispatch them in parallel and use the available sub-agent capacity instead of processing them serially. Favor parallel read-only mapping, scoped discovery, test selection, and independent validation. Assign exclusive file ownership before parallel write work, and keep overlapping or sequential changes with one agent.
+
 When adding or editing prose in Markdown docs, checked-in agent prompts, or skill files, write repo file references as Markdown links with the path as the link label, such as [docs/agents/README.md](docs/agents/README.md). Use code formatting only for non-file literals, globs, command arguments, generated output, or paths where Markdown links would change behavior.
 
 When writing or editing agent-facing prose, avoid second-person pronouns for coding agents. Do not use `you` or `your` to refer to an agent, sub-agent, coding tool, or future agent reader; use explicit nouns such as `the agent`, `the sub-agent`, `codex`, or `coding agents` instead.
