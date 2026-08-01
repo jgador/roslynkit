@@ -35,10 +35,15 @@ internal static class Program
 
     private static Task<int> RunCliAsync(IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
+        return CreateCliApplication(Console.Out, Console.Error).RunAsync(args, cancellationToken);
+    }
+
+    internal static CliApplication CreateCliApplication(TextWriter stdout, TextWriter stderr)
+    {
         return new CliApplication(
-            Console.Out,
-            Console.Error,
-            DaemonClient.Shared.ExecuteAsync,
-            DaemonCommandExecutor.ExecuteAsync).RunAsync(args, cancellationToken);
+            stdout,
+            stderr,
+            DaemonFallbackWorkspaceCommandRouter.ExecuteAsync,
+            DaemonCommandExecutor.ExecuteAsync);
     }
 }

@@ -72,6 +72,16 @@ hint: Retry with --line between 1 and 13, or run document-lines to inspect valid
 
 Exit codes: `0` success, `2` usage error, `130` canceled, `1` any other failure. The `error:` value is `usage`, `canceled`, or the exception type name. A zero exit code means stdout is command output; a non-zero exit code means stdout is the plain-text error.
 
+### Daemon Fallback Stderr
+
+When a daemon-eligible read-only workspace command receives a typed daemon infrastructure failure, the resulting buffered stderr starts with exactly one line:
+
+```text
+warning: daemon unavailable; executing standalone
+```
+
+The warning is not written to stdout and does not change the standalone command's stdout or exit-code contract. It is not emitted for usage errors, ordinary workspace-load errors, semantic command errors, or cancellation during the daemon attempt. Once an infrastructure failure has selected fallback, the warning remains when standalone execution later reports cancellation. `daemon status` and `daemon stop` never use fallback.
+
 Success output starts with `command: <name>` followed by command-specific key-value lines, then a blank line before bullets or fences:
 
 ```markdown

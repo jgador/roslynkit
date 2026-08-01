@@ -70,4 +70,28 @@ public sealed class ProgramTests
         Assert.False(daemonCalled);
         Assert.False(publicCliCalled);
     }
+
+    [Fact]
+    public async Task CreateCliApplication_RoutesDaemonInfrastructureFailureToStandalone()
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        var missingTarget = Path.Combine(
+            Path.GetTempPath(),
+            $"roslynkit-phase12-{Guid.NewGuid():N}",
+            "Missing.csproj");
+        var application = Program.CreateCliApplication(stdout, stderr);
+
+        var exitCode = await application.RunAsync(
+            ["symbols", "--target", missingTarget, "--query", "Missing"],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, exitCode);
+        Assert.Equal(
+            $"error: usage\nmessage: Target file '{missingTarget}' does not exist.{Environment.NewLine}",
+            stdout.ToString());
+        Assert.Equal(
+            $"warning: daemon unavailable; executing standalone{Environment.NewLine}",
+            stderr.ToString());
+    }
 }

@@ -1,12 +1,12 @@
 # Workspace Daemon
 
-This document is the canonical design contract for RoslynKit's optional workspace daemon. The hidden host, short-lived client, on-demand startup, and public lifecycle controls are implemented. Exact infrastructure-only standalone fallback remains the next implementation slice.
+This document is the canonical design contract for RoslynKit's optional workspace daemon. The hidden host, short-lived client, on-demand startup, public lifecycle controls, and exact infrastructure-only standalone fallback are implemented.
 
 ## Purpose
 
 Loading an `MSBuildWorkspace` reevaluates the target solution or project. Repeating that work in every short-lived CLI process dominates many read-only searches. The daemon keeps one loaded workspace and its current immutable `Solution` snapshot alive across compatible CLI invocations.
 
-The daemon is a transparent performance optimization, not a correctness authority or a new user-facing server product. The planned fallback boundary preserves correctness by executing eligible read-only commands through the existing standalone path when daemon infrastructure is unavailable; that fallback is not yet wired.
+The daemon is a transparent performance optimization, not a correctness authority or a new user-facing server product. The fallback boundary preserves correctness by executing eligible read-only commands through the existing standalone path when daemon infrastructure is unavailable.
 
 ```mermaid
 flowchart LR
@@ -19,7 +19,7 @@ flowchart LR
     Fingerprint --> Session[Workspace session]
     Session --> Executor[Roslyn command executor]
     Executor --> Response[Buffered stdout / stderr / exit code]
-    Pipe -.->|Planned Phase 12 infrastructure failure| Fallback[Standalone execution]
+    Pipe -.->|Daemon infrastructure failure| Fallback[Standalone execution]
 ```
 
 ## Lifecycle and identity
@@ -55,7 +55,7 @@ The committed `HEAD` is validated here but is not part of daemon compatibility i
 
 `DaemonIdentityResolver` adds the current operating-system user and local IPC runtime directory to a resolved `GitWorkspaceIdentity`. Windows users are identified by SID, Unix users by effective numeric UID, and the runtime directory is the canonical form of the process runtime directory returned by `Path.GetTempPath()`. The resolver snapshots the build-environment mapping so later mutation cannot change an already-created identity.
 
-`DaemonEndpointName` serializes every compatibility field in a fixed JSON property order, sorts build-environment entries ordinally, preserves null values, and hashes the UTF-8 bytes with SHA-256. The resulting endpoint name has the fixed format `roslynkit-v1-<64 lowercase hexadecimal characters>`. It contains no repository path, target path, environment value, or user identifier. The hidden daemon runner now uses this endpoint for both its lifetime lease and named-pipe listener. Client bootstrap locking and public CLI routing remain later layers.
+`DaemonEndpointName` serializes every compatibility field in a fixed JSON property order, sorts build-environment entries ordinally, preserves null values, and hashes the UTF-8 bytes with SHA-256. The resulting endpoint name has the fixed format `roslynkit-v1-<64 lowercase hexadecimal characters>`. It contains no repository path, target path, environment value, or user identifier. The hidden daemon runner uses this endpoint for both its lifetime lease and named-pipe listener. Client bootstrap locking uses the same endpoint, and public CLI routing reaches that client through the workspace command router.
 
 ## Supported workspace boundary
 
@@ -118,7 +118,7 @@ Reload behavior is:
 6. Otherwise require 250 milliseconds of quiet, represented by two equal stable captures; restart the quiet interval while the fingerprint continues changing, then reload once more.
 7. If the retry is also unstable, keep the latest completed snapshot usable for the current request and force the next request to reconcile and reload again.
 
-Only a usable stable load updates the successful fingerprint baseline. The second completed snapshot may serve its initiating request after a second pre/post mismatch, but its baseline remains unset and no later request can reuse it. A Git failure returns a typed infrastructure result for future standalone fallback. A normal workspace-load or semantic command exception propagates unchanged and is not converted into daemon fallback. Session disposal waits for active leases and prevents a generation that finishes loading after disposal begins from being published. `WorkspaceDaemonSession.CaptureSnapshot` reads state, generation, active and queued request counts, and the latest diagnostic under the session coordination lock so lifecycle status cannot combine fields from different moments.
+Only a usable stable load updates the successful fingerprint baseline. The second completed snapshot may serve its initiating request after a second pre/post mismatch, but its baseline remains unset and no later request can reuse it. A Git failure returns a typed infrastructure result that triggers standalone fallback. A normal workspace-load or semantic command exception propagates unchanged and is not converted into daemon fallback. Session disposal waits for active leases and prevents a generation that finishes loading after disposal begins from being published. `WorkspaceDaemonSession.CaptureSnapshot` reads state, generation, active and queued request counts, and the latest diagnostic under the session coordination lock so lifecycle status cannot combine fields from different moments.
 
 ## Host lifecycle coordination
 
@@ -140,7 +140,7 @@ Only a usable stable load updates the successful fingerprint baseline. The secon
 - Command targets are canonicalized again and must equal the target captured by daemon identity. The process never changes its global current directory for a request.
 - A clean peer disconnect, pipe failure, or unexpected byte after a command frame cancels the connection token passed into the lifecycle host. Malformed or incompatible clients close only their connection; the listener remains available.
 - Stop writes its acknowledgement before canceling the accept loop, then relies on the lifecycle host to drain or cancel existing work. When `WorkspaceDaemonServer.RunAsync` receives process-lifetime cancellation, it disposes the host before awaiting connection handlers, so active Roslyn work cannot keep that shutdown path alive indefinitely. `Program.Main` does not yet install a graceful process-signal handler.
-- A Git fingerprint infrastructure failure closes the command connection without publishing a partial result. The client classifies that transport loss as infrastructure; the next fallback slice will redirect it to standalone execution. Ordinary command exceptions are converted through the same buffered `CliProcessResult` error formatting used by standalone execution.
+- A Git fingerprint infrastructure failure closes the command connection without publishing a partial result. The client classifies that transport loss as infrastructure, and the fallback router redirects it to standalone execution. Ordinary command exceptions are converted through the same buffered `CliProcessResult` error formatting used by standalone execution.
 
 ## Local protocol and security
 
@@ -153,28 +153,28 @@ Only a usable stable load updates the successful fingerprint baseline. The secon
 - The daemon server never changes global current directory per request and rejects a target that does not match its identity.
 - Client cancellation or disconnect cancels queued or running work and flows through Roslyn operations. The lifecycle host waits for cancellation unwind before disposing the workspace session.
 
-`DaemonPipeClient` opens a short-lived connection, completes the required handshake, sends one operation, verifies protocol and request correlation, and exposes only a complete buffered response. `DaemonClient` resolves the endpoint, tries the command against an existing daemon, and coordinates startup when the endpoint is absent. Startup uses a five-second readiness window with short probes and one recheck when an endpoint disappears between readiness and the command exchange. `DaemonProcessStarter` invokes either the current apphost directly or `dotnet` with the current entry assembly, passes only the hidden token and canonical target, and does not wait for or kill the long-lived child. On Windows it follows Roslyn's compiler-server launch boundary: `CreateProcess` uses `CREATE_NO_WINDOW`, disables inherited handles, and supplies invalid standard handles so the daemon cannot retain or interfere with the short-lived client's terminal streams. Other platforms use the non-waiting `Process.Start` path with redirected streams. Workspace commands and public lifecycle controls now use these seams.
+`DaemonPipeClient` opens a short-lived connection, completes the required handshake, sends one operation, verifies protocol and request correlation, and exposes only a complete buffered response. `DaemonClient` resolves the endpoint, tries the command against an existing daemon, normalizes command-path infrastructure and protocol failures, and coordinates startup when the endpoint is absent. Startup uses a five-second readiness window with short probes and one recheck when an endpoint disappears between readiness and the command exchange. `DaemonProcessStarter` invokes either the current apphost directly or `dotnet` with the current entry assembly, passes only the hidden token and canonical target, and does not wait for or kill the long-lived child. On Windows it follows Roslyn's compiler-server launch boundary: `CreateProcess` uses `CREATE_NO_WINDOW`, disables inherited handles, and supplies invalid standard handles so the daemon cannot retain or interfere with the short-lived client's terminal streams. Other platforms use the non-waiting `Process.Start` path with redirected streams. `Program` injects `DaemonFallbackWorkspaceCommandRouter` for workspace commands. That router falls back only on its typed daemon infrastructure failure, prefixes the fallback result's buffered stderr with the warning, and invokes the existing standalone path once. Public lifecycle controls use the non-starting client exchange and never use fallback.
 
 Daemon-eligible commands are read-only. If mutating commands are introduced, request deduplication or a stricter pre-dispatch-only fallback rule is required before those commands may use the daemon.
 
-## Planned fallback
+## Standalone fallback
 
-The next implementation slice will limit fallback to daemon infrastructure failures:
+Fallback is limited to daemon infrastructure failures:
 
 - unsupported daemon workspace identity;
 - Git fingerprint failure or timeout;
 - daemon startup, handshake, transport, or protocol failure;
 - daemon crash or connection loss.
 
-Fallback will not apply to usage errors, ordinary workspace-load errors, semantic command errors, or explicit cancellation.
+Fallback is not selected for usage errors, ordinary workspace-load errors, semantic command errors, or cancellation during the daemon attempt. Once an infrastructure failure has selected fallback, its warning remains when standalone execution later reports cancellation.
 
-For a daemon-eligible read-only command, the completed fallback client will write exactly one line to stderr before standalone execution:
+For a daemon-eligible read-only command, `DaemonFallbackWorkspaceCommandRouter` prefixes the standalone result's buffered stderr with exactly one line:
 
 ```text
 warning: daemon unavailable; executing standalone
 ```
 
-Normal command stdout will remain unchanged. Because the implemented client exposes only complete daemon responses, a failed transport cannot mix partial daemon stdout with standalone output. Read-only execution makes a retry after an ambiguous disconnect logically safe; mutating commands require stronger at-most-once handling.
+Normal command stdout remains unchanged. Because daemon responses are complete, a failed transport cannot mix partial daemon stdout with standalone output. Read-only execution makes a retry after an ambiguous disconnect logically safe; mutating commands require stronger at-most-once handling.
 
 ## Public lifecycle commands
 

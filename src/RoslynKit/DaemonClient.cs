@@ -5,6 +5,9 @@ namespace RoslynKit;
 /// </summary>
 internal sealed class DaemonClient
 {
+    private const string CommandInfrastructureFailureMessage =
+        "The RoslynKit daemon command could not be completed because daemon infrastructure was unavailable.";
+
     internal static readonly TimeSpan ConnectTimeout = TimeSpan.FromMilliseconds(100);
     internal static readonly TimeSpan StartupTimeout = TimeSpan.FromSeconds(5);
     internal static readonly TimeSpan StartupPollInterval = TimeSpan.FromMilliseconds(50);
@@ -63,44 +66,68 @@ internal sealed class DaemonClient
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var endpoint = await ResolveEndpointAsync(command, cancellationToken).ConfigureAwait(false);
-        var request = CreateCommandRequest(command);
-        var response = await _sendAsync(
-            endpoint.EndpointName,
-            request,
-            ConnectTimeout,
-            cancellationToken).ConfigureAwait(false);
-        if (response is DaemonCommandResponse available)
+        try
         {
-            EnsureResponse(available, request.RequestId);
-            return available.ToProcessResult();
-        }
-
-        if (response is not null)
-        {
-            throw UnexpectedResponse<DaemonCommandResponse>(response);
-        }
-
-        var startupDeadline = _timeProvider.GetUtcNow() + StartupTimeout;
-        await EnsureRunningAsync(endpoint, startupDeadline, cancellationToken).ConfigureAwait(false);
-        for (var attempt = 0; attempt < 2; attempt++)
-        {
-            request = CreateCommandRequest(command);
-            response = await _sendAsync(
+            var endpoint = await ResolveEndpointAsync(command, cancellationToken).ConfigureAwait(false);
+            var request = CreateCommandRequest(command);
+            var response = await _sendAsync(
                 endpoint.EndpointName,
                 request,
                 ConnectTimeout,
                 cancellationToken).ConfigureAwait(false);
-            if (response is not null || attempt > 0 || _timeProvider.GetUtcNow() >= startupDeadline)
+            if (response is DaemonCommandResponse available)
             {
-                break;
+                EnsureResponse(available, request.RequestId);
+                return available.ToProcessResult();
             }
 
-            await EnsureRunningAsync(endpoint, startupDeadline, cancellationToken).ConfigureAwait(false);
-        }
+            if (response is not null)
+            {
+                throw UnexpectedResponse<DaemonCommandResponse>(response);
+            }
 
-        var commandResponse = RequireResponse<DaemonCommandResponse>(response, request.RequestId);
-        return commandResponse.ToProcessResult();
+            var startupDeadline = _timeProvider.GetUtcNow() + StartupTimeout;
+            await EnsureRunningAsync(endpoint, startupDeadline, cancellationToken).ConfigureAwait(false);
+            for (var attempt = 0; attempt < 2; attempt++)
+            {
+                request = CreateCommandRequest(command);
+                response = await _sendAsync(
+                    endpoint.EndpointName,
+                    request,
+                    ConnectTimeout,
+                    cancellationToken).ConfigureAwait(false);
+                if (response is not null || attempt > 0 || _timeProvider.GetUtcNow() >= startupDeadline)
+                {
+                    break;
+                }
+
+                await EnsureRunningAsync(endpoint, startupDeadline, cancellationToken).ConfigureAwait(false);
+            }
+
+            var commandResponse = RequireResponse<DaemonCommandResponse>(response, request.RequestId);
+            return commandResponse.ToProcessResult();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (DaemonClientInfrastructureException)
+        {
+            throw;
+        }
+        catch (DaemonProtocolException exception)
+        {
+            throw new DaemonClientInfrastructureException(CommandInfrastructureFailureMessage, exception);
+        }
+        catch (Exception exception) when (exception is
+            IOException or
+            TimeoutException or
+            UnauthorizedAccessException or
+            PlatformNotSupportedException or
+            InvalidOperationException)
+        {
+            throw new DaemonClientInfrastructureException(CommandInfrastructureFailureMessage, exception);
+        }
     }
 
     /// <summary>

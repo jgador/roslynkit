@@ -216,6 +216,45 @@ public sealed class DaemonClientTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_NormalizesProtocolFailureToInfrastructureException()
+    {
+        var client = CreateClient(
+            sendAsync: (_, request, _, _) => Task.FromResult<DaemonResponse?>(
+                new DaemonStopResponse(
+                    RoslynKitBuildInfo.DaemonProtocolVersion,
+                    request.RequestId,
+                    Stopping: true)),
+            probeAsync: (_, _, _) => throw new InvalidOperationException("Readiness was not expected."),
+            tryAcquireBootstrapLease: _ => throw new InvalidOperationException("Bootstrap was not expected."),
+            startDaemon: _ => throw new InvalidOperationException("Launch was not expected."));
+
+        var exception = await Assert.ThrowsAsync<DaemonClientInfrastructureException>(() => client.ExecuteAsync(
+            CreateWorkspaceCommand(),
+            TestContext.Current.CancellationToken));
+
+        Assert.IsType<DaemonProtocolException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PropagatesCallerCancellationWithoutInfrastructureNormalization()
+    {
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            TestContext.Current.CancellationToken);
+        cancellation.Cancel();
+        var client = CreateClient(
+            sendAsync: (_, _, _, token) => Task.FromCanceled<DaemonResponse?>(token),
+            probeAsync: (_, _, _) => throw new InvalidOperationException("Readiness was not expected."),
+            tryAcquireBootstrapLease: _ => throw new InvalidOperationException("Bootstrap was not expected."),
+            startDaemon: _ => throw new InvalidOperationException("Launch was not expected."));
+
+        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => client.ExecuteAsync(
+            CreateWorkspaceCommand(),
+            cancellation.Token));
+
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
+    }
+
+    [Fact]
     public async Task GetStatusAsync_DoesNotAcquireLeaseOrStartAbsentDaemon()
     {
         var client = CreateClient(
