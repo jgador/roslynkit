@@ -61,6 +61,15 @@ Do not use Repository Synapse in this repository. Do not run `synapse ensure`, `
 
 For ad-hoc scripts, scratch files, and temporary command results, use a clear subfolder under `artifacts/` such as `artifacts/<task-name>/`. Do not create repo-root scratch folders such as `.tmp`; `artifacts/` is ignored and is the expected place for disposable local outputs.
 
+### Search Tooling
+
+For file discovery and literal text search, invoke the globally available `rg` (`ripgrep`) command from `PATH`.
+
+- Use `rg --files` for file discovery and `rg -n "pattern"` for literal text search.
+- Prefer global `rg` over recursive PowerShell file enumeration or `Select-String`.
+- Fall back to the terminal-native search tool for the current platform only when global `rg` is unavailable.
+- This search-tool rule does not replace the RoslynKit-first C# semantic-inspection rules below.
+
 ### RoslynKit Default Semantic Inspection
 
 When the task is ordinary C# semantic inspection inside this RoslynKit repo, use [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md) first. Treat that dev skill as the repo-default route for declarations, symbol structure, definitions, references, implementations, types, signatures, generated documents, and similar Roslyn-backed inspection work.
