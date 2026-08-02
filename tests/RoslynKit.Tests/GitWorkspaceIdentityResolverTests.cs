@@ -71,6 +71,34 @@ public sealed class GitWorkspaceIdentityResolverTests
             DaemonEndpointName.Create(daemonResolver.Resolve(changedIdentity)));
     }
 
+    [Theory]
+    [InlineData("tsconfig.json")]
+    [InlineData("jsconfig.json")]
+    public async Task ResolveAsync_ReturnsSupportedIdentity_ForTypeScriptTargets(string configFileName)
+    {
+        await using var area = GitTestArea.Create();
+        var repository = await area.CreateRepositoryAsync($"typescript-{configFileName}");
+        var configPath = Path.Combine(repository.RootPath, configFileName);
+        await File.WriteAllTextAsync(
+            configPath,
+            "{ \"compilerOptions\": { \"noEmit\": true } }",
+            TestContext.Current.CancellationToken);
+        await area.RunGitAsync(repository.RootPath, "add", configFileName);
+        await area.RunGitAsync(repository.RootPath, "commit", "-m", "Add TypeScript target");
+
+        var result = await new GitWorkspaceIdentityResolver().ResolveAsync(
+            configPath,
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSupported, result.Diagnostic);
+        var identity = Assert.IsType<GitWorkspaceIdentity>(result.Identity);
+        Assert.Equal(configPath, identity.TargetPath);
+        var runtime = Assert.IsType<TypeScriptRuntimeIdentity>(identity.TypeScriptRuntime);
+        Assert.Equal("7.0.0-dev.20260707.2", runtime.NativePreviewVersion);
+        Assert.True(File.Exists(runtime.NodePath));
+        Assert.True(File.Exists(runtime.BridgePath));
+    }
+
     [Fact]
     public async Task ResolveAsync_ReturnsSupportedIdentity_ForLinkedWorktree()
     {

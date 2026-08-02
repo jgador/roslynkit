@@ -5,7 +5,8 @@ namespace RoslynKit;
 /// </summary>
 internal sealed record SqliteSearchIndexTarget(
     RepositoryRelativePath TargetIdentity,
-    string? Fingerprint);
+    string? Fingerprint,
+    string Language = SourceLanguageNames.CSharp);
 
 /// <summary>
 /// Describes one navigable source symbol and its pre-tokenized searchable fields.
@@ -31,7 +32,8 @@ internal sealed record SqliteSearchIndexSymbol(
     string ContainingTokens,
     string DetailsTokens,
     string PathTokens,
-    string BodyTokens);
+    string BodyTokens,
+    string Language = SourceLanguageNames.CSharp);
 
 /// <summary>
 /// Represents a tokenized full-text search request over one target partition.
@@ -41,7 +43,8 @@ internal sealed record SqliteSearchIndexQuery(
     IReadOnlyList<string> Tokens,
     IReadOnlyCollection<RepositoryRelativePath>? ProjectPaths = null,
     IReadOnlyCollection<string>? Kinds = null,
-    int MaxResults = 20);
+    int MaxResults = 20,
+    string Language = SourceLanguageNames.CSharp);
 
 /// <summary>
 /// Reports persistent metadata for one indexed target partition.
@@ -51,7 +54,8 @@ internal sealed record SqliteSearchIndexMetadata(
     RepositoryRelativePath TargetIdentity,
     string? Fingerprint,
     DateTimeOffset IndexedAtUtc,
-    int SymbolCount);
+    int SymbolCount,
+    string Language = SourceLanguageNames.CSharp);
 
 /// <summary>
 /// Represents one ranked persistent search match before markdown projection.
@@ -73,7 +77,8 @@ internal sealed record SqliteSearchIndexMatch(
     string? Signature,
     string? Excerpt,
     int QueryTermCoverage,
-    double RawBm25Score);
+    double RawBm25Score,
+    string Language = SourceLanguageNames.CSharp);
 
 /// <summary>
 /// Contains bounded ranked matches and the total count before the result limit was applied.
@@ -88,3 +93,12 @@ internal sealed record SqliteSearchIndexSearchResult(
 internal sealed record SqliteSearchIndexSearchSnapshot(
     SqliteSearchIndexMetadata? Metadata,
     SqliteSearchIndexSearchResult SearchResult);
+
+/// <summary>
+/// Defines stable language names persisted in the shared search index.
+/// </summary>
+internal static class SourceLanguageNames
+{
+    public const string CSharp = "csharp";
+    public const string TypeScript = "typescript";
+}

@@ -68,7 +68,7 @@ internal sealed class GitWorkspaceIdentityResolver
             var canonicalTarget = ResolveCanonicalTarget(targetPath);
             if (canonicalTarget is null)
             {
-                return Unsupported("The target must be an existing .sln, .slnx, or .csproj file.");
+                return Unsupported("The target must be an existing .sln, .slnx, .csproj, tsconfig.json, or jsconfig.json file.");
             }
 
             var targetDirectory = Path.GetDirectoryName(canonicalTarget)!;
@@ -162,7 +162,8 @@ internal sealed class GitWorkspaceIdentityResolver
                 CaptureBuildEnvironment(),
                 RoslynKitBuildInfo.Identity,
                 RoslynKitBuildInfo.DaemonProtocolVersion,
-                RuntimeInformation.ProcessArchitecture.ToString());
+                RuntimeInformation.ProcessArchitecture.ToString(),
+                await ResolveTypeScriptRuntimeIdentityAsync(canonicalTarget, cancellationToken).ConfigureAwait(false));
 
             return GitWorkspaceIdentityResolution.Supported(identity);
         }
@@ -192,14 +193,38 @@ internal sealed class GitWorkspaceIdentityResolver
         }
 
         var extension = Path.GetExtension(fullPath);
+        var fileName = Path.GetFileName(fullPath);
         if (!extension.Equals(".sln", StringComparison.OrdinalIgnoreCase)
             && !extension.Equals(".slnx", StringComparison.OrdinalIgnoreCase)
-            && !extension.Equals(".csproj", StringComparison.OrdinalIgnoreCase))
+            && !extension.Equals(".csproj", StringComparison.OrdinalIgnoreCase)
+            && !fileName.Equals("tsconfig.json", StringComparison.OrdinalIgnoreCase)
+            && !fileName.Equals("jsconfig.json", StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
         return fullPath;
+    }
+
+    private static async Task<TypeScriptRuntimeIdentity?> ResolveTypeScriptRuntimeIdentityAsync(
+        string canonicalTarget,
+        CancellationToken cancellationToken)
+    {
+        if (WorkspaceTarget.Resolve(canonicalTarget, "daemon") != WorkspaceTargetKind.TypeScript)
+        {
+            return null;
+        }
+
+        var runtime = await TypeScriptRuntimeResolver.ResolveAsync(
+            canonicalTarget,
+            cancellationToken).ConfigureAwait(false);
+        return new TypeScriptRuntimeIdentity(
+            runtime.NodePath,
+            runtime.NodeVersion,
+            runtime.BridgePath,
+            runtime.BridgeSha256,
+            runtime.NativePreviewRoot,
+            runtime.NativePreviewVersion);
     }
 
     private async Task<string?> FindContainingRepositoryAsync(

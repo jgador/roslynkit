@@ -5,11 +5,11 @@ using Microsoft.Data.Sqlite;
 namespace RoslynKit;
 
 /// <summary>
-/// Persists and queries target-partitioned Roslyn symbol search records through SQLite full-text search.
+/// Persists and queries target-partitioned, language-marked symbol records through SQLite full-text search.
 /// </summary>
 internal sealed class SqliteSearchIndex
 {
-    private const int CurrentSchemaVersion = 1;
+    private const int CurrentSchemaVersion = 2;
     private const int BusyTimeoutMilliseconds = 5_000;
     private const int NameWeight = 12;
     private const int ContainingWeight = 6;
@@ -19,6 +19,7 @@ internal sealed class SqliteSearchIndex
     private static readonly string[] TargetColumns =
     [
         "target_identity",
+        "language",
         "fingerprint",
         "indexed_at_utc",
         "symbol_count",
@@ -31,6 +32,7 @@ internal sealed class SqliteSearchIndex
         "symbol_key",
         "project_path",
         "project_name",
+        "language",
         "kind",
         "name",
         "display_name",
@@ -122,6 +124,7 @@ internal sealed class SqliteSearchIndex
             transaction = connection.BeginTransaction(deferred: false);
             if (schemaExists)
             {
+                await MigrateSchemaAsync(connection, transaction, cancellationToken);
                 await ValidateSchemaAsync(connection, transaction, cancellationToken);
             }
             else
@@ -212,6 +215,7 @@ internal sealed class SqliteSearchIndex
             """
             SELECT schema_version,
                    target_identity,
+                   language,
                    fingerprint,
                    indexed_at_utc,
                    symbol_count
@@ -233,7 +237,8 @@ internal sealed class SqliteSearchIndex
             RepositoryRelativePath.FromStoredValue(row.TargetIdentity, "Persisted target identity"),
             row.Fingerprint,
             DateTimeOffset.Parse(row.IndexedAtUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
-            row.SymbolCount);
+            row.SymbolCount,
+            row.Language);
     }
 
     /// <summary>
@@ -326,7 +331,8 @@ internal sealed class SqliteSearchIndex
                     row.Body,
                     query.Tokens),
                 row.QueryTermCoverage,
-                row.RawBm25Score));
+                row.RawBm25Score,
+                row.Language));
         }
 
         await transaction.CommitAsync(cancellationToken);
@@ -392,6 +398,12 @@ internal sealed class SqliteSearchIndex
         try
         {
             connection = await OpenReadConnectionAsync(cancellationToken);
+            if (await ReadSchemaVersionAsync(connection, null, cancellationToken).ConfigureAwait(false) == 1)
+            {
+                await connection.DisposeAsync();
+                return null;
+            }
+
             await ValidateSchemaAsync(connection, null, cancellationToken);
             return connection;
         }
@@ -436,20 +448,34 @@ internal sealed class SqliteSearchIndex
 
     private static async Task<bool> HasSchemaAsync(SqliteConnection connection, CancellationToken cancellationToken)
     {
-        try
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'search_index_schema';";
+        var value = await command.ExecuteScalarAsync(cancellationToken);
+        if (Convert.ToInt32(value, CultureInfo.InvariantCulture) != 0)
         {
-            await ValidateSchemaAsync(connection, null, cancellationToken);
             return true;
         }
-        catch (SqliteException exception) when (IsMissingSchema(exception))
-        {
-            if (await IsDatabaseEmptyAsync(connection, cancellationToken))
-            {
-                return false;
-            }
 
-            throw CreateIncompleteSchemaException("search_index_schema", exception);
+        if (await IsDatabaseEmptyAsync(connection, cancellationToken))
+        {
+            return false;
         }
+
+        throw CreateIncompleteSchemaException("search_index_schema", null);
+    }
+
+    private static async Task<int> ReadSchemaVersionAsync(
+        SqliteConnection connection,
+        SqliteTransaction? transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT schema_version FROM search_index_schema WHERE schema_key = 1;";
+        var value = await command.ExecuteScalarAsync(cancellationToken);
+        return value is null || value is DBNull
+            ? throw new InvalidOperationException("The SQLite search index schema metadata is missing.")
+            : Convert.ToInt32(value, CultureInfo.InvariantCulture);
     }
 
     private static async Task ConfigureWriteConnectionAsync(
@@ -484,6 +510,7 @@ internal sealed class SqliteSearchIndex
 
             CREATE TABLE IF NOT EXISTS search_index_targets (
                 target_identity TEXT PRIMARY KEY,
+                language TEXT NOT NULL,
                 fingerprint TEXT NULL,
                 indexed_at_utc TEXT NOT NULL,
                 symbol_count INTEGER NOT NULL CHECK (symbol_count >= 0),
@@ -496,6 +523,7 @@ internal sealed class SqliteSearchIndex
                 symbol_key TEXT NOT NULL,
                 project_path TEXT NOT NULL,
                 project_name TEXT NOT NULL,
+                language TEXT NOT NULL,
                 kind TEXT NOT NULL,
                 name TEXT NOT NULL,
                 display_name TEXT NOT NULL,
@@ -526,6 +554,43 @@ internal sealed class SqliteSearchIndex
             """, cancellationToken);
 
         await ValidateSchemaAsync(connection, transaction, cancellationToken);
+    }
+
+    private static async Task MigrateSchemaAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT schema_version FROM search_index_schema WHERE schema_key = 1;";
+        var value = await command.ExecuteScalarAsync(cancellationToken);
+        if (value is null || value is DBNull)
+        {
+            throw new InvalidOperationException("The SQLite search index schema metadata is missing.");
+        }
+
+        var schemaVersion = Convert.ToInt32(value, CultureInfo.InvariantCulture);
+        if (schemaVersion != 1)
+        {
+            return;
+        }
+
+        await ExecuteNonQueryAsync(
+            connection,
+            transaction,
+            "ALTER TABLE search_index_targets ADD COLUMN language TEXT NOT NULL DEFAULT 'csharp';",
+            cancellationToken);
+        await ExecuteNonQueryAsync(
+            connection,
+            transaction,
+            "ALTER TABLE search_index_symbols ADD COLUMN language TEXT NOT NULL DEFAULT 'csharp';",
+            cancellationToken);
+        await ExecuteNonQueryAsync(
+            connection,
+            transaction,
+            $"UPDATE search_index_targets SET schema_version = {CurrentSchemaVersion}; UPDATE search_index_schema SET schema_version = {CurrentSchemaVersion} WHERE schema_key = 1;",
+            cancellationToken);
     }
 
     private static async Task ValidateSchemaAsync(
@@ -626,7 +691,7 @@ internal sealed class SqliteSearchIndex
     {
         ValidateTarget(target);
         ArgumentNullException.ThrowIfNull(symbols);
-        ValidateSymbols(symbols, target.TargetIdentity);
+        ValidateSymbols(symbols, target.TargetIdentity, target.Language);
 
         await DeleteTargetAsync(connection, transaction, target.TargetIdentity, cancellationToken);
         await InsertSymbolsAsync(connection, transaction, target.TargetIdentity, symbols, cancellationToken);
@@ -650,7 +715,7 @@ internal sealed class SqliteSearchIndex
             throw new ArgumentException("At least one project path must be provided for a project refresh.", nameof(projectPaths));
         }
 
-        ValidateSymbols(symbols, target.TargetIdentity);
+        ValidateSymbols(symbols, target.TargetIdentity, target.Language);
         var knownProjectPaths = normalizedProjectPaths.ToHashSet();
         if (symbols.Any(symbol => !knownProjectPaths.Contains(symbol.ProjectPath)))
         {
@@ -754,6 +819,7 @@ internal sealed class SqliteSearchIndex
                 symbol_key,
                 project_path,
                 project_name,
+                language,
                 kind,
                 name,
                 display_name,
@@ -772,6 +838,7 @@ internal sealed class SqliteSearchIndex
                 $symbolKey,
                 $projectPath,
                 $projectName,
+                $language,
                 $kind,
                 $name,
                 $displayName,
@@ -791,6 +858,7 @@ internal sealed class SqliteSearchIndex
         var symbolKeyParameter = symbolCommand.Parameters.Add("$symbolKey", SqliteType.Text);
         var projectPathParameter = symbolCommand.Parameters.Add("$projectPath", SqliteType.Text);
         var projectNameParameter = symbolCommand.Parameters.Add("$projectName", SqliteType.Text);
+        var languageParameter = symbolCommand.Parameters.Add("$language", SqliteType.Text);
         var kindParameter = symbolCommand.Parameters.Add("$kind", SqliteType.Text);
         var nameParameter = symbolCommand.Parameters.Add("$name", SqliteType.Text);
         var displayNameParameter = symbolCommand.Parameters.Add("$displayName", SqliteType.Text);
@@ -837,6 +905,7 @@ internal sealed class SqliteSearchIndex
             symbolKeyParameter.Value = symbol.SymbolKey;
             projectPathParameter.Value = symbol.ProjectPath.Value;
             projectNameParameter.Value = symbol.ProjectName;
+            languageParameter.Value = symbol.Language;
             kindParameter.Value = symbol.Kind;
             nameParameter.Value = symbol.Name;
             displayNameParameter.Value = symbol.DisplayName;
@@ -879,23 +948,27 @@ internal sealed class SqliteSearchIndex
         command.CommandText = """
             INSERT INTO search_index_targets (
                 target_identity,
+                language,
                 fingerprint,
                 indexed_at_utc,
                 symbol_count,
                 schema_version)
             VALUES (
                 $targetIdentity,
+                $language,
                 $fingerprint,
                 $indexedAtUtc,
                 $symbolCount,
                 $schemaVersion)
             ON CONFLICT (target_identity) DO UPDATE SET
+                language = excluded.language,
                 fingerprint = excluded.fingerprint,
                 indexed_at_utc = excluded.indexed_at_utc,
                 symbol_count = excluded.symbol_count,
                 schema_version = excluded.schema_version;
             """;
         command.Parameters.AddWithValue("$targetIdentity", target.TargetIdentity.Value);
+        command.Parameters.AddWithValue("$language", target.Language);
         command.Parameters.AddWithValue("$fingerprint", ToDatabaseValue(target.Fingerprint));
         command.Parameters.AddWithValue("$indexedAtUtc", DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$symbolCount", symbolCount);
@@ -938,6 +1011,7 @@ internal sealed class SqliteSearchIndex
         var parameters = new DynamicParameters();
         parameters.Add("match", queryExpression);
         parameters.Add("targetIdentity", query.TargetIdentity.Value);
+        parameters.Add("language", query.Language);
         return parameters;
     }
 
@@ -958,6 +1032,7 @@ internal sealed class SqliteSearchIndex
             SELECT symbols.symbol_key,
                    symbols.project_path,
                    symbols.project_name,
+                   symbols.language,
                    symbols.kind,
                    symbols.name,
                    symbols.display_name,
@@ -1019,6 +1094,7 @@ internal sealed class SqliteSearchIndex
         {
             "search_index_fts MATCH @match",
             "symbols.target_identity = @targetIdentity",
+            "symbols.language = @language",
         };
 
         AddFilterValues(
@@ -1289,6 +1365,7 @@ internal sealed class SqliteSearchIndex
     {
         ArgumentNullException.ThrowIfNull(target);
         ValidateTargetIdentity(target.TargetIdentity);
+        ValidateLanguage(target.Language);
     }
 
     private static void ValidateTargetIdentity(RepositoryRelativePath targetIdentity)
@@ -1299,7 +1376,16 @@ internal sealed class SqliteSearchIndex
     private static void ValidateQuery(SqliteSearchIndexQuery query)
     {
         ValidateTargetIdentity(query.TargetIdentity);
+        ValidateLanguage(query.Language);
         ValidateRepositoryRelativePaths(query.ProjectPaths, "Search query project path");
+    }
+
+    private static void ValidateLanguage(string language)
+    {
+        if (language is not SourceLanguageNames.CSharp and not SourceLanguageNames.TypeScript)
+        {
+            throw new ArgumentException($"Unsupported search-index language '{language}'.", nameof(language));
+        }
     }
 
     private static void ValidateRepositoryRelativePaths(
@@ -1418,12 +1504,18 @@ internal sealed class SqliteSearchIndex
 
     private static void ValidateSymbols(
         IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
-        RepositoryRelativePath targetIdentity)
+        RepositoryRelativePath targetIdentity,
+        string? expectedLanguage = null)
     {
         var keys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var symbol in symbols)
         {
             ArgumentNullException.ThrowIfNull(symbol);
+            ValidateLanguage(symbol.Language);
+            if (expectedLanguage is not null && !string.Equals(symbol.Language, expectedLanguage, StringComparison.Ordinal))
+            {
+                throw new ArgumentException("Every search symbol must use the target language.", nameof(symbols));
+            }
             ArgumentException.ThrowIfNullOrWhiteSpace(symbol.SymbolKey);
             ValidateRepositoryRelativePath(symbol.ProjectPath, "Search symbol project path");
             ArgumentException.ThrowIfNullOrWhiteSpace(symbol.ProjectName);

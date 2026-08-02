@@ -1,17 +1,17 @@
 # RoslynKit
 
-RoslynKit is an independent Roslyn-powered command-line tool plus the [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md) workflow that helps coding agents navigate C# solutions through Roslyn instead of relying only on grep-style text search.
+RoslynKit is an independent code-intelligence command-line tool plus the [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md) workflow. It navigates C# through Roslyn and TypeScript/JavaScript through the native Go-based TypeScript compiler preview instead of relying only on grep-style text search.
 
-Install the CLI, point it at a `.slnx`, `.sln`, or `.csproj` file, and it can answer source questions that normally require an IDE:
+Install the CLI, point it at a `.slnx`, `.sln`, `.csproj`, `tsconfig.json`, or `jsconfig.json` file, and it can answer source questions that normally require an IDE:
 
 - What projects and source files does this solution load?
 - Where is this class or method defined?
 - What references this symbol?
 - What implementations exist for this interface or method?
 - What type, signature, or XML documentation is available at this call site?
-- What compiler diagnostics does Roslyn report for the loaded code?
+- What compiler diagnostics does the selected backend report for the loaded code?
 
-The CLI loads .NET projects with MSBuild and asks Roslyn for source information. Roslyn is the official .NET compiler platform for C# and Visual Basic; RoslynKit currently focuses on C# inspection.
+The CLI selects its semantic backend solely from `--target`. C# targets load with MSBuild and Roslyn. TypeScript and JavaScript configs load through `@typescript/native-preview/unstable/sync`, backed by the native Go compiler.
 
 RoslynKit prints stable terminal output so people can read it, copy it into issues, or use it in scripts.
 
@@ -32,6 +32,15 @@ Update an existing install:
 dotnet tool update --global roslynkit
 ```
 
+TypeScript and JavaScript targets also require Node.js 16.20 or later plus the native preview package. Install the package in the target repository (recommended) or globally:
+
+```powershell
+npm install --save-dev @typescript/native-preview@latest
+# or: npm install --global @typescript/native-preview@latest
+```
+
+RoslynKit packages its Node bridge inside the .NET tool; it discovers native-preview from the target repository, the global npm root, or `ROSLYNKIT_TYPESCRIPT_NATIVE_PREVIEW_ROOT`. See [docs/typescript-native-preview.md](docs/typescript-native-preview.md) for discovery details and actionable override variables.
+
 Set up RoslynKit for coding-agent use from a Git repository root:
 
 ```powershell
@@ -50,9 +59,9 @@ For local package feeds and side-by-side prerelease development installs, see [d
 | `init` | Scaffold the RoslynKit skill bundle into a Git repository for Codex, Claude, GitHub Copilot, or all supported agents. |
 | `workspace` | See which projects and documents load. |
 | `diagnostics` | Check compiler diagnostics. |
-| `index` | Prepare or refresh a persistent C# search index for one target. |
-| `search` | Find C# declarations from an English-oriented code question. |
-| `symbols` | Find C# declarations by name. |
+| `index` | Prepare or refresh a persistent language-aware search index for one target. |
+| `search` | Find declarations from an English-oriented code question. |
+| `symbols` | Find declarations by name. |
 | `document-symbols` | List declarations inside one file. |
 | `definition` | Jump from a symbol or cursor position to its definition. |
 | `type-definition` | Jump from a cursor position to the definition of its type. |
@@ -92,11 +101,11 @@ Read a small source window from the workspace Roslyn loaded:
 roslynkit document-lines --target .\MySolution.slnx --file .\src\MyApp\Service.cs --start-line 40 --end-line 52
 ```
 
-Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-based, matching editor line and column numbers.
+Targets can be `.slnx`, `.sln`, `.csproj`, `tsconfig.json`, or `jsconfig.json` files. TypeScript targets support `.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.jsx`, `.mjs`, and `.cjs`. Source positions are one-based, matching editor line and column numbers.
 
 ## Search Index
 
-Use `search` when the relevant declaration is not known by name but an English-oriented description is available. It builds on SQLite Full-Text Search 5 (FTS5), then uses Best Matching 25 (BM25) ranking internally to order C# symbols. The rank is a discovery heuristic, not a claim that the first result is the correct navigation target.
+Use `search` when the relevant declaration is not known by name but an English-oriented description is available. It builds on SQLite Full-Text Search 5 (FTS5), then uses Best Matching 25 (BM25) ranking internally. The rank is a discovery heuristic, not a claim that the first result is the correct navigation target.
 
 Both `index` and `search` require an explicit target and index path. Keep one database in a Git-ignored, repository-local location. The following path is a concise convention:
 
@@ -107,7 +116,7 @@ roslynkit search --target .\MySolution.slnx --index-path .\artifacts\roslynkit.d
 
 Add the database to the repository's `.gitignore`. SQLite enables write-ahead logging (WAL), so an active database can also have adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files. The path must be inside the repository; RoslynKit rejects a path that is not Git-ignored and never modifies `.gitignore`. The database persists target identities, project paths, and declaration source paths relative to the repository, then reconstructs absolute target and declaration locations from the resolved repository root for public output.
 
-One database belongs to one repository and stores separate partitions for its targets. `search` validates the selected target before reading and automatically refreshes changed records. `index` is the strict preparation command; use `--rebuild` to discard and recreate the selected target partition. A search waits for its first index, while concurrent searches may receive the last complete data set with `index-state: stale` while another request refreshes it.
+One database belongs to one repository and stores language-marked partitions for its targets. Version-1 C# indexes migrate in place to the language-aware version-2 schema. `search` validates the selected target before reading and automatically refreshes changed records. `index` is the strict preparation command; use `--rebuild` to discard and recreate the selected target partition. A search waits for its first index, while concurrent searches may receive the last complete data set with `index-state: stale` while another request refreshes it.
 
 The search index accepts only projects with one target framework. It rejects multi-targeted projects instead of selecting a framework implicitly. Every indexed project and non-generated source document must have an existing physical path inside the target's Git worktree; missing project or non-generated source paths, external projects, and external linked non-generated source files are rejected. Generated source documents are skipped, including source-generated documents, generated paths below `bin` or `obj`, and sources with standard generated-code markers injected from extracted NuGet packages outside the worktree. By default a target search covers every project; use `--project` to narrow it, `--kind` to select symbol kinds, and `--max-results` to change the default limit of 20.
 
@@ -160,7 +169,7 @@ roslynkit definition --target .\MySolution.slnx --file .\src\MyApp\Service.cs --
 roslynkit definition --target .\MySolution.slnx --symbol "M:MyApp.MyService.Execute(System.String)"
 ```
 
-The `--symbol` selector can be a Roslyn documentation-comment ID emitted as `id:` in command output, such as `T:MyApp.MyService` or `M:MyApp.MyService.Execute(System.String)`, or a qualified symbol name such as `MyApp.MyService.Execute`. Prefix meanings are defined in [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md).
+For C#, the `--symbol` selector can be a Roslyn documentation-comment ID emitted as `id:` or a qualified symbol name. TypeScript and JavaScript return deterministic opaque `ts:` selectors. Pass those selectors back unchanged to `definition`, `references`, or `symbol-source`; RoslynKit does not present them as C# documentation-comment IDs. Prefix meanings and selector rules are defined in [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md).
 
 If a qualified name is ambiguous, RoslynKit fails with candidate documentation-comment IDs so you can rerun the command with the exact symbol. Symbol IDs are more stable than saved line and column coordinates when files are changing.
 
@@ -192,6 +201,7 @@ Exit codes are `0` for success, `2` for usage errors, `130` for cancellation, an
 - [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md): generated command names, usage strings, and options.
 - [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md): command output contract.
 - [docs/daemon.md](docs/daemon.md): workspace-daemon lifecycle, consistency, IPC, fallback, and supported-workspace contract.
+- [docs/typescript-native-preview.md](docs/typescript-native-preview.md): native-preview architecture, prerequisites, discovery, supported files, and current limitations.
 - [docs/dev-install.md](docs/dev-install.md): side-by-side prerelease development install.
 - [docs/dotnet-tool-release.md](docs/dotnet-tool-release.md): maintainer packaging and release workflow.
 - [docs/roslyn-lsp-commands.md](docs/roslyn-lsp-commands.md): Roslyn language-server inventory and RoslynKit planning coverage.

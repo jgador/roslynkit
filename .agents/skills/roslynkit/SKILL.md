@@ -1,6 +1,6 @@
 ---
 name: roslynkit
-description: Use the stable global RoslynKit tool first for ordinary C# semantic inspection; for literal search, prose, non-C# files, or RoslynKit workspace-load failures, let Codex CLI choose the terminal-native fallback for the current platform.
+description: Use the stable global RoslynKit tool first for ordinary C#, TypeScript, and JavaScript semantic inspection; for literal search, prose, unsupported files, or workspace-load failures, let Codex CLI choose the terminal-native fallback for the current platform.
 ---
 
 # RoslynKit
@@ -9,24 +9,24 @@ description: Use the stable global RoslynKit tool first for ordinary C# semantic
 
 These override every other section when they conflict. They exist because reading whole files and re-reading files is the dominant token cost.
 
-- Never read a whole `.cs` file when a position-based command (`quick-info`, `definition`, `references`) answers the question.
+- Never read a whole supported source file when a position-based command (`quick-info`, `definition`, `references`) answers the question.
 - Never read the same file twice. Capture needed context the first time.
-- Resolve positions with RoslynKit instead of falling back to `Read`/grep on `.cs` source once the file is loaded.
+- Resolve positions with RoslynKit instead of falling back to `Read`/grep on supported source once the file is loaded.
 - Prefer single-target commands (`definition`, `quick-info`, `type-definition`) over `symbols`; `symbols` returns verbose arrays. When `symbols` or `references` are required, always cap output with the smallest useful `--max-results` (often `--max-results 1` to confirm one known declaration).
 - Stop once enough evidence is available. Do not gather extra members, siblings, or confirmation reads.
 
-Use this skill for ordinary C# semantic inspection when the stable global `roslynkit` command is available.
+Use this skill for ordinary C#, TypeScript, and JavaScript semantic inspection when the stable global `roslynkit` command is available.
 
 ## Routing Rule
 
-- Use RoslynKit first for C# semantic inspection.
-- For literal text search, comments or prose, non-C# files, or RoslynKit workspace-load failures, let Codex CLI choose the terminal-native fallback for the current platform.
+- Use RoslynKit first for C#, TypeScript, and JavaScript semantic inspection.
+- For literal text search, comments or prose, unsupported files, or RoslynKit workspace-load failures, let Codex CLI choose the terminal-native fallback for the current platform.
 
-Do not default to `Get-Content`, `Select-String`, or grep-style file reads for questions that are really about C# declarations, symbol structure, definitions, references, implementations, types, signatures, or generated documents.
+Do not default to `Get-Content`, `Select-String`, or grep-style file reads for questions that are really about supported-language declarations, symbol structure, definitions, references, implementations, types, signatures, or generated documents.
 
 ## Intent-Based Symbol Discovery
 
-Use `search` when an English-oriented question describes a C# responsibility but no declared symbol name is known. The command requires both `--target` and `--index-path`; use a Git-ignored repository-local database such as `./artifacts/roslynkit.db`.
+Use `search` when an English-oriented question describes a code responsibility but no declared symbol name is known. The command requires both `--target` and `--index-path`; use a Git-ignored repository-local database such as `./artifacts/roslynkit.db`.
 
 ```powershell
 roslynkit search --target .\SomeSolution.slnx --index-path .\artifacts\roslynkit.db --query "how does workspace daemon reload after source changes"
@@ -51,34 +51,34 @@ Search requires projects with one target framework and repository-local physical
 - The target has no global name (local variable, parameter, lambda parameter): position mode is the only way to address it.
 - `signature-help` and mid-expression `quick-info` are always position-based: they answer questions about a spot in the code, not about a declaration.
 
-`--symbol` takes a documentation-comment ID from RoslynKit `id:` output or a qualified name such as `SomeNamespace.SomeType.SomeMethod`. Prefix meanings for documentation-comment IDs are defined in [references/output.md](references/output.md). An ambiguous qualified name (for example method overloads) fails with the candidate documentation-comment IDs; retry with the exact ID. Constructors need the emitted `M:...#ctor(...)` ID form.
+For C#, `--symbol` takes a documentation-comment ID from RoslynKit `id:` output or a qualified name such as `SomeNamespace.SomeType.SomeMethod`. Prefix meanings for C# documentation-comment IDs are defined in [references/output.md](references/output.md). TypeScript and JavaScript use opaque `ts:` selectors emitted in `id:` output; pass them back unchanged and do not invent a C# documentation-comment ID. An ambiguous C# qualified name fails with candidate IDs; retry with the exact ID.
 
 Hard rule: coordinates must come from tool output, a diagnostic, or the user. If reading or searching a file would be required to find a line number, use `--symbol` instead.
 
 When a coordinate usage error includes a `hint:` line, do not retry the same `--line`/`--column`. Use the valid range in `hint:` and pick a new coordinate with `document-lines` or `document-symbols` before retrying semantic commands.
 
-Chain by identity when possible: symbol bullets carry documentation-comment IDs as `id:` when Roslyn can provide them. Pass that value straight to the next `--symbol` command. After editing a file, cached line and column values are stale; the ID stays valid.
+Chain by identity when possible: symbol bullets carry a backend-specific selector as `id:`. Pass that value straight to the next `--symbol` command. After editing a file, cached coordinates are stale; C# documentation IDs generally remain valid, while TypeScript `ts:` selectors should be regenerated from fresh output.
 
 ## Default File Scope
 
-RoslynKit is C#-only by default.
+RoslynKit selects its backend from `--target`.
 
-- For any RoslynKit command that accepts `--file`, always pass a path that ends in `.cs`.
-- Treat `.cs` as the default and required file scope. Generated C# documents are still selected by the generated `path` emitted from `workspace --include-generated`.
-- Do not run RoslynKit with `--file` values that point to `.md`, `.json`, `.xml`, `.yml`, `.yaml`, `.props`, `.targets`, `.editorconfig`, `.sln`, `.slnx`, `.csproj`, or other non-C# files.
-- If the task is prose inspection, comment wording, XML documentation wording, TODO scanning, or literal text matching, let Codex CLI choose the terminal-native fallback even when the text appears inside a `.cs` file.
-- A `.cs` file may still be inspected with RoslynKit when the primary task is semantic C# analysis or source inspection. Returned ranges may include comments, but comment text is not itself a RoslynKit search target. Because `document-text` returns whole documents only, prefer position-based commands, `quick-info`, targeted cross-references, and `document-lines` first. Use `document-symbols` only when the file is already known and local structure is needed. Use `document-lines` when a resolved path and small line window are enough; an oversized `--end-line` is capped at EOF, but `--start-line` still must be inside the document. Use `document-text` only when a full document read is justified after the symbol or file is already resolved.
+- `.slnx`, `.sln`, and `.csproj` select Roslyn and accept `.cs` source. `tsconfig.json` and `jsconfig.json` select native-preview and accept `.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.jsx`, `.mjs`, and `.cjs` source.
+- Generated C# documents are selected by the generated `path` emitted from `workspace --include-generated`. Native-preview currently reports physical configured source documents only.
+- Do not use semantic commands for `.md`, generic `.json`, `.xml`, `.yml`, `.yaml`, `.props`, `.targets`, or other unsupported files.
+- If the task is prose inspection, comment wording, TODO scanning, or literal text matching, let Codex CLI choose the terminal-native fallback even when the text appears inside a supported source file.
+- A supported source file may be inspected when the primary task is semantic analysis or source inspection. Prefer position-based commands, `quick-info`, targeted cross-references, and `document-lines` before `document-text`.
 
 ## Command
 
 Use the stable global command:
 
 ```powershell
-roslynkit <command> --target <solution.slnx|solution.sln|project.csproj>
+roslynkit <command> --target <solution.slnx|solution.sln|project.csproj|tsconfig.json|jsconfig.json>
 ```
 
-Always pass `--target` explicitly. RoslynKit does not infer a solution or project path automatically.
-When a command accepts `--file`, pass a `.cs` path by default.
+Always pass `--target` explicitly. RoslynKit does not infer a target path automatically.
+When a command accepts `--file`, use a source extension supported by the selected backend.
 Use `roslynkit help <command>` for exact runtime syntax and options. For the bundled command reference, read [references/commands.md](references/commands.md).
 
 ## When To Start With `workspace`
@@ -112,7 +112,7 @@ When a line contains more than one semantic target, choose the cursor deliberate
 
 ## Cheap-First Semantic Workflow
 
-When the task is a semantic C# question, prefer this order and stop once enough evidence is available:
+When the task is a supported-language semantic question, prefer this order and stop once enough evidence is available:
 
 1. If the declaration name is known, run `definition`, `references`, or `implementations` with `--symbol`, or `symbol-source` for the declaration body, in one command.
 2. If the current `.cs` file and cursor are already known, pick the most flow-bearing symbol on the current line and start with a position-based `definition`, `references`, `implementations`, or `quick-info` on that location. For chained invocations, start with the rightmost invoked method or property, not the constructor or enclosing type, unless construction is the question.
@@ -133,7 +133,7 @@ When the task is a semantic C# question, prefer this order and stop once enough 
 
 ## Token Discipline
 
-- Do not read an entire `.cs` file through `document-text` by default.
+- Do not read an entire source file through `document-text` by default.
 - Do not read a whole class body by default.
 - Chain follow-up lookups with the `id:` value from previous output when it is present instead of re-resolving the same symbol through `symbols` or a fresh position lookup.
 - Prefer `symbol-source` over `document-text` or shell reads when exactly one declaration body is needed.
@@ -254,4 +254,4 @@ roslynkit document-text --target .\SomeProject.csproj --file .\obj\Debug\net10.0
 ## Fallbacks
 
 - Do not prescribe a specific fallback command in this skill.
-- If the task is literal search, prose inspection, a non-C# file, or a RoslynKit workspace-load failure, state that RoslynKit is not the right tool for that step and let Codex CLI choose the terminal-native fallback for the current platform, such as PowerShell on Windows or the default shell on macOS and Linux.
+- If the task is literal search, prose inspection, an unsupported file, or a RoslynKit workspace-load failure, state that RoslynKit is not the right tool for that step and let Codex CLI choose the terminal-native fallback for the current platform.

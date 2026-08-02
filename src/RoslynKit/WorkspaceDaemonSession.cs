@@ -123,6 +123,7 @@ internal sealed class WorkspaceDaemonSession : IAsyncDisposable
     private readonly Func<CancellationToken, Task<GitWorktreeFingerprintResolution>> _captureFingerprintAsync;
     private readonly Func<CancellationToken, Task<WorkspaceDaemonGeneration>> _loadGenerationAsync;
     private readonly Func<TimeSpan, CancellationToken, Task> _delayAsync;
+    private readonly IDisposable? _sessionOwner;
     private TaskCompletionSource _stateChanged = CreateSignal();
     private TaskCompletionSource? _reloadCompleted;
     private WorkspaceDaemonGeneration? _currentGeneration;
@@ -146,7 +147,17 @@ internal sealed class WorkspaceDaemonSession : IAsyncDisposable
         TargetPath = PathCanonicalizer.ResolveExistingPath(targetPath);
         var fingerprintService = new GitWorktreeFingerprintService(worktreeRoot);
         _captureFingerprintAsync = fingerprintService.CaptureAsync;
-        _loadGenerationAsync = cancellationToken => WorkspaceDaemonGeneration.LoadAsync(TargetPath, cancellationToken);
+        if (WorkspaceTarget.Resolve(TargetPath, "daemon") == WorkspaceTargetKind.TypeScript)
+        {
+            var owner = new TypeScriptDaemonBackendOwner(TargetPath);
+            _sessionOwner = owner;
+            _loadGenerationAsync = owner.LoadGenerationAsync;
+        }
+        else
+        {
+            _loadGenerationAsync = cancellationToken => WorkspaceDaemonGeneration.LoadAsync(TargetPath, cancellationToken);
+        }
+
         _delayAsync = static (delay, cancellationToken) => Task.Delay(delay, cancellationToken);
     }
 
@@ -398,6 +409,7 @@ internal sealed class WorkspaceDaemonSession : IAsyncDisposable
         }
 
         generation?.Dispose();
+        _sessionOwner?.Dispose();
     }
 
     private async Task<ReloadAcquisition> ReloadAsync(

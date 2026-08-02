@@ -9,6 +9,7 @@ Use one source of truth per topic:
 - [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md): generated runtime command reference from `BuiltinCommandRegistry`; regenerate with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --write`.
 - [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md): shared command output contract for humans, scripts, tests, and agents.
 - [docs/daemon.md](docs/daemon.md): canonical lifecycle, consistency, IPC, fallback, and supported-workspace contract for the optional workspace daemon.
+- [docs/typescript-native-preview.md](docs/typescript-native-preview.md): TypeScript and JavaScript native-preview architecture, prerequisites, discovery, and limitations.
 - [docs/dev-install.md](docs/dev-install.md): semi-manual side-by-side prerelease installation for RoslynKit development.
 - [docs/dotnet-tool-release.md](docs/dotnet-tool-release.md): maintainer packaging and release workflow.
 - [docs/agents/README.md](docs/agents/README.md): index for repo-maintenance coding-agent workflow docs that agents may discover and apply on their own.
@@ -22,11 +23,13 @@ Keep this file focused on the rules agents need during execution. Put longer rep
 
 ## Project Structure & Module Organization
 
-RoslynKit is a .NET 10 command-line tool. Production code lives under `src/RoslynKit`, with the console entrypoint in `Program.cs`, CLI parsing in `CliParser.cs`, command metadata in `BuiltinCommandRegistry.cs`, and Roslyn execution logic in `RoslynCommandExecutor.cs`. Tests live under `tests/RoslynKit.Tests`, repo-local test-side utilities live under `tests/`, and small repo tooling lives under `tools/`. Shared product docs live under `docs/`; the reusable stable skill bundle and agent-suitable runtime contracts live under [.agents/skills/roslynkit/](.agents/skills/roslynkit/); repo-maintenance coding-agent docs live under `docs/agents/`. Manual reference, roadmap, and benchmark docs live directly under `docs/` and are opt-in unless the user names them.
+RoslynKit is a .NET 10 command-line tool. Production code lives under `src/RoslynKit`, with the console entrypoint in `Program.cs`, CLI parsing in `CliParser.cs`, command metadata in `BuiltinCommandRegistry.cs`, Roslyn execution in `RoslynCommandExecutor.cs`, backend selection in `WorkspaceCommandBackend.cs`, and the native-preview Node bridge under `src/RoslynKit/TypeScriptBridge/`. Tests live under `tests/RoslynKit.Tests`, TypeScript and JavaScript fixtures live under `tests/TypeScriptFixture` and `tests/JavaScriptFixture`, repo-local test-side utilities live under `tests/`, and small repo tooling lives under `tools/`. Shared product docs live under `docs/`; the reusable stable skill bundle and agent-suitable runtime contracts live under [.agents/skills/roslynkit/](.agents/skills/roslynkit/); repo-maintenance coding-agent docs live under `docs/agents/`. Manual reference, roadmap, and benchmark docs live directly under `docs/` and are opt-in unless the user names them.
 
 ## Build, Test, and Development Commands
 
 - `dotnet restore .\RoslynKit.slnx` restores packages for the solution.
+- `npm ci --prefix .\src\RoslynKit\TypeScriptBridge` installs the lockfile-pinned native-preview bridge dependency.
+- `npm test --prefix .\src\RoslynKit\TypeScriptBridge` runs native bridge unit and process-integration tests.
 - `dotnet build .\RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"` builds the CLI and tests with concise output.
 - `dotnet test .\RoslynKit.slnx` runs the xUnit test suite through Microsoft Testing Platform.
 - `dotnet run --project .\src\RoslynKit -- help` runs the CLI locally.
@@ -70,29 +73,29 @@ For file discovery and literal text search, invoke the globally available `rg` (
 - Use `rg --files` for file discovery and `rg -n "pattern"` for literal text search.
 - Prefer global `rg` over recursive PowerShell file enumeration or `Select-String`.
 - Fall back to the terminal-native search tool for the current platform only when global `rg` is unavailable.
-- This search-tool rule does not replace the RoslynKit-first C# semantic-inspection rules below.
+- This search-tool rule does not replace the RoslynKit-first supported-language semantic-inspection rules below.
 
 ### RoslynKit Default Semantic Inspection
 
-When the task is ordinary C# semantic inspection inside this RoslynKit repo, use [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md) first. Treat that dev skill as the repo-default route for declarations, symbol structure, definitions, references, implementations, types, signatures, generated documents, and similar Roslyn-backed inspection work.
+When the task is ordinary C#, TypeScript, or JavaScript semantic inspection inside this RoslynKit repo, use [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md) first. Treat that dev skill as the repo-default route for declarations, symbol structure, definitions, references, implementations, types, signatures, generated documents, and similar backend-supported inspection work.
 
 Use [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md) only when the task is explicitly about the stable global tool behavior or the released stable workflow.
 
-For literal search, prose inspection, non-C# files, or RoslynKit workspace-load failures, fall back to the terminal-native tool for the current platform instead of forcing RoslynKit.
+For literal search, prose inspection, unsupported files, or RoslynKit workspace-load failures, fall back to the terminal-native tool for the current platform instead of forcing RoslynKit.
 
-### No-Primer C# Tool Gate
+### No-Primer Semantic Tool Gate
 
-When the task does not already confirm C#/.NET from the user prompt, named files, project/solution files, or known C# symbols, do not ask whether to use RoslynKit and do not mention RoslynKit in the classifier. First separate code investigation from C#/.NET confirmation with this no-primer shape:
+When the task does not already confirm C#/.NET, TypeScript, or JavaScript from the user prompt, named files, supported targets, or known symbols, do not ask whether to use RoslynKit and do not mention RoslynKit in the classifier. First separate code investigation from supported-language confirmation with this no-primer shape:
 
 ```json
-{"code_investigation":"yes|no|unknown","csharp_dotnet_confirmed":"yes|no|unknown","confidence":"low|medium|high","reason":"one sentence","next_question_if_unknown":"one question or null"}
+{"code_investigation":"yes|no|unknown","supported_language_confirmed":"yes|no|unknown","confidence":"low|medium|high","reason":"one sentence","next_question_if_unknown":"one question or null"}
 ```
 
-- If `csharp_dotnet_confirmed=yes`, RoslynKit may be used once a symbol, file, project, or cursor position is known.
-- If `code_investigation=yes` and `csharp_dotnet_confirmed=unknown`, do not use RoslynKit yet; ask `next_question_if_unknown` or gather minimal repo evidence first.
-- Minimal repo evidence for C#/.NET is a lightweight discovery of C# source or script files (`.cs`, `.csx`), C# project files (`.csproj`), .NET solution or solution-filter files (`.sln`, `.slnx`, `.slnf`), Razor files containing C# (`.razor`, `.cshtml`), C#-affecting MSBuild files (`.props`, `.targets`), analyzer configuration files (`.editorconfig`, `.globalconfig`, `.ruleset`), `global.json` with .NET SDK context, or related generated C# files such as `.g.cs`, `.g.i.cs`, and `.Designer.cs`.
+- If `supported_language_confirmed=yes`, RoslynKit may be used once a symbol, file, target, or cursor position is known.
+- If `code_investigation=yes` and `supported_language_confirmed=unknown`, do not use RoslynKit yet; ask `next_question_if_unknown` or gather minimal repo evidence first.
+- Minimal evidence is a supported C# target/source or a `tsconfig.json`/`jsconfig.json` target with `.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.jsx`, `.mjs`, or `.cjs` source.
 - If `code_investigation=no`, do not use RoslynKit first.
-- Stop after at most five classifier or clarification exchanges; if C#/.NET is still unknown, proceed with non-RoslynKit narrowing first.
+- Stop after at most five classifier or clarification exchanges; if the supported language is still unknown, proceed with non-RoslynKit narrowing first.
 
 ### Bounded Scout Search
 

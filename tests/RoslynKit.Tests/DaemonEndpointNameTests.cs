@@ -16,7 +16,7 @@ public sealed class DaemonEndpointNameTests
         Assert.DoesNotContain(identity.Workspace.WorktreeRoot, endpointName, StringComparison.Ordinal);
         Assert.DoesNotContain(identity.Workspace.TargetPath, endpointName, StringComparison.Ordinal);
         Assert.Equal(
-            "roslynkit-v1-72ad2dd9269deec8b275bf8cdfdea584c6bbad733c62df726c34efd875edb43c",
+            "roslynkit-v1-235b331248ebf6e9bd63fdb6699390cffc41c6e50b2058dcd23ecb462e0cf0f3",
             endpointName);
     }
 
@@ -41,6 +41,7 @@ public sealed class DaemonEndpointNameTests
     public void Create_DistinguishesEveryCompatibilityInput()
     {
         var identity = CreateIdentity();
+        var typeScriptRuntime = CreateTypeScriptRuntimeIdentity();
         var variants = new DaemonIdentity[]
         {
             identity with { User = identity.User with { Kind = "other-user-kind" } },
@@ -63,6 +64,13 @@ public sealed class DaemonEndpointNameTests
             identity with { Workspace = identity.Workspace with { RoslynKit = identity.Workspace.RoslynKit with { ModuleVersionId = "other-mvid" } } },
             identity with { Workspace = identity.Workspace with { ProtocolVersion = 2 } },
             identity with { Workspace = identity.Workspace with { ProcessArchitecture = "other-architecture" } },
+            identity with { Workspace = identity.Workspace with { TypeScriptRuntime = typeScriptRuntime } },
+            identity with { Workspace = identity.Workspace with { TypeScriptRuntime = typeScriptRuntime with { NodePath = "/other/node" } } },
+            identity with { Workspace = identity.Workspace with { TypeScriptRuntime = typeScriptRuntime with { NodeVersion = "22.0.0" } } },
+            identity with { Workspace = identity.Workspace with { TypeScriptRuntime = typeScriptRuntime with { BridgePath = "/other/bridge.mjs" } } },
+            identity with { Workspace = identity.Workspace with { TypeScriptRuntime = typeScriptRuntime with { BridgeSha256 = "other-bridge" } } },
+            identity with { Workspace = identity.Workspace with { TypeScriptRuntime = typeScriptRuntime with { NativePreviewRoot = "/other/native-preview" } } },
+            identity with { Workspace = identity.Workspace with { TypeScriptRuntime = typeScriptRuntime with { NativePreviewVersion = "7.0.0-dev.other" } } },
         };
         var endpointName = DaemonEndpointName.Create(identity);
 
@@ -144,5 +152,16 @@ public sealed class DaemonEndpointNameTests
             new DaemonUserIdentity(DaemonIdentityResolver.UnixEffectiveUserIdKind, "1000"),
             "/runtime/user/1000",
             workspace);
+    }
+
+    private static TypeScriptRuntimeIdentity CreateTypeScriptRuntimeIdentity()
+    {
+        return new TypeScriptRuntimeIdentity(
+            "/usr/bin/node",
+            "24.0.0",
+            "/tool/TypeScriptBridge/bridge.mjs",
+            "bridge-sha256",
+            "/repo/node_modules/@typescript/native-preview",
+            "7.0.0-dev.20260707.2");
     }
 }

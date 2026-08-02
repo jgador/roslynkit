@@ -1,3 +1,5 @@
+using System.Net.Sockets;
+
 namespace RoslynKit;
 
 /// <summary>
@@ -121,6 +123,7 @@ internal sealed class DaemonClient
         }
         catch (Exception exception) when (exception is
             IOException or
+            SocketException or
             TimeoutException or
             UnauthorizedAccessException or
             PlatformNotSupportedException or

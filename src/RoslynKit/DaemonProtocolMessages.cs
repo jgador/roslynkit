@@ -172,6 +172,7 @@ internal sealed record DaemonCommandRequest(
 
     private static string ResolveIndexPath(string indexPath, string baseDirectory)
     {
+        indexPath = PathCanonicalizer.NormalizeDirectorySeparators(indexPath);
         var fullPath = Path.GetFullPath(indexPath, baseDirectory);
         if (File.Exists(fullPath) || Directory.Exists(fullPath))
         {

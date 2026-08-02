@@ -16,12 +16,14 @@ internal static class SqliteSearchIndexTypeMaps
             ("target_identity", row => row.TargetIdentity),
             ("fingerprint", row => row.Fingerprint),
             ("indexed_at_utc", row => row.IndexedAtUtc),
-            ("symbol_count", row => row.SymbolCount));
+            ("symbol_count", row => row.SymbolCount),
+            ("language", row => row.Language));
 
         Register<SqliteSearchIndexMatchRow>(
             ("symbol_key", row => row.SymbolKey),
             ("project_path", row => row.ProjectPath),
             ("project_name", row => row.ProjectName),
+            ("language", row => row.Language),
             ("kind", row => row.Kind),
             ("name", row => row.Name),
             ("display_name", row => row.DisplayName),
@@ -118,6 +120,8 @@ internal sealed class SqliteSearchIndexMetadataRow
     public string IndexedAtUtc { get; set; } = string.Empty;
 
     public int SymbolCount { get; set; }
+
+    public string Language { get; set; } = SourceLanguageNames.CSharp;
 }
 
 /// <summary>
@@ -130,6 +134,8 @@ internal sealed class SqliteSearchIndexMatchRow
     public string ProjectPath { get; set; } = string.Empty;
 
     public string ProjectName { get; set; } = string.Empty;
+
+    public string Language { get; set; } = SourceLanguageNames.CSharp;
 
     public string Kind { get; set; } = string.Empty;
 

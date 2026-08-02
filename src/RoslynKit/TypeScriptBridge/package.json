@@ -1,0 +1,12 @@
+{
+  "name": "roslynkit-typescript-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@typescript/native-preview": "7.0.0-dev.20260707.2"
+  }
+}

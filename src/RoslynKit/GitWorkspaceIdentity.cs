@@ -12,7 +12,19 @@ internal sealed record GitWorkspaceIdentity(
     IReadOnlyDictionary<string, string?> BuildEnvironment,
     RoslynKitBuildIdentity RoslynKit,
     int ProtocolVersion,
-    string ProcessArchitecture);
+    string ProcessArchitecture,
+    TypeScriptRuntimeIdentity? TypeScriptRuntime = null);
+
+/// <summary>
+/// Identifies the exact external runtime inputs used by a TypeScript daemon backend.
+/// </summary>
+internal sealed record TypeScriptRuntimeIdentity(
+    string NodePath,
+    string NodeVersion,
+    string BridgePath,
+    string BridgeSha256,
+    string NativePreviewRoot,
+    string NativePreviewVersion);
 
 /// <summary>
 /// Identifies the nearest <c>global.json</c> by canonical path and exact content digest.

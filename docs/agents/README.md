@@ -9,7 +9,7 @@ These docs are for repo-maintenance guidance that coding agents should discover 
 ## Skill Bundle References
 
 - [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md): generated runtime command names, usage strings, and options from `BuiltinCommandRegistry`.
-- [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md): deterministic command output contract, including documentation-comment ID prefix meanings.
+- [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md): deterministic command output contract, including C# documentation-comment IDs and TypeScript `ts:` selectors.
 
 ## Not Agent-Autoloaded
 
@@ -24,6 +24,7 @@ Keep manual references, roadmap inventories, and benchmark procedures outside th
 Do not duplicate shared runtime or workflow facts in hand-written agent docs. Link to the canonical source instead:
 
 - [docs/dev-install.md](../dev-install.md): side-by-side prerelease development install.
+- [docs/typescript-native-preview.md](../typescript-native-preview.md): native-preview prerequisites, lifecycle, discovery, and limitations.
 
 When command metadata changes, regenerate [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md) with:
 

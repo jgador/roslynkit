@@ -9,7 +9,6 @@ internal static class WorkspaceCommandRouter
         ParsedCommand command,
         CancellationToken cancellationToken)
     {
-        var data = await RoslynCommandExecutor.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
-        return CliProcessResult.Success(MarkdownProjection.Render(data));
+        return await WorkspaceCommandBackend.ExecuteStandaloneAsync(command, cancellationToken).ConfigureAwait(false);
     }
 }

@@ -7,6 +7,7 @@ internal static class PathCanonicalizer
 {
     public static string ResolveExistingPath(string path, string? baseDirectory = null)
     {
+        path = NormalizeDirectorySeparators(path);
         var fullPath = baseDirectory is null
             ? Path.GetFullPath(path)
             : Path.GetFullPath(path, baseDirectory);
@@ -32,5 +33,12 @@ internal static class PathCanonicalizer
         }
 
         return Path.GetFullPath(resolvedPath);
+    }
+
+    internal static string NormalizeDirectorySeparators(string path)
+    {
+        return Path.DirectorySeparatorChar == '/'
+            ? path.Replace('\\', '/')
+            : path;
     }
 }

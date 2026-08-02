@@ -7,11 +7,11 @@
     <ToolCommandName>roslynkit</ToolCommandName>
     <PackageId>roslynkit</PackageId>
     <Authors>RoslynKit contributors</Authors>
-    <Description>Unofficial Roslyn-powered C# code intelligence CLI for coding agents and terminal workflows.</Description>
+    <Description>Code intelligence CLI for C#, TypeScript, and JavaScript coding-agent workflows.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/jgador/roslynkit</PackageProjectUrl>
     <PackageReadmeFile>PackageReadme.md</PackageReadmeFile>
-    <PackageTags>roslyn;csharp;code-analysis;dotnet-tool;cli</PackageTags>
+    <PackageTags>roslyn;csharp;typescript;javascript;code-analysis;dotnet-tool;cli</PackageTags>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/jgador/roslynkit</RepositoryUrl>
@@ -36,6 +36,11 @@
 
   <ItemGroup>
     <None Include="PackageReadme.md" Pack="true" PackagePath="\" />
+    <Content Include="TypeScriptBridge/bridge.mjs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <Pack>false</Pack>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

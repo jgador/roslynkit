@@ -52,7 +52,7 @@ public sealed class SqliteSearchIndexTests
     }
 
     [Fact]
-    public async Task ReplaceTargetAsync_SchemaVersionOneOmitsTargetPathAndPersistsCanonicalRelativeValues()
+    public async Task ReplaceTargetAsync_SchemaVersionTwoOmitsTargetPathAndPersistsCanonicalRelativeValues()
     {
         await using var area = SearchIndexTestArea.Create();
         var index = new SqliteSearchIndex(area.DatabasePath);
@@ -78,7 +78,9 @@ public sealed class SqliteSearchIndexTests
         var targetColumns = await ReadColumnNamesAsync(area.DatabasePath, "search_index_targets", cancellationToken);
         var persisted = await ReadPersistedPathValuesAsync(area.DatabasePath, targetIdentity, cancellationToken);
 
-        Assert.Equal(1, metadata!.SchemaVersion);
+        Assert.Equal(2, metadata!.SchemaVersion);
+        Assert.Equal(SourceLanguageNames.CSharp, metadata.Language);
+        Assert.Contains("language", targetColumns, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("target_path", targetColumns, StringComparer.OrdinalIgnoreCase);
         Assert.Equal(targetIdentity, persisted.TargetIdentity);
         Assert.Equal(projectPath, persisted.ProjectPath);
@@ -117,6 +119,76 @@ public sealed class SqliteSearchIndexTests
         Assert.Contains("target_path", exception.Message, StringComparison.Ordinal);
         Assert.Contains("Delete the index database", exception.Message, StringComparison.Ordinal);
         Assert.Contains("run index again", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AcquireWriterLeaseAsync_MigratesVersionOneIndexesWithoutLosingCSharpSymbols()
+    {
+        await using var area = SearchIndexTestArea.Create();
+        var index = new SqliteSearchIndex(area.DatabasePath);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await index.ReplaceTargetAsync(
+            new SqliteSearchIndexTarget(RelativePath("target"), "fingerprint"),
+            [CreateSymbol("existing", "ExistingWorkspace", "existing workspace")],
+            cancellationToken);
+        await ExecuteSqlAsync(
+            area.DatabasePath,
+            """
+            UPDATE search_index_schema SET schema_version = 1 WHERE schema_key = 1;
+            UPDATE search_index_targets SET schema_version = 1;
+            ALTER TABLE search_index_targets DROP COLUMN language;
+            ALTER TABLE search_index_symbols DROP COLUMN language;
+            """,
+            cancellationToken);
+
+        Assert.Null(await index.ReadMetadataAsync(RelativePath("target"), cancellationToken));
+        await using (var lease = await index.AcquireWriterLeaseAsync(TimeSpan.FromSeconds(1), cancellationToken))
+        {
+            await lease.CommitAsync(cancellationToken);
+        }
+
+        var metadata = await index.ReadMetadataAsync(RelativePath("target"), cancellationToken);
+        var search = await index.SearchAsync(
+            new SqliteSearchIndexQuery(RelativePath("target"), ["existing"], MaxResults: 20),
+            cancellationToken);
+
+        Assert.Equal(2, metadata!.SchemaVersion);
+        Assert.Equal(SourceLanguageNames.CSharp, metadata.Language);
+        Assert.Equal("ExistingWorkspace", Assert.Single(search.Matches).Name);
+    }
+
+    [Fact]
+    public async Task SearchAsync_FiltersSymbolsByLanguage()
+    {
+        await using var area = SearchIndexTestArea.Create();
+        var index = new SqliteSearchIndex(area.DatabasePath);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await index.ReplaceTargetAsync(
+            new SqliteSearchIndexTarget(
+                RelativePath("tsconfig.json"),
+                "fingerprint",
+                SourceLanguageNames.TypeScript),
+            [CreateSymbol(
+                "selector",
+                "Formatter",
+                "formatter",
+                targetIdentity: "tsconfig.json",
+                language: SourceLanguageNames.TypeScript)],
+            cancellationToken);
+
+        var typeScript = await index.SearchAsync(
+            new SqliteSearchIndexQuery(
+                RelativePath("tsconfig.json"),
+                ["formatter"],
+                MaxResults: 20,
+                Language: SourceLanguageNames.TypeScript),
+            cancellationToken);
+        var csharp = await index.SearchAsync(
+            new SqliteSearchIndexQuery(RelativePath("tsconfig.json"), ["formatter"], MaxResults: 20),
+            cancellationToken);
+
+        Assert.Equal(SourceLanguageNames.TypeScript, Assert.Single(typeScript.Matches).Language);
+        Assert.Empty(csharp.Matches);
     }
 
     [Fact]
@@ -598,7 +670,8 @@ public sealed class SqliteSearchIndexTests
         string projectPath = "App.csproj",
         string kind = "Method",
         string? pathTokens = null,
-        string targetIdentity = "target")
+        string targetIdentity = "target",
+        string language = SourceLanguageNames.CSharp)
     {
         var relativeProjectPath = RelativePath(projectPath);
         var relativeSourcePath = RelativePath(path ?? "App.cs");
@@ -626,7 +699,8 @@ public sealed class SqliteSearchIndexTests
             "app",
             details,
             pathTokens ?? "app cs",
-            details);
+            details,
+            language);
     }
 
     private static RepositoryRelativePath RelativePath(string value)

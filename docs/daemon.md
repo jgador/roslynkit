@@ -4,7 +4,7 @@ This document is the canonical design contract for RoslynKit's optional workspac
 
 ## Purpose
 
-Loading an `MSBuildWorkspace` reevaluates the target solution or project. Repeating that work in every short-lived CLI process dominates many read-only searches. The daemon keeps one loaded workspace and its current immutable `Solution` snapshot alive across compatible CLI invocations.
+Loading an `MSBuildWorkspace` or starting the native TypeScript compiler reevaluates the target. Repeating that work in every short-lived CLI process dominates many read-only searches. The daemon keeps the selected language backend and its current immutable snapshot alive across compatible CLI invocations.
 
 The daemon is a transparent performance optimization, not a correctness authority or a new user-facing server product. The fallback boundary preserves correctness by executing eligible read-only commands through the existing standalone path when daemon infrastructure is unavailable.
 
@@ -17,7 +17,7 @@ flowchart LR
     Pipe --> Daemon[Long-lived same-user daemon]
     Daemon --> Fingerprint[Git fingerprint]
     Fingerprint --> Session[Workspace session]
-    Session --> Executor[Roslyn command executor]
+    Session --> Executor[Selected language backend]
     Executor --> Response[Buffered stdout / stderr / exit code]
     Pipe -.->|Daemon infrastructure failure| Fallback[Standalone execution]
 ```
@@ -26,7 +26,7 @@ flowchart LR
 
 - The first workspace-backed command connects to a compatible daemon or starts the same RoslynKit executable in the hidden internal server mode. There is no public `daemon start` command.
 - `help`, `version`, `init`, `daemon status`, and `daemon stop` execute locally. Status and stop never start a daemon.
-- A compatibility identity includes the current user, canonical Git worktree and target, exact protocol and RoslynKit code/build identity, process architecture, resolved .NET SDK and MSBuild identity, applicable `global.json`, agreed build environment values, and the runtime directory used by local IPC.
+- A compatibility identity includes the current user, canonical Git worktree and target, exact protocol and RoslynKit code/build identity, process architecture, resolved .NET SDK and MSBuild identity, applicable `global.json`, agreed build environment values, optional TypeScript runtime identity, and the runtime directory used by local IPC.
 - The endpoint is a fixed-length opaque hash of the canonical identity. Repository paths never appear in endpoint names.
 - A short-lived `DaemonBootstrapLease` prevents concurrent clients from racing to start a server. After acquiring it, the client rechecks connectivity before spawning and holds it only until the versioned handshake reports readiness. The separate `DaemonLifetimeLease` enforces one live server for the identity. Both use cross-process mutexes held by dedicated owner threads; Windows uses the global mutex namespace so desktop sessions for the same identity cannot create separate owners.
 - Readiness requires a versioned protocol handshake. The existence of a pipe or socket is not sufficient.
@@ -39,13 +39,14 @@ flowchart LR
 
 `GitWorkspaceIdentityResolver` implements the workspace and toolchain portion of the compatibility identity without loading an `MSBuildWorkspace`. Both the daemon client and hidden server resolve it before deriving the endpoint. Resolution currently:
 
-1. Converts an existing `.sln`, `.slnx`, or `.csproj` target to an absolute path and resolves existing symbolic-link or reparse-point components.
+1. Converts an existing `.sln`, `.slnx`, `.csproj`, `tsconfig.json`, or `jsconfig.json` target to an absolute path and resolves existing symbolic-link or reparse-point components.
 2. Resolves the worktree with `git rev-parse --path-format=absolute --show-toplevel` and requires `git rev-parse --verify HEAD^{commit}` to succeed.
 3. Rejects a target worktree that is a submodule, a repository nested under another worktree, or a repository containing configured submodules.
 4. Requires the resolved root to occur exactly once in `git worktree list --porcelain -z`. Other linked worktrees for the same repository remain compatible because each target still belongs to exactly one worktree.
 5. Captures the nearest `global.json` found by walking from the target directory to the filesystem root as its canonical path plus a SHA-256 content digest.
 6. Captures `dotnet --version` from the target directory and queries `MSBuildLocator` with that directory to record the selected instance, discovery type, instance version, MSBuild path, and `MSBuild.dll` product version.
 7. Captures the RoslynKit informational version, module version ID, daemon protocol version, and process architecture.
+8. For `tsconfig.json` or `jsconfig.json`, captures the resolved Node path and version, packaged bridge path and SHA-256 digest, and native-preview package root and version.
 
 The explicit build-environment allowlist is `Configuration`, `Platform`, `DOTNET_CLI_HOME`, `DOTNET_HOST_PATH`, `DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR`, `DOTNET_ROLL_FORWARD`, `DOTNET_ROLL_FORWARD_TO_PRERELEASE`, `DOTNET_ROOT`, `DOTNET_ROOT_X64`, `DOTNET_ROOT_X86`, `MSBUILD_EXE_PATH`, `MSBuildExtensionsPath`, `MSBuildExtensionsPath32`, `MSBuildExtensionsPath64`, `MSBuildSDKsPath`, `NUGET_FALLBACK_PACKAGES`, `NUGET_HTTP_CACHE_PATH`, `NUGET_PACKAGES`, `NUGET_PLUGINS_CACHE_PATH`, and `NUGET_PLUGIN_PATHS`. Unset values are retained as explicit null entries so set and unset environments cannot compare as the same identity accidentally. Other environment-dependent evaluation remains outside the supported boundary.
 
@@ -59,7 +60,7 @@ The committed `HEAD` is validated here but is not part of daemon compatibility i
 
 ## Supported workspace boundary
 
-Daemon acceleration initially supports one Git worktree with a committed `HEAD` and one solution or project target inside that worktree.
+Daemon acceleration supports one Git worktree with a committed `HEAD` and one C#, TypeScript, or JavaScript target inside that worktree.
 
 The following cases execute standalone or remain unsupported for daemon acceleration:
 
@@ -71,13 +72,13 @@ The following cases execute standalone or remain unsupported for daemon accelera
 - tracked files hidden from status by `assume-unchanged` or `skip-worktree`;
 - raw worktree-byte changes that Git clean filters, line-ending normalization, LFS, `ident`, or custom filters report as clean.
 
-These limitations mean the performance-only correctness claim applies inside this supported boundary. A filesystem watcher and incremental `Solution.WithDocumentText` updates are explicitly out of scope. Any detected fingerprint change causes a full MSBuild workspace reload.
+These limitations mean the performance-only correctness claim applies inside this supported boundary. A filesystem watcher and incremental `Solution.WithDocumentText` updates are explicitly out of scope. Any detected fingerprint change causes a full MSBuild workspace reload for C#, or a native-preview snapshot refresh for TypeScript and JavaScript.
 
 ## Search index and daemon coordination
 
 `index` and `search` use a persistent SQLite Full-Text Search 5 (FTS5) database in addition to the daemon's in-memory workspace snapshot. Both commands require an explicit `--target` and `--index-path`. A repository-local, Git-ignored path such as `artifacts/roslynkit.db` is the intended storage boundary. One database can contain separate partitions for targets in that repository; an index path outside the repository or not ignored by Git is rejected. SQLite persists target identities, project paths, and declaration source paths relative to the repository, then reconstructs public target and declaration locations as absolute paths from the resolved repository root.
 
-SQLite write-ahead logging (WAL) allows readers to continue while a refresh writes a new coherent target partition. While the database is active, SQLite can create adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files. The index database is independent of the local IPC endpoint identity and does not make the daemon a general-purpose database server.
+SQLite write-ahead logging (WAL) allows readers to continue while a refresh writes a new coherent target partition. Target metadata and symbol rows carry a language marker; schema version 2 migrates version-1 C# indexes in place with `csharp` defaults. While the database is active, SQLite can create adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files. The index database is independent of the local IPC endpoint identity and does not make the daemon a general-purpose database server.
 
 `search` reconciles the target before querying. It builds the initial target index when absent and refreshes stale records automatically. `index` is the strict synchronization operation: it waits for a stable workspace before reporting success, and `--rebuild` forces a full rebuild of the selected target partition. An ongoing refresh never publishes partial records. When a previous coherent partition exists, concurrent searches can use it and report `index-state: stale`; otherwise they wait for initial indexing to finish.
 
@@ -112,17 +113,17 @@ The stable capture reduces races but is not an atomic filesystem snapshot. A Git
 
 ## Immutable snapshots and reloads
 
-Each command leases one captured immutable Roslyn `Solution`. A reload creates a new `MSBuildWorkspace` and `Solution`; it does not mutate the snapshot held by an active command. Historical generations are released after their active leases finish.
+Each command leases one captured immutable backend generation. A C# reload creates a new `MSBuildWorkspace` and `Solution`. A TypeScript reload asks the retained native-preview `API` for a new invalidated snapshot and project, then disposes the replaced snapshot without restarting the Node bridge or native compiler process. Historical generations are released after their active leases finish; final session disposal closes the remaining snapshot, API, and bridge process.
 
 At most three clean-snapshot searches run concurrently. Asynchronous writer-priority coordination prevents a pending reload from admitting new searches against the old generation.
 
-`WorkspaceDaemonSession` implements the workspace ownership boundary beneath the lifecycle host. It owns the current `RoslynWorkspaceLoader`, successful fingerprint baseline, monotonically increasing generation number, active and queued request counts, workspace state, and latest Git infrastructure diagnostic. A generation dispatches through the caller-owned `RoslynCommandExecutor` overload, so command execution never reloads or disposes the leased workspace.
+`WorkspaceDaemonSession` implements the workspace ownership boundary beneath the lifecycle host. It owns the selected backend, successful fingerprint baseline, monotonically increasing generation number, active and queued request counts, workspace state, and latest Git infrastructure diagnostic. C# generations dispatch through the caller-owned `RoslynCommandExecutor`; TypeScript generations dispatch through one session-owned bridge backend.
 
 Reload behavior is:
 
 1. Compute a stable pre-load fingerprint.
 2. Block new searches and wait for active searches to finish.
-3. Dispose the old workspace and load a fresh workspace.
+3. Dispose the old C# workspace and load a fresh workspace, or refresh the retained TypeScript API to a new snapshot.
 4. Compute a stable post-load fingerprint.
 5. Accept the new generation when the fingerprints match.
 6. Otherwise require 250 milliseconds of quiet, represented by two equal stable captures; restart the quiet interval while the fingerprint continues changing, then reload once more.

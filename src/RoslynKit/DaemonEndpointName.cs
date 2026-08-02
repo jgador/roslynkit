@@ -65,6 +65,7 @@ internal static class DaemonEndpointName
             writer.WriteEndObject();
             writer.WriteNumber("protocolVersion", workspace.ProtocolVersion);
             writer.WriteString("processArchitecture", workspace.ProcessArchitecture);
+            WriteTypeScriptRuntime(writer, workspace.TypeScriptRuntime);
             writer.WriteEndObject();
             writer.WriteEndObject();
         }
@@ -84,6 +85,27 @@ internal static class DaemonEndpointName
         writer.WriteStartObject();
         writer.WriteString("path", globalJson.Path);
         writer.WriteString("sha256", globalJson.Sha256);
+        writer.WriteEndObject();
+    }
+
+    private static void WriteTypeScriptRuntime(
+        Utf8JsonWriter writer,
+        TypeScriptRuntimeIdentity? runtime)
+    {
+        writer.WritePropertyName("typeScriptRuntime");
+        if (runtime is null)
+        {
+            writer.WriteNullValue();
+            return;
+        }
+
+        writer.WriteStartObject();
+        writer.WriteString("nodePath", runtime.NodePath);
+        writer.WriteString("nodeVersion", runtime.NodeVersion);
+        writer.WriteString("bridgePath", runtime.BridgePath);
+        writer.WriteString("bridgeSha256", runtime.BridgeSha256);
+        writer.WriteString("nativePreviewRoot", runtime.NativePreviewRoot);
+        writer.WriteString("nativePreviewVersion", runtime.NativePreviewVersion);
         writer.WriteEndObject();
     }
 }

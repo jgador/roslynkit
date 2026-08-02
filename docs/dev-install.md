@@ -22,6 +22,7 @@ This install is intentionally separate from the stable global `roslynkit` tool s
 ## Prerequisites
 
 - .NET 10 SDK installed
+- Node.js 16.20 or later plus `npm ci` in `src\RoslynKit\TypeScriptBridge` when testing TypeScript or JavaScript targets
 - the current RoslynKit checkout
 - the install script at `scripts\install-roslynkit-dev.ps1`
 

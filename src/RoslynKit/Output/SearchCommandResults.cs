@@ -35,7 +35,7 @@ public sealed record SearchResult(
     IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics);
 
 /// <summary>
-/// Represents one ranked C# symbol hit returned by a full-text search query.
+/// Represents one ranked source symbol hit returned by a full-text search query.
 /// </summary>
 public sealed record SearchHit(
     string DisplayName,

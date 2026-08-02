@@ -99,11 +99,11 @@ For repeated items, output uses compact bullets:
 - kind: Method name: `MyApp.MyService.Execute` loc: `src/MyApp/MyService.cs:12:17-12:24` id: `M:MyApp.MyService.Execute(System.String)`
 ```
 
-`name:` carries the fully qualified display name, and `id:` carries the documentation-comment ID that chains into `--symbol` when Roslyn can provide one. For `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations`, a non-empty XML summary may render as an indented `documentation:` continuation line below the symbol bullet. `references` renders documentation once in the command header for the searched symbol. When a symbol has more than one declaration (partial types), extra `- decl:` bullets follow with one location each.
+`name:` carries the backend display name, and `id:` carries a selector that chains into `--symbol`. C# emits a documentation-comment ID when Roslyn can provide one. TypeScript and JavaScript emit deterministic opaque selectors such as `ts:c3JjL2Zvcm1hdHRlcnMudHM:109:387`; these are not C# documentation-comment IDs and must be passed back unchanged. For symbol-listing and navigation commands, non-empty documentation may render as an indented `documentation:` continuation line. C# partial declarations may add `- decl:` bullets.
 
 ### Documentation-Comment ID Prefixes
 
-This is the canonical prefix legend for RoslynKit `id:` values and `--symbol` selectors that use Roslyn documentation-comment IDs:
+This is the canonical prefix legend only for C# `id:` values and `--symbol` selectors that use Roslyn documentation-comment IDs:
 
 - `N:` namespace
 - `T:` type, including class, struct, interface, enum, delegate, or record
@@ -112,7 +112,7 @@ This is the canonical prefix legend for RoslynKit `id:` values and `--symbol` se
 - `F:` field
 - `E:` event
 
-Treat the complete `id:` value as opaque when chaining it into `--symbol`; keep the prefix, containing type, member name, and signature suffix exactly as emitted.
+Treat every complete `id:` value as opaque when chaining it into `--symbol`. Keep C# prefixes and signatures, or the complete TypeScript `ts:` selector, exactly as emitted. Refresh TypeScript selectors from current output after source edits change declaration spans.
 
 For source text, output uses fenced code blocks with a fence longer than any backtick run inside the payload:
 
@@ -128,7 +128,7 @@ public sealed class MyService
 ```
 ````
 
-For non-C# text documents, the fence info string is `text`.
+TypeScript source uses `typescript`, JavaScript source uses `javascript`, C# source uses `csharp`, and non-source text documents use `text` as the fence info string.
 
 When workspace loading produced diagnostics, every command appends them at the end:
 
@@ -223,7 +223,7 @@ rebuilt: false
 
 ### `search`
 
-`search` finds C# declarations from an English-oriented query. It requires both `--target` and `--index-path`. It validates the selected target and refreshes stale data automatically. The first request waits for indexing; when a prior coherent index exists, a concurrent refresh can return that data with `index-state: stale`.
+`search` finds C#, TypeScript, or JavaScript declarations from an English-oriented query. It requires both `--target` and `--index-path`. It validates the selected target and refreshes stale data automatically. The first request waits for indexing; when a prior coherent index exists, a concurrent refresh can return that data with `index-state: stale`.
 
 ```markdown
 command: search

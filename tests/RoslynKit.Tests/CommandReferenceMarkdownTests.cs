@@ -34,7 +34,7 @@ public sealed class CommandReferenceMarkdownTests
         Assert.Contains("roslynkit symbols --target <target> --query <text>", rendered, StringComparison.Ordinal);
         Assert.Contains("- `--query` / `-q` `<text>` (required): symbol name text to search for", rendered, StringComparison.Ordinal);
         Assert.Contains("roslynkit definition --target <target> --symbol <selector>", rendered, StringComparison.Ordinal);
-        Assert.Contains("- `--symbol` `<selector>` (required): documentation-comment ID", rendered, StringComparison.Ordinal);
+        Assert.Contains("- `--symbol` `<selector>` (required): backend selector from id output or C# qualified symbol name", rendered, StringComparison.Ordinal);
         Assert.Contains("roslynkit document-lines --target <target> --file <path>", rendered, StringComparison.Ordinal);
         Assert.Contains("## `version`\n\nPrint the installed RoslynKit version.", rendered, StringComparison.Ordinal);
         Assert.Contains("No options.", rendered, StringComparison.Ordinal);

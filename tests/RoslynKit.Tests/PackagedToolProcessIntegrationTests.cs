@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security;
+using System.Text.RegularExpressions;
 
 namespace RoslynKit.Tests;
 
@@ -23,6 +24,10 @@ public sealed class PackagedToolProcessIntegrationTests
         var packageSourcePath = Path.Combine(packagingPath, "packages");
         var toolPath = Path.Combine(packagingPath, "tool");
         var nugetConfigPath = Path.Combine(packagingPath, "NuGet.Config");
+        var typeScriptPath = Path.Combine(area.RootPath, "typescript");
+        var typeScriptConfigPath = Path.Combine(typeScriptPath, "tsconfig.json");
+        var typeScriptSourcePath = Path.Combine(typeScriptPath, "formatter.ts");
+        var typeScriptIndexPath = Path.Combine(area.RootPath, "artifacts", "packaged-typescript-search", "roslynkit.db");
 
         await File.AppendAllTextAsync(
             Path.Combine(area.RootPath, ".gitignore"),
@@ -99,6 +104,39 @@ public sealed class PackagedToolProcessIntegrationTests
             OperatingSystem.IsWindows() ? "roslynkit.exe" : "roslynkit");
         Assert.True(File.Exists(executablePath), $"Expected installed tool at '{executablePath}'.");
 
+        Directory.CreateDirectory(typeScriptPath);
+        await File.WriteAllTextAsync(
+            typeScriptConfigPath,
+            """
+            {
+              "compilerOptions": {
+                "module": "nodenext",
+                "moduleResolution": "nodenext",
+                "noEmit": true,
+                "strict": true,
+                "target": "es2024"
+              },
+              "include": ["*.ts"]
+            }
+            """,
+            cancellationToken);
+        await File.WriteAllTextAsync(
+            typeScriptSourcePath,
+            """
+            /** Formats a packaged-tool fixture value. */
+            export class PackagedTypeScriptFormatter {
+              format(value: string): string {
+                return value.toUpperCase();
+              }
+            }
+
+            export const packagedFormatter = new PackagedTypeScriptFormatter();
+            """,
+            cancellationToken);
+        CopyDirectory(
+            TestPaths.RepoFile("src", "RoslynKit", "TypeScriptBridge", "node_modules", "@typescript"),
+            Path.Combine(area.RootPath, "node_modules", "@typescript"));
+
         var workspace = await RunProcessAsync(
             executablePath,
             area.RootPath,
@@ -127,6 +165,42 @@ public sealed class PackagedToolProcessIntegrationTests
         Assert.Contains("index-state: fresh", search.StandardOutput, StringComparison.Ordinal);
         Assert.Contains("PackagedToolFixture.PackagedSearchFixture", search.StandardOutput, StringComparison.Ordinal);
 
+        var typeScriptWorkspace = await RunProcessAsync(
+            executablePath,
+            area.RootPath,
+            ["workspace", "--target", typeScriptConfigPath],
+            cancellationToken);
+        typeScriptWorkspace.EnsureSuccess("installed roslynkit TypeScript workspace");
+        Assert.Contains("formatter.ts", typeScriptWorkspace.StandardOutput, StringComparison.Ordinal);
+
+        var typeScriptIndex = await RunProcessAsync(
+            executablePath,
+            area.RootPath,
+            ["index", "--target", typeScriptConfigPath, "--index-path", typeScriptIndexPath],
+            cancellationToken);
+        typeScriptIndex.EnsureSuccess("installed roslynkit TypeScript index");
+        Assert.Contains("index-state: fresh", typeScriptIndex.StandardOutput, StringComparison.Ordinal);
+
+        var typeScriptSearch = await RunProcessAsync(
+            executablePath,
+            area.RootPath,
+            ["search", "--target", typeScriptConfigPath, "--index-path", typeScriptIndexPath, "--query", "packaged typescript formatter"],
+            cancellationToken);
+        typeScriptSearch.EnsureSuccess("installed roslynkit TypeScript search");
+        var selector = Regex.Match(
+            typeScriptSearch.StandardOutput,
+            " id: `(?<selector>ts:[^`]+)`",
+            RegexOptions.CultureInvariant).Groups["selector"].Value;
+        Assert.StartsWith("ts:", selector, StringComparison.Ordinal);
+
+        var typeScriptSource = await RunProcessAsync(
+            executablePath,
+            area.RootPath,
+            ["symbol-source", "--target", typeScriptConfigPath, "--symbol", selector],
+            cancellationToken);
+        typeScriptSource.EnsureSuccess("installed roslynkit TypeScript symbol-source");
+        Assert.Contains("export class PackagedTypeScriptFormatter", typeScriptSource.StandardOutput, StringComparison.Ordinal);
+
         var status = await RunProcessAsync(
             executablePath,
             area.RootPath,
@@ -138,6 +212,13 @@ public sealed class PackagedToolProcessIntegrationTests
 
         await area.GetDaemonStatusAsync(cancellationToken);
 
+        var typeScriptStop = await RunProcessAsync(
+            executablePath,
+            area.RootPath,
+            ["daemon", "stop", "--target", typeScriptConfigPath],
+            cancellationToken);
+        typeScriptStop.EnsureSuccess("installed roslynkit TypeScript daemon stop");
+
         var stop = await RunProcessAsync(
             executablePath,
             area.RootPath,
@@ -146,6 +227,21 @@ public sealed class PackagedToolProcessIntegrationTests
         stop.EnsureSuccess("installed roslynkit daemon stop");
         Assert.Contains("state: stopping", stop.StandardOutput, StringComparison.Ordinal);
         await area.WaitForNotRunningStatusAsync(cancellationToken);
+    }
+
+    private static void CopyDirectory(string sourceDirectory, string destinationDirectory)
+    {
+        foreach (var directory in Directory.EnumerateDirectories(sourceDirectory, "*", SearchOption.AllDirectories))
+        {
+            Directory.CreateDirectory(Path.Combine(destinationDirectory, Path.GetRelativePath(sourceDirectory, directory)));
+        }
+
+        Directory.CreateDirectory(destinationDirectory);
+        foreach (var file in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
+        {
+            var destination = Path.Combine(destinationDirectory, Path.GetRelativePath(sourceDirectory, file));
+            File.Copy(file, destination, overwrite: true);
+        }
     }
 
     private static async Task<ProcessResult> RunProcessAsync(

@@ -8,10 +8,10 @@ This reference lists command names, usage strings, and options exposed by the in
 - `init`: Scaffold the RoslynKit coding-agent skill bundle into the current Git repository.
 - `daemon status`: Report the compatible workspace daemon state without starting it.
 - `daemon stop`: Stop the compatible workspace daemon if it is running, without starting one.
-- `workspace`: List projects and repo-relevant documents loaded from a solution or project.
+- `workspace`: List projects and repo-relevant documents loaded from a C#, TypeScript, or JavaScript target.
 - `diagnostics`: Return source compiler diagnostics for the loaded target.
 - `index`: Build or refresh a repository-local full-text search index for the loaded target.
-- `search`: Search indexed C# symbols using English-oriented text matching and ranking.
+- `search`: Search indexed C#, TypeScript, or JavaScript symbols using English-oriented text matching and ranking.
 - `symbols`: Search source declarations by symbol name.
 - `document-text`: Read the full text of one resolved document.
 - `document-lines`: Read a bounded one-based line range from one resolved document.
@@ -66,7 +66,7 @@ roslynkit daemon status --target <target>
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file identifying the compatible daemon
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config identifying the compatible daemon
 
 ## `daemon stop`
 
@@ -80,21 +80,21 @@ roslynkit daemon stop --target <target>
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file identifying the compatible daemon
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config identifying the compatible daemon
 
 ## `workspace`
 
-List projects and repo-relevant documents loaded from a solution or project.
+List projects and repo-relevant documents loaded from a C#, TypeScript, or JavaScript target.
 
 ### Usage
 
 ```powershell
-roslynkit workspace --target <solution.slnx|solution.sln|project.csproj> [--include-generated] [--include-additional] [--include-analyzer-config]
+roslynkit workspace --target <solution.slnx|solution.sln|project.csproj|tsconfig.json|jsconfig.json> [--include-generated] [--include-additional] [--include-analyzer-config]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--include-generated`: include source-generated and generated source documents
 - `--include-additional`: include additional files
 - `--include-analyzer-config`: include analyzer config documents such as .editorconfig
@@ -111,7 +111,7 @@ roslynkit diagnostics --target <target> [--max-results <n>] [--include-hidden] [
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--max-results` `<n>`: maximum results to return
 - `--include-hidden`: include hidden diagnostics
 - `--include-generated`: include diagnostics from generated, bin, and obj documents
@@ -128,13 +128,13 @@ roslynkit index --target <target> --index-path <path> [--rebuild]
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--index-path` `<path>` (required): Git-ignored repository-local SQLite database file path
 - `--rebuild`: discard the selected target's existing index records before indexing
 
 ## `search`
 
-Search indexed C# symbols using English-oriented text matching and ranking.
+Search indexed C#, TypeScript, or JavaScript symbols using English-oriented text matching and ranking.
 
 ### Usage
 
@@ -144,7 +144,7 @@ roslynkit search --target <target> --index-path <path> --query <text> [--project
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--index-path` `<path>` (required): Git-ignored repository-local SQLite database file path
 - `--query` / `-q` `<text>` (required): English-oriented text to search for
 - `--project` `<path>`: limit search to one project file within the loaded target
@@ -163,7 +163,7 @@ roslynkit symbols --target <target> --query <text> [--max-results <n>] [--case-s
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--query` / `-q` `<text>` (required): symbol name text to search for
 - `--max-results` `<n>`: maximum results to return
 - `--case-sensitive`: match query text case-sensitively
@@ -182,7 +182,7 @@ roslynkit document-text --target <target> --file <path> [--project <path>] [--tf
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -200,7 +200,7 @@ roslynkit document-lines --target <target> --file <path> [--project <path>] [--t
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -220,7 +220,7 @@ roslynkit document-symbols --target <target> --file <path> [--project <path>] [-
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -239,14 +239,14 @@ roslynkit definition --target <target> --symbol <selector>
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
 - `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
 - `--line` `<n>`: one-based source line
 - `--column` `<n>`: one-based source column
-- `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
+- `--symbol` `<selector>`: backend selector from id output or C# qualified symbol name
 
 ## `type-definition`
 
@@ -260,7 +260,7 @@ roslynkit type-definition --target <target> --file <path> [--project <path>] [--
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -281,14 +281,14 @@ roslynkit references --target <target> --symbol <selector> [--max-results <n>]
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
 - `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
 - `--line` `<n>`: one-based source line
 - `--column` `<n>`: one-based source column
-- `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
+- `--symbol` `<selector>`: backend selector from id output or C# qualified symbol name
 - `--max-results` `<n>`: maximum results to return
 
 ## `implementations`
@@ -304,14 +304,14 @@ roslynkit implementations --target <target> --symbol <selector> [--max-results <
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
 - `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
 - `--line` `<n>`: one-based source line
 - `--column` `<n>`: one-based source column
-- `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
+- `--symbol` `<selector>`: backend selector from id output or C# qualified symbol name
 - `--max-results` `<n>`: maximum results to return
 
 ## `quick-info`
@@ -326,7 +326,7 @@ roslynkit quick-info --target <target> --file <path> [--project <path>] [--tfm <
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -346,7 +346,7 @@ roslynkit signature-help --target <target> --file <path> [--project <path>] [--t
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -366,5 +366,5 @@ roslynkit symbol-source --target <target> --symbol <selector>
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
-- `--symbol` `<selector>` (required): documentation-comment ID or qualified symbol name
+- `--target` / `-t` `<target>` (required): C# solution/project or TypeScript/JavaScript config file to load
+- `--symbol` `<selector>` (required): backend selector from id output or C# qualified symbol name

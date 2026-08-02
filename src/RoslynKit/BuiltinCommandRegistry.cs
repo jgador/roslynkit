@@ -36,8 +36,8 @@ public static class BuiltinCommandRegistry
             ]),
         new BuiltinCommand(
             "workspace",
-            "List projects and repo-relevant documents loaded from a solution or project.",
-            ["roslynkit workspace --target <solution.slnx|solution.sln|project.csproj> [--include-generated] [--include-additional] [--include-analyzer-config]"],
+            "List projects and repo-relevant documents loaded from a C#, TypeScript, or JavaScript target.",
+            ["roslynkit workspace --target <solution.slnx|solution.sln|project.csproj|tsconfig.json|jsconfig.json> [--include-generated] [--include-additional] [--include-analyzer-config]"],
             [
                 TargetOption(),
                 OptionSpec.Flag(null, "include-generated", "include source-generated and generated source documents"),
@@ -65,7 +65,7 @@ public static class BuiltinCommandRegistry
             ]),
         new BuiltinCommand(
             "search",
-            "Search indexed C# symbols using English-oriented text matching and ranking.",
+            "Search indexed C#, TypeScript, or JavaScript symbols using English-oriented text matching and ranking.",
             ["roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>]"],
             [
                 TargetOption(),
@@ -282,12 +282,12 @@ public static class BuiltinCommandRegistry
 
     private static OptionSpec TargetOption()
     {
-        return OptionSpec.String('t', "target", "target", "solution or project file to load", required: true);
+        return OptionSpec.String('t', "target", "target", "C# solution/project or TypeScript/JavaScript config file to load", required: true);
     }
 
     private static OptionSpec DaemonTargetOption()
     {
-        return OptionSpec.String('t', "target", "target", "solution or project file identifying the compatible daemon", required: true);
+        return OptionSpec.String('t', "target", "target", "C# solution/project or TypeScript/JavaScript config identifying the compatible daemon", required: true);
     }
 
     private static OptionSpec FileOption()
@@ -347,7 +347,7 @@ public static class BuiltinCommandRegistry
 
     private static OptionSpec SymbolOption(bool required = false)
     {
-        return OptionSpec.String(null, "symbol", "selector", "documentation-comment ID or qualified symbol name", required);
+        return OptionSpec.String(null, "symbol", "selector", "backend selector from id output or C# qualified symbol name", required);
     }
 
     private static OptionSpec MaxResultsOption()

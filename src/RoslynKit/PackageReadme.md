@@ -1,6 +1,6 @@
 # roslynkit
 
-`roslynkit` is a .NET tool for deterministic, read-only Roslyn-powered C# code intelligence in terminal and coding-agent workflows.
+`roslynkit` is a .NET tool for deterministic, read-only C#, TypeScript, and JavaScript code intelligence in terminal and coding-agent workflows. It uses Roslyn for C# and the Go-based TypeScript native compiler preview for TypeScript and JavaScript.
 
 ## Install from NuGet.org
 
@@ -28,6 +28,15 @@ To update an existing install:
 dotnet tool update --global roslynkit
 roslynkit version
 ```
+
+TypeScript and JavaScript targets additionally require Node.js 16.20 or later and native-preview:
+
+```powershell
+npm install --save-dev @typescript/native-preview@latest
+# or: npm install --global @typescript/native-preview@latest
+```
+
+The .NET tool includes the maintained Node bridge. It discovers native-preview from the target repository or global npm root; `ROSLYNKIT_NODE_PATH`, `ROSLYNKIT_NPM_PATH`, and `ROSLYNKIT_TYPESCRIPT_NATIVE_PREVIEW_ROOT` provide explicit overrides.
 
 ## Install from a local folder feed
 
@@ -80,11 +89,11 @@ roslynkit workspace --target .\MySolution.slnx
 roslynkit diagnostics --target .\MySolution.slnx
 ```
 
-Targets can be `.slnx`, `.sln`, or `.csproj` files.
+Targets can be `.slnx`, `.sln`, `.csproj`, `tsconfig.json`, or `jsconfig.json` files. The native-preview backend supports `.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.jsx`, `.mjs`, and `.cjs`.
 
 ## Search by code intent
 
-`search` finds C# declarations from an English-oriented question. It uses SQLite Full-Text Search 5 (FTS5) with internal Best Matching 25 (BM25) ranking. `index` prepares the same persistent index explicitly.
+`search` finds C#, TypeScript, or JavaScript declarations from an English-oriented question. It uses SQLite Full-Text Search 5 (FTS5) with internal Best Matching 25 (BM25) ranking. `index` prepares the same persistent language-aware index explicitly.
 
 Both commands require `--target` and `--index-path`. Keep the database inside the Git repository and ignore it, for example:
 
@@ -101,8 +110,8 @@ Search output is for agent-mediated follow-up. Inspect several ranked results, t
 
 - Print tool metadata with `version` or top-level `--version`.
 - Enumerate workspace documents with `workspace`, including generated, additional, or analyzer-config documents when requested.
-- Prepare and search a repository-local C# full-text index with `index` and `search`.
-- Search, navigate, and inspect C# symbols with commands such as `symbols`, `definition`, `references`, `quick-info`, and `symbol-source`.
+- Prepare and search a repository-local language-aware full-text index with `index` and `search`.
+- Search, navigate, and inspect C#, TypeScript, or JavaScript symbols with commands such as `symbols`, `definition`, `references`, `quick-info`, and `symbol-source`.
 - Read resolved documents with `document-text`, `document-lines`, or `document-symbols`.
 - Scaffold the RoslynKit skill bundle into a Git repository with `init`.
 

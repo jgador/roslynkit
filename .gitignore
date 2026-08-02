@@ -5,6 +5,7 @@ Visual Studio 18/
 .vscode/
 .idea/
 TestResults/
+node_modules/
 artifacts/*
 !artifacts/.gitkeep
 *.user
