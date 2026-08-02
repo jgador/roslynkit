@@ -114,7 +114,7 @@ roslynkit diagnostics --target <target> [--max-results <n>] [--include-hidden] [
 - `--target` / `-t` `<target>` (required): solution or project file to load
 - `--max-results` `<n>`: maximum results to return
 - `--include-hidden`: include hidden diagnostics
-- `--include-generated`: include diagnostics from generated and obj documents
+- `--include-generated`: include diagnostics from generated, bin, and obj documents
 
 ## `index`
 
@@ -123,14 +123,13 @@ Build or refresh a repository-local full-text search index for the loaded target
 ### Usage
 
 ```powershell
-roslynkit index --target <target> --index-path <path> [--include-generated] [--rebuild]
+roslynkit index --target <target> --index-path <path> [--rebuild]
 ```
 
 ### Options
 
 - `--target` / `-t` `<target>` (required): solution or project file to load
 - `--index-path` `<path>` (required): Git-ignored repository-local SQLite database file path
-- `--include-generated`: include source-generated symbols
 - `--rebuild`: discard the selected target's existing index records before indexing
 
 ## `search`
@@ -140,7 +139,7 @@ Search indexed C# symbols using English-oriented text matching and ranking.
 ### Usage
 
 ```powershell
-roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>] [--include-generated]
+roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>]
 ```
 
 ### Options
@@ -151,7 +150,6 @@ roslynkit search --target <target> --index-path <path> --query <text> [--project
 - `--project` `<path>`: limit search to one project file within the loaded target
 - `--kind` `<kind>`: filter symbols by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate
 - `--max-results` `<n>`: maximum results to return (default: 20)
-- `--include-generated`: include source-generated symbols
 
 ## `symbols`
 

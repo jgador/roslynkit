@@ -73,7 +73,8 @@ public static class RoslynDocumentFilters
         }
 
         var fileName = Path.GetFileName(fullPath);
-        return ContainsPathSegment(fullPath, "obj")
+        return ContainsPathSegment(fullPath, "bin")
+            || ContainsPathSegment(fullPath, "obj")
             || fileName.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase)
             || fileName.EndsWith(".g.i.cs", StringComparison.OrdinalIgnoreCase)
             || fileName.EndsWith(".AssemblyInfo.cs", StringComparison.OrdinalIgnoreCase)

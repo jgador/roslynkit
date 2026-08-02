@@ -206,9 +206,9 @@ state: stopping
 
 ### `index`
 
-`index` prepares or refreshes the selected target partition in the repository-local SQLite Full-Text Search 5 (FTS5) database. It requires both `--target` and `--index-path`. The index path must be inside the repository and ignored by Git. One database can contain partitions for multiple targets in that repository.
+`index` prepares or refreshes the selected target partition in the repository-local SQLite Full-Text Search 5 (FTS5) database. It requires both `--target` and `--index-path`. The index path must be inside the repository and ignored by Git. One database can contain partitions for multiple targets in that repository. SQLite persists target identities, project paths, and declaration source paths relative to the repository; public target and declaration locations are reconstructed as absolute paths from the resolved repository root, while `index-path` is the resolved absolute database path.
 
-`index` waits for a stable workspace before reporting success. `--rebuild` recreates the selected target partition. SQLite uses write-ahead logging (WAL), so an active `artifacts/roslynkit.db` can also have adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files. Multi-targeted projects are rejected; source-generated declarations require `--include-generated`.
+`index` waits for a stable workspace before reporting success. `--rebuild` recreates the selected target partition. SQLite uses write-ahead logging (WAL), so an active `artifacts/roslynkit.db` can also have adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files. Multi-targeted projects, missing physical project or source paths, external projects, and external linked files are rejected; source-generated declarations and generated source paths below `bin` or `obj` are excluded.
 
 ```markdown
 command: index
@@ -234,9 +234,9 @@ index-state: fresh
 returned: 2/2
 truncated: false
 
-- rank: 1 kind: method name: `MyApp.WorkspaceDaemonSession.ReloadAsync` loc: `src/MyApp/WorkspaceDaemonSession.cs:398:43-398:54` id: `M:MyApp.WorkspaceDaemonSession.ReloadAsync(System.Threading.CancellationToken)`
+- rank: 1 kind: method name: `MyApp.WorkspaceDaemonSession.ReloadAsync` loc: `C:\repo\MyApp\src\MyApp\WorkspaceDaemonSession.cs:398:43-398:54` id: `M:MyApp.WorkspaceDaemonSession.ReloadAsync(System.Threading.CancellationToken)`
   excerpt: `Reloads the workspace generation after the repository source changes.`
-- rank: 2 kind: class name: `MyApp.WorkspaceDaemonSession` loc: `src/MyApp/WorkspaceDaemonSession.cs:112:23-112:45` id: `T:MyApp.WorkspaceDaemonSession`
+- rank: 2 kind: class name: `MyApp.WorkspaceDaemonSession` loc: `C:\repo\MyApp\src\MyApp\WorkspaceDaemonSession.cs:112:23-112:45` id: `T:MyApp.WorkspaceDaemonSession`
 ```
 
 Results are ordered by the internal Best Matching 25 (BM25) ranking but do not expose raw scores. `rank:` starts at one. `excerpt:` is optional and is a bounded source-derived excerpt with normalized whitespace; it is never generated or paraphrased. `id:` and `loc:` are navigation inputs for an agent-selected follow-up command, not a standard-input pipeline. Rank is heuristic, so agents compare several excerpts, kinds, identities, and locations before choosing a next navigation target.

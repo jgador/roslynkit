@@ -40,7 +40,7 @@ Use `search` when an English-oriented question describes a C# responsibility but
 
 Search ranking is heuristic. Inspect several top results and compare excerpts, symbol kinds, identities, and locations before selecting a navigation target; do not assume rank 1 is correct. Follow up through existing commands with a returned `id:` or `loc:` value. RoslynKit has no standard-input pipeline for search hits; the coding agent selects the appropriate next command.
 
-Search requires projects with one target framework. Source-generated declarations require `--include-generated`. Use `--project`, `--kind`, or `--max-results` only when a narrower target, symbol kind, or result limit is needed. In the RoslynKit repository, the generated [.agents/skills/roslynkit/references/commands.md](../roslynkit/references/commands.md) file contains the exact options.
+Search requires projects with one target framework and repository-local physical project and source paths; missing or external paths are rejected. It indexes non-generated declarations only, so source-generated declarations and generated source paths below `bin` or `obj` are excluded. Use `--project`, `--kind`, or `--max-results` only when a narrower target, symbol kind, or result limit is needed. In the RoslynKit repository, the generated [.agents/skills/roslynkit/references/commands.md](../roslynkit/references/commands.md) file contains the exact options.
 
 ## Selector Choice
 

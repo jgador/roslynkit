@@ -96,7 +96,12 @@ public sealed class SearchCommandTests
             "M:FixtureApp.ConfigurationValidator.ValidateConfiguration",
             Assert.IsType<string>(hit.SymbolId),
             StringComparison.Ordinal);
-        Assert.EndsWith("SearchExamples.cs", hit.Location.Path, StringComparison.OrdinalIgnoreCase);
+        var hitPath = Assert.IsType<string>(hit.Location.Path);
+        Assert.Equal(
+            TestPaths.RepoFile("tests", "FixtureWorkspace", "App", "SearchExamples.cs"),
+            hitPath,
+            ignoreCase: OperatingSystem.IsWindows());
+        Assert.True(Path.IsPathFullyQualified(hitPath));
         Assert.True(hit.Location.Line > 0);
         Assert.True(hit.Location.Column > 0);
         Assert.True(hit.Location.EndLine >= hit.Location.Line);

@@ -71,7 +71,7 @@ internal static class SearchCommandService
             var fingerprint = await CaptureFingerprintAsync(command.Name, context, cancellationToken).ConfigureAwait(false);
             EnsureWorkspaceMatches(command.Name, context, loaded, fingerprint);
             var metadata = await lease.ReadMetadataAsync(context.TargetIdentity, cancellationToken).ConfigureAwait(false);
-            var requestedFingerprint = StoredFingerprint.Create(fingerprint, context.IncludeGenerated);
+            var requestedFingerprint = StoredFingerprint.Create(fingerprint);
             var forceRebuild = command.Flag("rebuild");
             if (!forceRebuild && FingerprintMatches(metadata, requestedFingerprint))
             {
@@ -117,18 +117,17 @@ internal static class SearchCommandService
         var query = command.Required("query");
         var queryTokens = SearchQueryTokenizer.TokenizeQuery(query);
         var maxResults = command.OptionalInt("max-results", 20, 1);
-        var projectPaths = ResolveProjectFilter(command, loaded.Solution);
+        var projectPaths = ResolveProjectFilter(command, context.Path.RepositoryRoot, loaded.Solution);
         var kinds = ResolveKindFilter(command.Name, command.Optional("kind"));
         var fingerprint = await CaptureFingerprintAsync(command.Name, context, cancellationToken).ConfigureAwait(false);
         EnsureWorkspaceMatches(command.Name, context, loaded, fingerprint);
         var metadata = await context.Index.ReadMetadataAsync(context.TargetIdentity, cancellationToken).ConfigureAwait(false);
-        var requestedFingerprint = StoredFingerprint.Create(fingerprint, context.IncludeGenerated);
+        var requestedFingerprint = StoredFingerprint.Create(fingerprint);
 
         if (!FingerprintMatches(metadata, requestedFingerprint))
         {
             var mustWaitForCompatibleIndex = metadata is null
-                || StoredFingerprint.TryParse(metadata.Fingerprint) is not { } stored
-                || stored.IncludeGenerated != context.IncludeGenerated;
+                || StoredFingerprint.TryParse(metadata.Fingerprint) is null;
             var lease = mustWaitForCompatibleIndex
                 ? await WaitForWriterLeaseAsync(context.Index, cancellationToken).ConfigureAwait(false)
                 : await TryAcquireWriterLeaseAsync(context.Index, TimeSpan.Zero, cancellationToken).ConfigureAwait(false);
@@ -139,7 +138,7 @@ internal static class SearchCommandService
                 {
                     fingerprint = await CaptureFingerprintAsync(command.Name, context, cancellationToken).ConfigureAwait(false);
                     EnsureWorkspaceMatches(command.Name, context, loaded, fingerprint);
-                    requestedFingerprint = StoredFingerprint.Create(fingerprint, context.IncludeGenerated);
+                    requestedFingerprint = StoredFingerprint.Create(fingerprint);
                     metadata = await lease.ReadMetadataAsync(context.TargetIdentity, cancellationToken).ConfigureAwait(false);
                     if (!FingerprintMatches(metadata, requestedFingerprint))
                     {
@@ -166,8 +165,7 @@ internal static class SearchCommandService
                 maxResults),
             cancellationToken).ConfigureAwait(false);
         var snapshotFingerprint = StoredFingerprint.TryParse(searchSnapshot.Metadata?.Fingerprint);
-        var snapshotIsCompatible = snapshotFingerprint is not null
-            && snapshotFingerprint.IncludeGenerated == context.IncludeGenerated;
+        var snapshotIsCompatible = snapshotFingerprint is not null;
         var indexState = snapshotIsCompatible
             && FingerprintMatches(searchSnapshot.Metadata, requestedFingerprint)
                 ? SearchIndexState.Fresh
@@ -179,7 +177,12 @@ internal static class SearchCommandService
             .Select(match => new SearchHit(
                 match.DisplayName,
                 match.Kind,
-                new SourceRange(match.Path, match.Line, match.Column, match.EndLine, match.EndColumn),
+                new SourceRange(
+                    match.Path.Resolve(context.Path.RepositoryRoot),
+                    match.Line,
+                    match.Column,
+                    match.EndLine,
+                    match.EndColumn),
                 match.SymbolId,
                 match.Excerpt))
             .ToArray();
@@ -210,11 +213,13 @@ internal static class SearchCommandService
         }
 
         var path = resolution.Path!;
-        var targetIdentity = CreateTargetIdentity(path);
+        var targetIdentity = RepositoryRelativePath.FromPhysicalPath(
+            path.RepositoryRoot,
+            path.TargetPath,
+            "Search target");
         return new SearchCommandContext(
             path,
             targetIdentity,
-            command.Flag("include-generated"),
             new SearchIndexFingerprintService(path),
             new SqliteSearchIndex(path.DatabasePath));
     }
@@ -273,8 +278,7 @@ internal static class SearchCommandService
 
         var target = new SqliteSearchIndexTarget(
             context.TargetIdentity,
-            context.Path.TargetPath,
-            StoredFingerprint.Create(verifiedFingerprint, context.IncludeGenerated).Serialize());
+            StoredFingerprint.Create(verifiedFingerprint).Serialize());
         var symbols = records.Select(record => record.ToSqliteSymbol()).ToArray();
         if (plan.Kind == SearchIndexRefreshKind.Projects)
         {
@@ -299,15 +303,15 @@ internal static class SearchCommandService
         string commandName,
         SearchCommandContext context,
         Solution solution,
-        string? projectSelector,
+        RepositoryRelativePath? projectSelector,
         CancellationToken cancellationToken)
     {
         var build = await new RoslynSearchCorpusBuilder().BuildAsync(
             solution,
             new RoslynSearchCorpusBuildOptions(
+                context.Path.RepositoryRoot,
                 context.TargetIdentity,
-                projectSelector,
-                context.IncludeGenerated),
+                projectSelector),
             cancellationToken).ConfigureAwait(false);
         if (build.Issues.Count > 0)
         {
@@ -330,8 +334,7 @@ internal static class SearchCommandService
         var stored = StoredFingerprint.TryParse(existingMetadata?.Fingerprint);
         if (forceFullRebuild
             || existingMetadata is null
-            || stored is null
-            || stored.IncludeGenerated != context.IncludeGenerated)
+            || stored is null)
         {
             return SearchIndexRefreshPlan.Full;
         }
@@ -374,13 +377,13 @@ internal static class SearchCommandService
             : SearchIndexRefreshPlan.ForProjects(affectedProjectPaths);
     }
 
-    private static IReadOnlyList<string>? ResolveIncrementalProjects(
+    private static IReadOnlyList<RepositoryRelativePath>? ResolveIncrementalProjects(
         SearchCommandContext context,
         Solution solution,
         IReadOnlyList<string> changedSourcePaths)
     {
 
-        var affected = new HashSet<string>(PathComparer);
+        var affected = new HashSet<RepositoryRelativePath>();
         foreach (var relativePath in changedSourcePaths)
         {
             var fullPath = Path.GetFullPath(relativePath, context.Path.RepositoryRoot);
@@ -405,13 +408,22 @@ internal static class SearchCommandService
                 return null;
             }
 
-            affected.UnionWith(matches);
+            foreach (var match in matches)
+            {
+                affected.Add(RepositoryRelativePath.FromPhysicalPath(
+                    context.Path.RepositoryRoot,
+                    match,
+                    "Loaded project"));
+            }
         }
 
-        return affected.Order(PathComparer).ToArray();
+        return affected.OrderBy(path => path.Value, StringComparer.Ordinal).ToArray();
     }
 
-    private static IReadOnlyCollection<string>? ResolveProjectFilter(ParsedCommand command, Solution solution)
+    private static IReadOnlyCollection<RepositoryRelativePath>? ResolveProjectFilter(
+        ParsedCommand command,
+        string repositoryRoot,
+        Solution solution)
     {
         var selector = command.Optional("project");
         if (selector is null)
@@ -422,8 +434,11 @@ internal static class SearchCommandService
         var fullSelector = Path.GetFullPath(selector);
         var matches = solution.Projects
             .Where(project => project.FilePath is not null && PathsEqual(project.FilePath, fullSelector))
-            .Select(project => Path.GetFullPath(project.FilePath!))
-            .Distinct(PathComparer)
+            .Select(project => RepositoryRelativePath.FromPhysicalPath(
+                repositoryRoot,
+                project.FilePath,
+                $"Project '{project.Name}'"))
+            .Distinct()
             .ToArray();
         return matches.Length switch
         {
@@ -488,8 +503,7 @@ internal static class SearchCommandService
         var stored = StoredFingerprint.TryParse(metadata?.Fingerprint);
         return stored is not null
             && string.Equals(stored.Value, requested.Value, StringComparison.Ordinal)
-            && string.Equals(stored.HeadCommit, requested.HeadCommit, StringComparison.Ordinal)
-            && stored.IncludeGenerated == requested.IncludeGenerated;
+            && string.Equals(stored.HeadCommit, requested.HeadCommit, StringComparison.Ordinal);
     }
 
     private static void ValidateSingleTargetFrameworkProjects(string commandName, Solution solution)
@@ -505,13 +519,6 @@ internal static class SearchCommandService
                 commandName,
                 $"Project '{duplicates.Key}' has multiple target-framework contexts. Search indexing supports one target framework per project.");
         }
-    }
-
-    private static string CreateTargetIdentity(SearchIndexPath path)
-    {
-        return Path.GetRelativePath(path.RepositoryRoot, path.TargetPath)
-            .Replace(Path.DirectorySeparatorChar, '/')
-            .Replace(Path.AltDirectorySeparatorChar, '/');
     }
 
     private static async Task<SqliteSearchIndexWriterLease?> TryAcquireWriterLeaseAsync(
@@ -590,24 +597,21 @@ internal static class SearchCommandService
 
     private sealed record SearchCommandContext(
         SearchIndexPath Path,
-        string TargetIdentity,
-        bool IncludeGenerated,
+        RepositoryRelativePath TargetIdentity,
         SearchIndexFingerprintService FingerprintService,
         SqliteSearchIndex Index);
 
     private sealed record StoredFingerprint(
         string Value,
         string HeadCommit,
-        bool IncludeGenerated,
         bool RequiresFullRebuild,
         IReadOnlyList<string> ChangedPaths)
     {
-        public static StoredFingerprint Create(SearchIndexFingerprint fingerprint, bool includeGenerated)
+        public static StoredFingerprint Create(SearchIndexFingerprint fingerprint)
         {
             return new StoredFingerprint(
                 fingerprint.Value,
                 fingerprint.HeadCommit,
-                includeGenerated,
                 fingerprint.RequiresFullRebuild,
                 fingerprint.ChangedPaths.Order(StringComparer.Ordinal).ToArray());
         }
@@ -644,13 +648,13 @@ internal static class SearchCommandService
 
     private sealed record SearchIndexRefreshPlan(
         SearchIndexRefreshKind Kind,
-        IReadOnlyList<string> ProjectPaths)
+        IReadOnlyList<RepositoryRelativePath> ProjectPaths)
     {
         public static SearchIndexRefreshPlan MetadataOnly { get; } = new(SearchIndexRefreshKind.MetadataOnly, []);
 
         public static SearchIndexRefreshPlan Full { get; } = new(SearchIndexRefreshKind.Full, []);
 
-        public static SearchIndexRefreshPlan ForProjects(IReadOnlyList<string> projectPaths)
+        public static SearchIndexRefreshPlan ForProjects(IReadOnlyList<RepositoryRelativePath> projectPaths)
         {
             return new SearchIndexRefreshPlan(SearchIndexRefreshKind.Projects, projectPaths);
         }

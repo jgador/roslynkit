@@ -33,10 +33,10 @@ internal sealed class RoslynSearchCorpusBuilder
     {
         ArgumentNullException.ThrowIfNull(solution);
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentException.ThrowIfNullOrWhiteSpace(options.TargetIdentity);
+        ArgumentException.ThrowIfNullOrWhiteSpace(options.RepositoryRoot);
 
         var issues = new List<RoslynSearchCorpusBuildIssue>();
-        var projects = SelectProjects(solution, options.ProjectSelector, issues);
+        var projects = SelectProjects(solution, options.RepositoryRoot, options.ProjectPath, issues);
         var unsupportedProjects = FindMultiTargetProjects(solution, projects, issues);
         var records = new List<RoslynSearchCorpusRecord>();
 
@@ -47,7 +47,25 @@ internal sealed class RoslynSearchCorpusBuilder
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var documents = await BuildDocumentMapAsync(project, options.IncludeGenerated, cancellationToken).ConfigureAwait(false);
+            RepositoryRelativePath projectPath;
+            try
+            {
+                projectPath = RepositoryRelativePath.FromPhysicalPath(
+                    options.RepositoryRoot,
+                    project.FilePath,
+                    $"Project '{project.Name}'");
+            }
+            catch (ArgumentException exception)
+            {
+                issues.Add(new RoslynSearchCorpusBuildIssue("project-path-invalid", exception.Message));
+                continue;
+            }
+
+            var documents = await BuildDocumentMapAsync(
+                project,
+                options.RepositoryRoot,
+                issues,
+                cancellationToken).ConfigureAwait(false);
             if (documents.Count == 0)
             {
                 continue;
@@ -68,7 +86,7 @@ internal sealed class RoslynSearchCorpusBuilder
 
                 foreach (var declaration in GetIncludedDeclarations(symbol, documents, cancellationToken))
                 {
-                    var record = CreateRecord(options.TargetIdentity, project, symbol, declaration);
+                    var record = CreateRecord(options.TargetIdentity, project, projectPath, symbol, declaration);
                     if (record is not null)
                     {
                         records.Add(record);
@@ -79,8 +97,8 @@ internal sealed class RoslynSearchCorpusBuilder
 
         var orderedRecords = records
             .DistinctBy(record => record.SymbolKey, StringComparer.Ordinal)
-            .OrderBy(record => record.ProjectPath, StringComparer.Ordinal)
-            .ThenBy(record => record.Path, StringComparer.Ordinal)
+            .OrderBy(record => record.ProjectPath.Value, StringComparer.Ordinal)
+            .ThenBy(record => record.Path.Value, StringComparer.Ordinal)
             .ThenBy(record => record.Location.Line)
             .ThenBy(record => record.Location.Column)
             .ThenBy(record => record.SymbolKey, StringComparer.Ordinal)
@@ -91,30 +109,30 @@ internal sealed class RoslynSearchCorpusBuilder
 
     private static IReadOnlyList<Project> SelectProjects(
         Solution solution,
-        string? projectSelector,
+        string repositoryRoot,
+        RepositoryRelativePath? projectPath,
         ICollection<RoslynSearchCorpusBuildIssue> issues)
     {
         var csharpProjects = solution.Projects
             .Where(project => string.Equals(project.Language, LanguageNames.CSharp, StringComparison.Ordinal))
             .ToArray();
 
-        if (string.IsNullOrWhiteSpace(projectSelector))
+        if (projectPath is null)
         {
             return csharpProjects;
         }
 
-        var normalizedSelector = NormalizePath(projectSelector);
+        var selectedPath = projectPath.Value.Resolve(repositoryRoot);
         var matches = csharpProjects
-            .Where(project => string.Equals(project.Name, projectSelector, StringComparison.Ordinal)
-                || (normalizedSelector is not null
-                    && string.Equals(NormalizePath(project.FilePath), normalizedSelector, PathComparison)))
+            .Where(project => project.FilePath is not null
+                && string.Equals(NormalizePath(project.FilePath), selectedPath, PathComparison))
             .ToArray();
 
         if (matches.Length == 0)
         {
             issues.Add(new RoslynSearchCorpusBuildIssue(
                 "project-not-found",
-                $"No loaded C# project matches '{projectSelector}'."));
+                $"No loaded C# project matches '{projectPath.Value}'."));
         }
 
         return matches;
@@ -159,39 +177,44 @@ internal sealed class RoslynSearchCorpusBuilder
 
     private static async Task<IReadOnlyDictionary<SyntaxTree, CorpusDocument>> BuildDocumentMapAsync(
         Project project,
-        bool includeGenerated,
+        string repositoryRoot,
+        ICollection<RoslynSearchCorpusBuildIssue> issues,
         CancellationToken cancellationToken)
     {
-        var documents = new List<(Document document, bool generated)>();
-        documents.AddRange(project.Documents
-            .Where(document => includeGenerated || !RoslynDocumentFilters.IsGenerated(document))
-            .Select(document => (document, generated: RoslynDocumentFilters.IsGenerated(document))));
-        if (includeGenerated)
-        {
-            documents.AddRange((await project.GetSourceGeneratedDocumentsAsync(cancellationToken).ConfigureAwait(false))
-                .Select(document => ((Document)document, generated: true)));
-        }
-
         var result = new Dictionary<SyntaxTree, CorpusDocument>();
-        foreach (var (document, generated) in documents
-                     .OrderBy(item => NormalizePath(item.document.FilePath), StringComparer.Ordinal)
-                     .ThenBy(item => item.document.Name, StringComparer.Ordinal)
-                     .ThenBy(item => item.document.Id.Id))
+        foreach (var document in project.Documents
+                     .OrderBy(document => NormalizePath(document.FilePath), StringComparer.Ordinal)
+                     .ThenBy(document => document.Name, StringComparer.Ordinal)
+                     .ThenBy(document => document.Id.Id))
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            RepositoryRelativePath documentPath;
+            try
+            {
+                documentPath = RepositoryRelativePath.FromPhysicalPath(
+                    repositoryRoot,
+                    document.FilePath,
+                    $"Source document '{document.Name}' in project '{project.Name}'");
+            }
+            catch (ArgumentException exception)
+            {
+                issues.Add(new RoslynSearchCorpusBuildIssue("document-path-invalid", exception.Message));
+                continue;
+            }
+
+            if (RoslynDocumentFilters.IsGenerated(document))
+            {
+                continue;
+            }
+
             var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken).ConfigureAwait(false);
             if (syntaxTree is null)
             {
                 continue;
             }
 
-            var path = NormalizePath(document.FilePath)
-                ?? NormalizePath(syntaxTree.FilePath)
-                ?? document.Name;
-            var documentKey = !string.IsNullOrWhiteSpace(document.FilePath)
-                ? path
-                : $"generated:{document.Id.Id:N}:{document.Name}";
-            result.TryAdd(syntaxTree, new CorpusDocument(documentKey, path, generated));
+            result.TryAdd(syntaxTree, new CorpusDocument(documentPath));
         }
 
         return result;
@@ -312,23 +335,17 @@ internal sealed class RoslynSearchCorpusBuilder
                     && candidate.SourceSpan.IntersectsWith(syntaxReference.Span))
                 ?? node.GetLocation();
             var sourceRange = SourceRange.FromLocation(location);
-            var path = sourceRange.Path ?? document.Path;
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                continue;
-            }
-
-            yield return new CorpusDeclaration(document, node, sourceRange, path);
+            yield return new CorpusDeclaration(document, node, sourceRange);
         }
     }
 
     private static RoslynSearchCorpusRecord? CreateRecord(
-        string targetIdentity,
+        RepositoryRelativePath targetIdentity,
         Project project,
+        RepositoryRelativePath projectPath,
         ISymbol symbol,
         CorpusDeclaration declaration)
     {
-        var projectPath = NormalizePath(project.FilePath) ?? $"project:{project.Id.Id:N}";
         var symbolId = DocumentationCommentId.CreateDeclarationId(symbol);
         var displayName = symbol.ToDisplayString(SymbolDisplayFormats.QualifiedMember);
         var signature = NormalizeWhitespace(symbol.ToDisplayString(SearchSignatureFormat));
@@ -337,16 +354,16 @@ internal sealed class RoslynSearchCorpusBuilder
         var attributes = ExtractAttributes(symbol);
         var body = Truncate(NormalizeWhitespace(declaration.Node.ToFullString()), MaximumBodyCharacters);
         var excerpt = SelectExcerpt(documentation, comments, signature, body);
-        var documentKey = $"{projectPath}|{declaration.Document.Key}";
+        var documentKey = $"{projectPath.Value}|{declaration.Document.Path.Value}";
         var identity = symbolId ?? $"{symbol.Kind}:{displayName}";
-        var symbolKey = $"{targetIdentity}|{documentKey}|{identity}|{declaration.Node.Span.Start}";
+        var symbolKey = $"{targetIdentity.Value}|{documentKey}|{identity}|{declaration.Node.Span.Start}";
 
         return new RoslynSearchCorpusRecord(
             targetIdentity,
             projectPath,
             project.Name,
             documentKey,
-            declaration.Path,
+            declaration.Document.Path,
             symbolKey,
             GetSearchKind(symbol),
             symbol.Name,
@@ -366,7 +383,7 @@ internal sealed class RoslynSearchCorpusBuilder
             BuildNameSearchText(symbol.Name),
             BuildSearchText($"{symbol.ContainingType?.ToDisplayString(SymbolDisplayFormats.Qualified)} {symbol.ContainingNamespace?.ToDisplayString(SymbolDisplayFormats.Qualified)} {displayName}"),
             BuildSearchText($"{documentation} {comments} {attributes} {signature}"),
-            BuildSearchText(declaration.Path),
+            BuildSearchText(declaration.Document.Path.Value),
             BuildSearchText(body));
     }
 
@@ -587,22 +604,21 @@ internal sealed class RoslynSearchCorpusBuilder
         ? StringComparison.OrdinalIgnoreCase
         : StringComparison.Ordinal;
 
-    private sealed record CorpusDocument(string Key, string Path, bool IsGenerated);
+    private sealed record CorpusDocument(RepositoryRelativePath Path);
 
     private sealed record CorpusDeclaration(
         CorpusDocument Document,
         SyntaxNode Node,
-        SourceRange Location,
-        string Path);
+        SourceRange Location);
 }
 
 /// <summary>
-/// Specifies the target and source inclusion choices for corpus construction.
+/// Specifies repository-local target and project choices for corpus construction.
 /// </summary>
 internal sealed record RoslynSearchCorpusBuildOptions(
-    string TargetIdentity,
-    string? ProjectSelector = null,
-    bool IncludeGenerated = false);
+    string RepositoryRoot,
+    RepositoryRelativePath TargetIdentity,
+    RepositoryRelativePath? ProjectPath = null);
 
 /// <summary>
 /// Reports one non-fatal corpus construction limitation that the command layer can render as an actionable failure.
@@ -620,11 +636,11 @@ internal sealed record RoslynSearchCorpusBuildResult(
 /// Represents one source declaration together with its weighted search fields.
 /// </summary>
 internal sealed record RoslynSearchCorpusRecord(
-    string TargetIdentity,
-    string ProjectPath,
+    RepositoryRelativePath TargetIdentity,
+    RepositoryRelativePath ProjectPath,
     string ProjectName,
     string DocumentKey,
-    string Path,
+    RepositoryRelativePath Path,
     string SymbolKey,
     string Kind,
     string Name,

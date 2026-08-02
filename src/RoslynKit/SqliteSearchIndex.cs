@@ -15,6 +15,43 @@ internal sealed class SqliteSearchIndex
     private const int DetailsWeight = 3;
     private const int PathWeight = 1;
     private const int BodyWeight = 1;
+    private static readonly string[] TargetColumns =
+    [
+        "target_identity",
+        "fingerprint",
+        "indexed_at_utc",
+        "symbol_count",
+        "schema_version",
+    ];
+    private static readonly string[] SymbolColumns =
+    [
+        "id",
+        "target_identity",
+        "symbol_key",
+        "project_path",
+        "project_name",
+        "kind",
+        "name",
+        "display_name",
+        "symbol_id",
+        "path",
+        "line",
+        "column_number",
+        "end_line",
+        "end_column_number",
+        "documentation",
+        "signature",
+        "comments",
+        "body",
+    ];
+    private static readonly string[] FtsColumns =
+    [
+        "name_tokens",
+        "containing_tokens",
+        "details_tokens",
+        "path_tokens",
+        "body_tokens",
+    ];
     private readonly string _databasePath;
     private readonly string _connectionString;
     private readonly string _readConnectionString;
@@ -56,7 +93,7 @@ internal sealed class SqliteSearchIndex
     /// </summary>
     public async Task ReplaceProjectsAsync(
         SqliteSearchIndexTarget target,
-        IReadOnlyCollection<string> projectPaths,
+        IReadOnlyCollection<RepositoryRelativePath> projectPaths,
         IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
         CancellationToken cancellationToken)
     {
@@ -141,7 +178,7 @@ internal sealed class SqliteSearchIndex
     /// Reads metadata for one target without creating a database when no index exists yet.
     /// </summary>
     public async Task<SqliteSearchIndexMetadata?> ReadMetadataAsync(
-        string targetIdentity,
+        RepositoryRelativePath targetIdentity,
         CancellationToken cancellationToken)
     {
         ValidateTargetIdentity(targetIdentity);
@@ -163,22 +200,22 @@ internal sealed class SqliteSearchIndex
     internal static async Task<SqliteSearchIndexMetadata?> ReadMetadataAsync(
         SqliteConnection connection,
         SqliteTransaction? transaction,
-        string targetIdentity,
+        RepositoryRelativePath targetIdentity,
         CancellationToken cancellationToken)
     {
+        ValidateTargetIdentity(targetIdentity);
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
             SELECT schema_version,
                    target_identity,
-                   target_path,
                    fingerprint,
                    indexed_at_utc,
                    symbol_count
             FROM search_index_targets
             WHERE target_identity = $targetIdentity;
             """;
-        command.Parameters.AddWithValue("$targetIdentity", targetIdentity);
+        command.Parameters.AddWithValue("$targetIdentity", targetIdentity.Value);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken))
@@ -188,11 +225,10 @@ internal sealed class SqliteSearchIndex
 
         return new SqliteSearchIndexMetadata(
             reader.GetInt32(0),
-            reader.GetString(1),
-            reader.GetString(2),
-            reader.IsDBNull(3) ? null : reader.GetString(3),
-            DateTimeOffset.Parse(reader.GetString(4), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
-            reader.GetInt32(5));
+            RepositoryRelativePath.FromStoredValue(reader.GetString(1), "Persisted target identity"),
+            reader.IsDBNull(2) ? null : reader.GetString(2),
+            DateTimeOffset.Parse(reader.GetString(3), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+            reader.GetInt32(4));
     }
 
     /// <summary>
@@ -213,7 +249,7 @@ internal sealed class SqliteSearchIndex
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
-        ValidateTargetIdentity(query.TargetIdentity);
+        ValidateQuery(query);
         if (query.MaxResults <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(query), "The maximum result count must be positive.");
@@ -251,26 +287,30 @@ internal sealed class SqliteSearchIndex
         command.Transaction = transaction;
         command.CommandText = BuildSearchCommandText(query, command);
         command.Parameters.AddWithValue("$match", queryExpression);
-        command.Parameters.AddWithValue("$targetIdentity", query.TargetIdentity);
+        command.Parameters.AddWithValue("$targetIdentity", query.TargetIdentity.Value);
         command.Parameters.AddWithValue("$maxResults", query.MaxResults);
 
         var results = new List<SqliteSearchIndexMatch>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
+            var symbolKey = reader.GetString(0);
+            var projectPath = RepositoryRelativePath.FromStoredValue(reader.GetString(1), "Persisted project path");
+            var sourcePath = RepositoryRelativePath.FromStoredValue(reader.GetString(7), "Persisted source path");
+            ValidateSymbolKey(symbolKey, query.TargetIdentity, projectPath, sourcePath);
             var documentation = reader.IsDBNull(12) ? null : reader.GetString(12);
             var signature = reader.IsDBNull(13) ? null : reader.GetString(13);
             var comments = reader.IsDBNull(14) ? null : reader.GetString(14);
             var body = reader.IsDBNull(15) ? null : reader.GetString(15);
             results.Add(new SqliteSearchIndexMatch(
-                reader.GetString(0),
-                reader.GetString(1),
+                symbolKey,
+                projectPath,
                 reader.GetString(2),
                 reader.GetString(3),
                 reader.GetString(4),
                 reader.GetString(5),
                 reader.IsDBNull(6) ? null : reader.GetString(6),
-                reader.GetString(7),
+                sourcePath,
                 reader.GetInt32(8),
                 reader.GetInt32(9),
                 reader.GetInt32(10),
@@ -442,7 +482,6 @@ internal sealed class SqliteSearchIndex
 
             CREATE TABLE IF NOT EXISTS search_index_targets (
                 target_identity TEXT PRIMARY KEY,
-                target_path TEXT NOT NULL,
                 fingerprint TEXT NULL,
                 indexed_at_utc TEXT NOT NULL,
                 symbol_count INTEGER NOT NULL CHECK (symbol_count >= 0),
@@ -508,9 +547,9 @@ internal sealed class SqliteSearchIndex
                 $"The SQLite search index uses schema version {schemaVersion}, but RoslynKit requires version {CurrentSchemaVersion}. Delete the index database and run index again.");
         }
 
-        await ValidateSchemaObjectAsync(connection, transaction, "search_index_targets", false, cancellationToken);
-        await ValidateSchemaObjectAsync(connection, transaction, "search_index_symbols", false, cancellationToken);
-        await ValidateSchemaObjectAsync(connection, transaction, "search_index_fts", true, cancellationToken);
+        await ValidateSchemaObjectAsync(connection, transaction, "search_index_targets", false, TargetColumns, cancellationToken);
+        await ValidateSchemaObjectAsync(connection, transaction, "search_index_symbols", false, SymbolColumns, cancellationToken);
+        await ValidateSchemaObjectAsync(connection, transaction, "search_index_fts", true, FtsColumns, cancellationToken);
     }
 
     private static async Task ValidateSchemaObjectAsync(
@@ -518,6 +557,7 @@ internal sealed class SqliteSearchIndex
         SqliteTransaction? transaction,
         string objectName,
         bool requireFts5,
+        IReadOnlyCollection<string> expectedColumns,
         CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
@@ -536,6 +576,34 @@ internal sealed class SqliteSearchIndex
         {
             throw new InvalidOperationException(
                 "The SQLite search index schema is incompatible because search_index_fts is not an FTS5 virtual table. Delete the index database and run index again.");
+        }
+
+        await ValidateSchemaColumnsAsync(connection, transaction, objectName, expectedColumns, cancellationToken);
+    }
+
+    private static async Task ValidateSchemaColumnsAsync(
+        SqliteConnection connection,
+        SqliteTransaction? transaction,
+        string objectName,
+        IReadOnlyCollection<string> expectedColumns,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = $"PRAGMA table_info({objectName});";
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var actualColumns = new HashSet<string>(StringComparer.Ordinal);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            actualColumns.Add(reader.GetString(1));
+        }
+
+        if (!actualColumns.SetEquals(expectedColumns))
+        {
+            throw CreateIncompatibleSchemaException(
+                objectName,
+                actualColumns,
+                expectedColumns);
         }
     }
 
@@ -556,7 +624,7 @@ internal sealed class SqliteSearchIndex
     {
         ValidateTarget(target);
         ArgumentNullException.ThrowIfNull(symbols);
-        ValidateSymbols(symbols);
+        ValidateSymbols(symbols, target.TargetIdentity);
 
         await DeleteTargetAsync(connection, transaction, target.TargetIdentity, cancellationToken);
         await InsertSymbolsAsync(connection, transaction, target.TargetIdentity, symbols, cancellationToken);
@@ -567,7 +635,7 @@ internal sealed class SqliteSearchIndex
         SqliteConnection connection,
         SqliteTransaction transaction,
         SqliteSearchIndexTarget target,
-        IReadOnlyCollection<string> projectPaths,
+        IReadOnlyCollection<RepositoryRelativePath> projectPaths,
         IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
         CancellationToken cancellationToken)
     {
@@ -580,8 +648,8 @@ internal sealed class SqliteSearchIndex
             throw new ArgumentException("At least one project path must be provided for a project refresh.", nameof(projectPaths));
         }
 
-        ValidateSymbols(symbols);
-        var knownProjectPaths = normalizedProjectPaths.ToHashSet(StringComparer.Ordinal);
+        ValidateSymbols(symbols, target.TargetIdentity);
+        var knownProjectPaths = normalizedProjectPaths.ToHashSet();
         if (symbols.Any(symbol => !knownProjectPaths.Contains(symbol.ProjectPath)))
         {
             throw new ArgumentException(
@@ -609,7 +677,7 @@ internal sealed class SqliteSearchIndex
     private static async Task DeleteTargetAsync(
         SqliteConnection connection,
         SqliteTransaction transaction,
-        string targetIdentity,
+        RepositoryRelativePath targetIdentity,
         CancellationToken cancellationToken)
     {
         await using var deleteFtsCommand = connection.CreateCommand();
@@ -622,34 +690,34 @@ internal sealed class SqliteSearchIndex
                 WHERE target_identity = $targetIdentity
             );
             """;
-        deleteFtsCommand.Parameters.AddWithValue("$targetIdentity", targetIdentity);
+        deleteFtsCommand.Parameters.AddWithValue("$targetIdentity", targetIdentity.Value);
         await deleteFtsCommand.ExecuteNonQueryAsync(cancellationToken);
 
         await using var deleteSymbolsCommand = connection.CreateCommand();
         deleteSymbolsCommand.Transaction = transaction;
         deleteSymbolsCommand.CommandText = "DELETE FROM search_index_symbols WHERE target_identity = $targetIdentity;";
-        deleteSymbolsCommand.Parameters.AddWithValue("$targetIdentity", targetIdentity);
+        deleteSymbolsCommand.Parameters.AddWithValue("$targetIdentity", targetIdentity.Value);
         await deleteSymbolsCommand.ExecuteNonQueryAsync(cancellationToken);
 
         await using var deleteMetadataCommand = connection.CreateCommand();
         deleteMetadataCommand.Transaction = transaction;
         deleteMetadataCommand.CommandText = "DELETE FROM search_index_targets WHERE target_identity = $targetIdentity;";
-        deleteMetadataCommand.Parameters.AddWithValue("$targetIdentity", targetIdentity);
+        deleteMetadataCommand.Parameters.AddWithValue("$targetIdentity", targetIdentity.Value);
         await deleteMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static async Task DeleteProjectsAsync(
         SqliteConnection connection,
         SqliteTransaction transaction,
-        string targetIdentity,
-        IReadOnlyCollection<string> projectPaths,
+        RepositoryRelativePath targetIdentity,
+        IReadOnlyCollection<RepositoryRelativePath> projectPaths,
         CancellationToken cancellationToken)
     {
         await using var deleteFtsCommand = connection.CreateCommand();
         deleteFtsCommand.Transaction = transaction;
         var ftsFilters = new List<string> { "target_identity = $targetIdentity" };
-        deleteFtsCommand.Parameters.AddWithValue("$targetIdentity", targetIdentity);
-        AddFilterValues(deleteFtsCommand, ftsFilters, "project_path", "$projectPath", projectPaths);
+        deleteFtsCommand.Parameters.AddWithValue("$targetIdentity", targetIdentity.Value);
+        AddFilterValues(deleteFtsCommand, ftsFilters, "project_path", "$projectPath", projectPaths.Select(path => path.Value).ToArray());
         deleteFtsCommand.CommandText = $"""
             DELETE FROM search_index_fts
             WHERE rowid IN (
@@ -663,8 +731,8 @@ internal sealed class SqliteSearchIndex
         await using var deleteSymbolsCommand = connection.CreateCommand();
         deleteSymbolsCommand.Transaction = transaction;
         var symbolFilters = new List<string> { "target_identity = $targetIdentity" };
-        deleteSymbolsCommand.Parameters.AddWithValue("$targetIdentity", targetIdentity);
-        AddFilterValues(deleteSymbolsCommand, symbolFilters, "project_path", "$projectPath", projectPaths);
+        deleteSymbolsCommand.Parameters.AddWithValue("$targetIdentity", targetIdentity.Value);
+        AddFilterValues(deleteSymbolsCommand, symbolFilters, "project_path", "$projectPath", projectPaths.Select(path => path.Value).ToArray());
         deleteSymbolsCommand.CommandText = $"DELETE FROM search_index_symbols WHERE {string.Join(" AND ", symbolFilters)};";
         await deleteSymbolsCommand.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -672,7 +740,7 @@ internal sealed class SqliteSearchIndex
     private static async Task InsertSymbolsAsync(
         SqliteConnection connection,
         SqliteTransaction transaction,
-        string targetIdentity,
+        RepositoryRelativePath targetIdentity,
         IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
         CancellationToken cancellationToken)
     {
@@ -763,15 +831,15 @@ internal sealed class SqliteSearchIndex
         foreach (var symbol in symbols.OrderBy(static symbol => symbol.SymbolKey, StringComparer.Ordinal))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            targetIdentityParameter.Value = targetIdentity;
+            targetIdentityParameter.Value = targetIdentity.Value;
             symbolKeyParameter.Value = symbol.SymbolKey;
-            projectPathParameter.Value = symbol.ProjectPath;
+            projectPathParameter.Value = symbol.ProjectPath.Value;
             projectNameParameter.Value = symbol.ProjectName;
             kindParameter.Value = symbol.Kind;
             nameParameter.Value = symbol.Name;
             displayNameParameter.Value = symbol.DisplayName;
             symbolIdParameter.Value = ToDatabaseValue(symbol.SymbolId);
-            pathParameter.Value = symbol.Path;
+            pathParameter.Value = symbol.Path.Value;
             lineParameter.Value = symbol.Line;
             columnParameter.Value = symbol.Column;
             endLineParameter.Value = symbol.EndLine;
@@ -809,27 +877,23 @@ internal sealed class SqliteSearchIndex
         command.CommandText = """
             INSERT INTO search_index_targets (
                 target_identity,
-                target_path,
                 fingerprint,
                 indexed_at_utc,
                 symbol_count,
                 schema_version)
             VALUES (
                 $targetIdentity,
-                $targetPath,
                 $fingerprint,
                 $indexedAtUtc,
                 $symbolCount,
                 $schemaVersion)
             ON CONFLICT (target_identity) DO UPDATE SET
-                target_path = excluded.target_path,
                 fingerprint = excluded.fingerprint,
                 indexed_at_utc = excluded.indexed_at_utc,
                 symbol_count = excluded.symbol_count,
                 schema_version = excluded.schema_version;
             """;
-        command.Parameters.AddWithValue("$targetIdentity", target.TargetIdentity);
-        command.Parameters.AddWithValue("$targetPath", target.TargetPath);
+        command.Parameters.AddWithValue("$targetIdentity", target.TargetIdentity.Value);
         command.Parameters.AddWithValue("$fingerprint", ToDatabaseValue(target.Fingerprint));
         command.Parameters.AddWithValue("$indexedAtUtc", DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$symbolCount", symbolCount);
@@ -840,13 +904,13 @@ internal sealed class SqliteSearchIndex
     private static async Task<int> CountTargetSymbolsAsync(
         SqliteConnection connection,
         SqliteTransaction transaction,
-        string targetIdentity,
+        RepositoryRelativePath targetIdentity,
         CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = "SELECT COUNT(*) FROM search_index_symbols WHERE target_identity = $targetIdentity;";
-        command.Parameters.AddWithValue("$targetIdentity", targetIdentity);
+        command.Parameters.AddWithValue("$targetIdentity", targetIdentity.Value);
         var value = await command.ExecuteScalarAsync(cancellationToken);
         return Convert.ToInt32(value, CultureInfo.InvariantCulture);
     }
@@ -862,7 +926,7 @@ internal sealed class SqliteSearchIndex
         command.Transaction = transaction;
         command.CommandText = BuildCountCommandText(query, command);
         command.Parameters.AddWithValue("$match", queryExpression);
-        command.Parameters.AddWithValue("$targetIdentity", query.TargetIdentity);
+        command.Parameters.AddWithValue("$targetIdentity", query.TargetIdentity.Value);
         var value = await command.ExecuteScalarAsync(cancellationToken);
         return Convert.ToInt32(value, CultureInfo.InvariantCulture);
     }
@@ -947,7 +1011,12 @@ internal sealed class SqliteSearchIndex
             "symbols.target_identity = $targetIdentity",
         };
 
-        AddFilterValues(command, filters, "symbols.project_path", "$projectPath", query.ProjectPaths);
+        AddFilterValues(
+            command,
+            filters,
+            "symbols.project_path",
+            "$projectPath",
+            query.ProjectPaths?.Select(path => path.Value).ToArray());
         AddFilterValues(command, filters, "symbols.kind", "$kind", query.Kinds);
         return string.Join(" AND ", filters);
     }
@@ -985,12 +1054,13 @@ internal sealed class SqliteSearchIndex
         filters.Add($"{fieldName} IN ({string.Join(", ", parameterNames)})");
     }
 
-    private static IReadOnlyCollection<string> NormalizeProjectPaths(IReadOnlyCollection<string> projectPaths)
+    private static IReadOnlyCollection<RepositoryRelativePath> NormalizeProjectPaths(
+        IReadOnlyCollection<RepositoryRelativePath> projectPaths)
     {
+        ValidateRepositoryRelativePaths(projectPaths, "Search index project path");
         return projectPaths
-            .Where(static path => !string.IsNullOrWhiteSpace(path))
-            .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)
+            .Distinct()
+            .OrderBy(path => path.Value, StringComparer.Ordinal)
             .ToArray();
     }
 
@@ -1176,12 +1246,69 @@ internal sealed class SqliteSearchIndex
     {
         ArgumentNullException.ThrowIfNull(target);
         ValidateTargetIdentity(target.TargetIdentity);
-        ArgumentException.ThrowIfNullOrWhiteSpace(target.TargetPath);
     }
 
-    private static void ValidateTargetIdentity(string targetIdentity)
+    private static void ValidateTargetIdentity(RepositoryRelativePath targetIdentity)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(targetIdentity);
+        ValidateRepositoryRelativePath(targetIdentity, "Search index target identity");
+    }
+
+    private static void ValidateQuery(SqliteSearchIndexQuery query)
+    {
+        ValidateTargetIdentity(query.TargetIdentity);
+        ValidateRepositoryRelativePaths(query.ProjectPaths, "Search query project path");
+    }
+
+    private static void ValidateRepositoryRelativePaths(
+        IReadOnlyCollection<RepositoryRelativePath>? paths,
+        string pathDescription)
+    {
+        if (paths is null)
+        {
+            return;
+        }
+
+        foreach (var path in paths)
+        {
+            ValidateRepositoryRelativePath(path, pathDescription);
+        }
+    }
+
+    private static void ValidateRepositoryRelativePath(RepositoryRelativePath path, string pathDescription)
+    {
+        if (string.IsNullOrWhiteSpace(path.Value))
+        {
+            throw new ArgumentException(
+                $"{pathDescription} must not be empty.",
+                nameof(path));
+        }
+
+        _ = RepositoryRelativePath.FromStoredValue(path.Value, pathDescription);
+    }
+
+    private static void ValidateSymbolKey(
+        string symbolKey,
+        RepositoryRelativePath targetIdentity,
+        RepositoryRelativePath projectPath,
+        RepositoryRelativePath sourcePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(symbolKey);
+        var expectedPathPrefix = $"{targetIdentity.Value}|{projectPath.Value}|{sourcePath.Value}|";
+        if (!symbolKey.StartsWith(expectedPathPrefix, StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                "Search symbol key path components must match the target identity, project path, and source path stored with the symbol.",
+                nameof(symbolKey));
+        }
+
+        var identityAndSpan = symbolKey.AsSpan(expectedPathPrefix.Length);
+        var spanSeparator = identityAndSpan.LastIndexOf('|');
+        if (spanSeparator <= 0 || spanSeparator == identityAndSpan.Length - 1)
+        {
+            throw new ArgumentException(
+                "Search symbol keys must use the '<target>|<project>|<source>|<symbol>|<span>' structure.",
+                nameof(symbolKey));
+        }
     }
 
     private static void ValidateLeaseTimeout(TimeSpan timeout)
@@ -1237,19 +1364,31 @@ internal sealed class SqliteSearchIndex
             innerException);
     }
 
-    private static void ValidateSymbols(IReadOnlyCollection<SqliteSearchIndexSymbol> symbols)
+    private static InvalidOperationException CreateIncompatibleSchemaException(
+        string objectName,
+        IEnumerable<string> actualColumns,
+        IEnumerable<string> expectedColumns)
+    {
+        return new InvalidOperationException(
+            $"The SQLite search index schema is incompatible because table '{objectName}' has columns [{string.Join(", ", actualColumns.Order(StringComparer.Ordinal))}] but requires [{string.Join(", ", expectedColumns.Order(StringComparer.Ordinal))}]. Delete the index database and run index again.");
+    }
+
+    private static void ValidateSymbols(
+        IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
+        RepositoryRelativePath targetIdentity)
     {
         var keys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var symbol in symbols)
         {
             ArgumentNullException.ThrowIfNull(symbol);
             ArgumentException.ThrowIfNullOrWhiteSpace(symbol.SymbolKey);
-            ArgumentException.ThrowIfNullOrWhiteSpace(symbol.ProjectPath);
+            ValidateRepositoryRelativePath(symbol.ProjectPath, "Search symbol project path");
             ArgumentException.ThrowIfNullOrWhiteSpace(symbol.ProjectName);
             ArgumentException.ThrowIfNullOrWhiteSpace(symbol.Kind);
             ArgumentException.ThrowIfNullOrWhiteSpace(symbol.Name);
             ArgumentException.ThrowIfNullOrWhiteSpace(symbol.DisplayName);
-            ArgumentException.ThrowIfNullOrWhiteSpace(symbol.Path);
+            ValidateRepositoryRelativePath(symbol.Path, "Search symbol source path");
+            ValidateSymbolKey(symbol.SymbolKey, targetIdentity, symbol.ProjectPath, symbol.Path);
             if (symbol.Line <= 0 || symbol.Column <= 0 || symbol.EndLine <= 0 || symbol.EndColumn <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(symbols), "Search symbol ranges must use one-based positive line and column values.");

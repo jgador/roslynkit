@@ -6,26 +6,24 @@ namespace RoslynKit.Tests;
 public sealed class SearchCliContractTests
 {
     [Fact]
-    public void Parse_IndexAcceptsRequiredOptionsAndFlags()
+    public void Parse_IndexAcceptsRequiredOptionsAndRebuildFlag()
     {
         var command = CliParser.Parse(
         [
             "index",
             "--target", "repo.slnx",
             "--index-path", "artifacts\\roslynkit.db",
-            "--include-generated",
             "--rebuild",
         ]);
 
         Assert.Equal("index", command.Name);
         Assert.Equal("repo.slnx", command.Required("target"));
         Assert.Equal("artifacts\\roslynkit.db", command.Required("index-path"));
-        Assert.True(command.Flag("include-generated"));
         Assert.True(command.Flag("rebuild"));
     }
 
     [Fact]
-    public void Parse_SearchAcceptsAllSearchOptions()
+    public void Parse_SearchAcceptsAllSupportedOptions()
     {
         var command = CliParser.Parse(
         [
@@ -36,7 +34,6 @@ public sealed class SearchCliContractTests
             "--project", "src\\RoslynKit\\RoslynKit.csproj",
             "--kind", "class",
             "--max-results", "7",
-            "--include-generated",
         ]);
 
         Assert.Equal("search", command.Name);
@@ -44,7 +41,6 @@ public sealed class SearchCliContractTests
         Assert.Equal("src\\RoslynKit\\RoslynKit.csproj", command.Required("project"));
         Assert.Equal("class", command.Required("kind"));
         Assert.Equal(7, command.OptionalInt("max-results", 20, 1));
-        Assert.True(command.Flag("include-generated"));
     }
 
     [Fact]
@@ -61,11 +57,10 @@ public sealed class SearchCliContractTests
         Assert.Equal(20, command.OptionalInt("max-results", 20, 1));
         Assert.Null(command.Optional("project"));
         Assert.Null(command.Optional("kind"));
-        Assert.False(command.Flag("include-generated"));
     }
 
     [Fact]
-    public void Parse_IndexFlagsDefaultToFalse()
+    public void Parse_IndexRebuildFlagDefaultsToFalse()
     {
         var command = CliParser.Parse(
         [
@@ -74,7 +69,6 @@ public sealed class SearchCliContractTests
             "--index-path", "artifacts\\roslynkit.db",
         ]);
 
-        Assert.False(command.Flag("include-generated"));
         Assert.False(command.Flag("rebuild"));
     }
 
@@ -105,6 +99,29 @@ public sealed class SearchCliContractTests
 
         Assert.Equal("index", exception.CommandName);
         Assert.Contains("Unknown option '--query'", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("index", "--target", "repo.slnx", "--index-path", "artifacts\\roslynkit.db", "--include-generated")]
+    [InlineData("search", "--target", "repo.slnx", "--index-path", "artifacts\\roslynkit.db", "--query", "workspace daemon", "--include-generated")]
+    public void Parse_IndexAndSearchRejectIncludeGenerated(params string[] arguments)
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(arguments));
+
+        Assert.Contains("Unknown option '--include-generated'", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_DiagnosticsRetainsIncludeGenerated()
+    {
+        var command = CliParser.Parse(
+        [
+            "diagnostics",
+            "--target", "repo.slnx",
+            "--include-generated",
+        ]);
+
+        Assert.True(command.Flag("include-generated"));
     }
 
     [Fact]

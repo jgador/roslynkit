@@ -4,8 +4,7 @@ namespace RoslynKit;
 /// Identifies one target partition persisted in a shared SQLite search database.
 /// </summary>
 internal sealed record SqliteSearchIndexTarget(
-    string TargetIdentity,
-    string TargetPath,
+    RepositoryRelativePath TargetIdentity,
     string? Fingerprint);
 
 /// <summary>
@@ -13,13 +12,13 @@ internal sealed record SqliteSearchIndexTarget(
 /// </summary>
 internal sealed record SqliteSearchIndexSymbol(
     string SymbolKey,
-    string ProjectPath,
+    RepositoryRelativePath ProjectPath,
     string ProjectName,
     string Kind,
     string Name,
     string DisplayName,
     string? SymbolId,
-    string Path,
+    RepositoryRelativePath Path,
     int Line,
     int Column,
     int EndLine,
@@ -38,9 +37,9 @@ internal sealed record SqliteSearchIndexSymbol(
 /// Represents a tokenized full-text search request over one target partition.
 /// </summary>
 internal sealed record SqliteSearchIndexQuery(
-    string TargetIdentity,
+    RepositoryRelativePath TargetIdentity,
     IReadOnlyList<string> Tokens,
-    IReadOnlyCollection<string>? ProjectPaths = null,
+    IReadOnlyCollection<RepositoryRelativePath>? ProjectPaths = null,
     IReadOnlyCollection<string>? Kinds = null,
     int MaxResults = 20);
 
@@ -49,8 +48,7 @@ internal sealed record SqliteSearchIndexQuery(
 /// </summary>
 internal sealed record SqliteSearchIndexMetadata(
     int SchemaVersion,
-    string TargetIdentity,
-    string TargetPath,
+    RepositoryRelativePath TargetIdentity,
     string? Fingerprint,
     DateTimeOffset IndexedAtUtc,
     int SymbolCount);
@@ -60,13 +58,13 @@ internal sealed record SqliteSearchIndexMetadata(
 /// </summary>
 internal sealed record SqliteSearchIndexMatch(
     string SymbolKey,
-    string ProjectPath,
+    RepositoryRelativePath ProjectPath,
     string ProjectName,
     string Kind,
     string Name,
     string DisplayName,
     string? SymbolId,
-    string Path,
+    RepositoryRelativePath Path,
     int Line,
     int Column,
     int EndLine,

@@ -21,10 +21,11 @@ internal sealed class SqliteSearchIndexWriterLease : IAsyncDisposable
     /// <summary>
     /// Reads target metadata from the same transaction that holds the writer lease.
     /// </summary>
-    public Task<SqliteSearchIndexMetadata?> ReadMetadataAsync(string targetIdentity, CancellationToken cancellationToken)
+    public Task<SqliteSearchIndexMetadata?> ReadMetadataAsync(
+        RepositoryRelativePath targetIdentity,
+        CancellationToken cancellationToken)
     {
         ThrowIfUnavailable();
-        ArgumentException.ThrowIfNullOrWhiteSpace(targetIdentity);
         return SqliteSearchIndex.ReadMetadataAsync(_connection, _transaction, targetIdentity, cancellationToken);
     }
 
@@ -45,7 +46,7 @@ internal sealed class SqliteSearchIndexWriterLease : IAsyncDisposable
     /// </summary>
     public Task ReplaceProjectsAsync(
         SqliteSearchIndexTarget target,
-        IReadOnlyCollection<string> projectPaths,
+        IReadOnlyCollection<RepositoryRelativePath> projectPaths,
         IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
         CancellationToken cancellationToken)
     {

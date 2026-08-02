@@ -35,13 +35,9 @@ public sealed class SearchWorkspaceSnapshotTests
 
         Assert.Contains("not associated with a stable repository fingerprint", exception.Message, StringComparison.Ordinal);
 
-        var targetIdentity = Path.GetRelativePath(
-                TestPaths.RepositoryRoot(),
-                TestPaths.FixtureProjectPath())
-            .Replace(Path.DirectorySeparatorChar, '/')
-            .Replace(Path.AltDirectorySeparatorChar, '/');
+        const string targetIdentity = "tests/FixtureWorkspace/App/App.csproj";
         var metadata = await new SqliteSearchIndex(area.DatabasePath).ReadMetadataAsync(
-            targetIdentity,
+            RepositoryRelativePath.FromStoredValue(targetIdentity, "search target"),
             TestContext.Current.CancellationToken);
 
         Assert.Null(metadata);

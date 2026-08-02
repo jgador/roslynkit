@@ -93,7 +93,7 @@ roslynkit index --target .\MySolution.slnx --index-path .\artifacts\roslynkit.db
 roslynkit search --target .\MySolution.slnx --index-path .\artifacts\roslynkit.db --query "where is request validation"
 ```
 
-The database has one partition per target. `search` refreshes stale records automatically; `index --rebuild` forces a selected target rebuild. SQLite write-ahead logging (WAL) can create adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files while the database is active. The index supports projects with one target framework. Add `--include-generated` only when source-generated declarations should be searched.
+The database has one partition per target. It persists target identities, project paths, and declaration source paths relative to the repository, then reconstructs absolute target and declaration locations from the resolved repository root for public output. `search` refreshes stale records automatically; `index --rebuild` forces a selected target rebuild. SQLite write-ahead logging (WAL) can create adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files while the database is active. The index supports projects with one target framework and requires every indexed project and source document to have an existing physical path inside the target's Git worktree. It rejects missing or external paths and indexes non-generated declarations only, excluding source-generated declarations and generated source paths below `bin` or `obj`.
 
 Search output is for agent-mediated follow-up. Inspect several ranked results, then pass a returned `id:` or `loc:` to an existing navigation command. RoslynKit does not read search results from standard input.
 

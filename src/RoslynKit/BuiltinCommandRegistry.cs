@@ -52,22 +52,21 @@ public static class BuiltinCommandRegistry
                 TargetOption(),
                 MaxResultsOption(),
                 OptionSpec.Flag(null, "include-hidden", "include hidden diagnostics"),
-                OptionSpec.Flag(null, "include-generated", "include diagnostics from generated and obj documents"),
+                OptionSpec.Flag(null, "include-generated", "include diagnostics from generated, bin, and obj documents"),
             ]),
         new BuiltinCommand(
             "index",
             "Build or refresh a repository-local full-text search index for the loaded target.",
-            ["roslynkit index --target <target> --index-path <path> [--include-generated] [--rebuild]"],
+            ["roslynkit index --target <target> --index-path <path> [--rebuild]"],
             [
                 TargetOption(),
                 IndexPathOption(),
-                OptionSpec.Flag(null, "include-generated", "include source-generated symbols"),
                 OptionSpec.Flag(null, "rebuild", "discard the selected target's existing index records before indexing"),
             ]),
         new BuiltinCommand(
             "search",
             "Search indexed C# symbols using English-oriented text matching and ranking.",
-            ["roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>] [--include-generated]"],
+            ["roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>]"],
             [
                 TargetOption(),
                 IndexPathOption(),
@@ -75,7 +74,6 @@ public static class BuiltinCommandRegistry
                 SearchProjectOption(),
                 SymbolKindOption(),
                 SearchMaxResultsOption(),
-                OptionSpec.Flag(null, "include-generated", "include source-generated symbols"),
             ]),
         new BuiltinCommand(
             "symbols",
