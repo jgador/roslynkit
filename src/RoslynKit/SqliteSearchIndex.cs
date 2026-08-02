@@ -1,4 +1,5 @@
 using System.Globalization;
+using Dapper;
 using Microsoft.Data.Sqlite;
 
 namespace RoslynKit;
@@ -204,31 +205,35 @@ internal sealed class SqliteSearchIndex
         CancellationToken cancellationToken)
     {
         ValidateTargetIdentity(targetIdentity);
-        await using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        SqliteSearchIndexTypeMaps.EnsureRegistered();
+        var parameters = new DynamicParameters();
+        parameters.Add("targetIdentity", targetIdentity.Value);
+        var command = new CommandDefinition(
+            """
             SELECT schema_version,
                    target_identity,
                    fingerprint,
                    indexed_at_utc,
                    symbol_count
             FROM search_index_targets
-            WHERE target_identity = $targetIdentity;
-            """;
-        command.Parameters.AddWithValue("$targetIdentity", targetIdentity.Value);
+            WHERE target_identity = @targetIdentity;
+            """,
+            parameters,
+            transaction,
+            cancellationToken: cancellationToken);
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        if (!await reader.ReadAsync(cancellationToken))
+        var row = await connection.QuerySingleOrDefaultAsync<SqliteSearchIndexMetadataRow>(command);
+        if (row is null)
         {
             return null;
         }
 
         return new SqliteSearchIndexMetadata(
-            reader.GetInt32(0),
-            RepositoryRelativePath.FromStoredValue(reader.GetString(1), "Persisted target identity"),
-            reader.IsDBNull(2) ? null : reader.GetString(2),
-            DateTimeOffset.Parse(reader.GetString(3), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
-            reader.GetInt32(4));
+            row.SchemaVersion,
+            RepositoryRelativePath.FromStoredValue(row.TargetIdentity, "Persisted target identity"),
+            row.Fingerprint,
+            DateTimeOffset.Parse(row.IndexedAtUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+            row.SymbolCount);
     }
 
     /// <summary>
@@ -250,6 +255,7 @@ internal sealed class SqliteSearchIndex
     {
         ArgumentNullException.ThrowIfNull(query);
         ValidateQuery(query);
+        SqliteSearchIndexTypeMaps.EnsureRegistered();
         if (query.MaxResults <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(query), "The maximum result count must be positive.");
@@ -283,48 +289,44 @@ internal sealed class SqliteSearchIndex
         }
 
         var totalMatchCount = await CountMatchesAsync(connection, transaction, query, queryExpression, cancellationToken);
-        await using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = BuildSearchCommandText(query, command);
-        command.Parameters.AddWithValue("$match", queryExpression);
-        command.Parameters.AddWithValue("$targetIdentity", query.TargetIdentity.Value);
-        command.Parameters.AddWithValue("$maxResults", query.MaxResults);
+        var parameters = CreateSearchParameters(query, queryExpression);
+        parameters.Add("maxResults", query.MaxResults);
+        var command = new CommandDefinition(
+            BuildSearchCommandText(query, parameters),
+            parameters,
+            transaction,
+            cancellationToken: cancellationToken);
 
         var results = new List<SqliteSearchIndexMatch>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        var rows = await connection.QueryAsync<SqliteSearchIndexMatchRow>(command);
+        foreach (var row in rows)
         {
-            var symbolKey = reader.GetString(0);
-            var projectPath = RepositoryRelativePath.FromStoredValue(reader.GetString(1), "Persisted project path");
-            var sourcePath = RepositoryRelativePath.FromStoredValue(reader.GetString(7), "Persisted source path");
-            ValidateSymbolKey(symbolKey, query.TargetIdentity, projectPath, sourcePath);
-            var documentation = reader.IsDBNull(12) ? null : reader.GetString(12);
-            var signature = reader.IsDBNull(13) ? null : reader.GetString(13);
-            var comments = reader.IsDBNull(14) ? null : reader.GetString(14);
-            var body = reader.IsDBNull(15) ? null : reader.GetString(15);
+            var projectPath = RepositoryRelativePath.FromStoredValue(row.ProjectPath, "Persisted project path");
+            var sourcePath = RepositoryRelativePath.FromStoredValue(row.Path, "Persisted source path");
+            ValidateSymbolKey(row.SymbolKey, query.TargetIdentity, projectPath, sourcePath);
             results.Add(new SqliteSearchIndexMatch(
-                symbolKey,
+                row.SymbolKey,
                 projectPath,
-                reader.GetString(2),
-                reader.GetString(3),
-                reader.GetString(4),
-                reader.GetString(5),
-                reader.IsDBNull(6) ? null : reader.GetString(6),
+                row.ProjectName,
+                row.Kind,
+                row.Name,
+                row.DisplayName,
+                row.SymbolId,
                 sourcePath,
-                reader.GetInt32(8),
-                reader.GetInt32(9),
-                reader.GetInt32(10),
-                reader.GetInt32(11),
-                documentation,
-                signature,
+                row.Line,
+                row.Column,
+                row.EndLine,
+                row.EndColumn,
+                row.Documentation,
+                row.Signature,
                 SelectExcerpt(
-                    documentation,
-                    comments,
-                    signature,
-                    body,
+                    row.Documentation,
+                    row.Comments,
+                    row.Signature,
+                    row.Body,
                     query.Tokens),
-                reader.GetInt32(17),
-                reader.GetDouble(16)));
+                row.QueryTermCoverage,
+                row.RawBm25Score));
         }
 
         await transaction.CommitAsync(cancellationToken);
@@ -922,28 +924,36 @@ internal sealed class SqliteSearchIndex
         string queryExpression,
         CancellationToken cancellationToken)
     {
-        await using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = BuildCountCommandText(query, command);
-        command.Parameters.AddWithValue("$match", queryExpression);
-        command.Parameters.AddWithValue("$targetIdentity", query.TargetIdentity.Value);
-        var value = await command.ExecuteScalarAsync(cancellationToken);
-        return Convert.ToInt32(value, CultureInfo.InvariantCulture);
+        var parameters = CreateSearchParameters(query, queryExpression);
+        var command = new CommandDefinition(
+            BuildCountCommandText(query, parameters),
+            parameters,
+            transaction,
+            cancellationToken: cancellationToken);
+        return await connection.ExecuteScalarAsync<int>(command);
     }
 
-    private static string BuildCountCommandText(SqliteSearchIndexQuery query, SqliteCommand command)
+    private static DynamicParameters CreateSearchParameters(SqliteSearchIndexQuery query, string queryExpression)
+    {
+        var parameters = new DynamicParameters();
+        parameters.Add("match", queryExpression);
+        parameters.Add("targetIdentity", query.TargetIdentity.Value);
+        return parameters;
+    }
+
+    private static string BuildCountCommandText(SqliteSearchIndexQuery query, DynamicParameters parameters)
     {
         return $"""
             SELECT COUNT(*)
             FROM search_index_fts
             INNER JOIN search_index_symbols AS symbols ON symbols.id = search_index_fts.rowid
-            WHERE {BuildSearchFilters(query, command)};
+            WHERE {BuildSearchFilters(query, parameters)};
             """;
     }
 
-    private static string BuildSearchCommandText(SqliteSearchIndexQuery query, SqliteCommand command)
+    private static string BuildSearchCommandText(SqliteSearchIndexQuery query, DynamicParameters parameters)
     {
-        var coverageExpression = BuildQueryTermCoverageExpression(command, query.Tokens);
+        var coverageExpression = BuildQueryTermCoverageExpression(parameters, query.Tokens);
         return $"""
             SELECT symbols.symbol_key,
                    symbols.project_path,
@@ -965,7 +975,7 @@ internal sealed class SqliteSearchIndex
                    {coverageExpression} AS query_term_coverage
             FROM search_index_fts
             INNER JOIN search_index_symbols AS symbols ON symbols.id = search_index_fts.rowid
-            WHERE {BuildSearchFilters(query, command)}
+            WHERE {BuildSearchFilters(query, parameters)}
             ORDER BY query_term_coverage DESC,
                      bm25_score ASC,
                      symbols.display_name COLLATE BINARY ASC,
@@ -973,11 +983,11 @@ internal sealed class SqliteSearchIndex
                      symbols.line ASC,
                      symbols.column_number ASC,
                      symbols.symbol_key COLLATE BINARY ASC
-            LIMIT $maxResults;
+            LIMIT @maxResults;
             """;
     }
 
-    private static string BuildQueryTermCoverageExpression(SqliteCommand command, IReadOnlyList<string> tokens)
+    private static string BuildQueryTermCoverageExpression(DynamicParameters parameters, IReadOnlyList<string> tokens)
     {
         var normalizedTokens = GetNormalizedSearchTokens(tokens);
         if (normalizedTokens.Length == 0)
@@ -988,14 +998,14 @@ internal sealed class SqliteSearchIndex
         var termExpressions = new List<string>(normalizedTokens.Length);
         for (var index = 0; index < normalizedTokens.Length; index++)
         {
-            var parameterName = $"$coveragePattern{index}";
-            command.Parameters.AddWithValue(parameterName, $"% {normalizedTokens[index]}%");
+            var parameterName = $"coveragePattern{index}";
+            parameters.Add(parameterName, $"% {normalizedTokens[index]}%");
             termExpressions.Add($"""
-                CASE WHEN (' ' || lower(search_index_fts.name_tokens)) LIKE {parameterName}
-                           OR (' ' || lower(search_index_fts.containing_tokens)) LIKE {parameterName}
-                           OR (' ' || lower(search_index_fts.details_tokens)) LIKE {parameterName}
-                           OR (' ' || lower(search_index_fts.path_tokens)) LIKE {parameterName}
-                           OR (' ' || lower(search_index_fts.body_tokens)) LIKE {parameterName}
+                CASE WHEN (' ' || lower(search_index_fts.name_tokens)) LIKE @{parameterName}
+                           OR (' ' || lower(search_index_fts.containing_tokens)) LIKE @{parameterName}
+                           OR (' ' || lower(search_index_fts.details_tokens)) LIKE @{parameterName}
+                           OR (' ' || lower(search_index_fts.path_tokens)) LIKE @{parameterName}
+                           OR (' ' || lower(search_index_fts.body_tokens)) LIKE @{parameterName}
                      THEN 1 ELSE 0 END
                 """);
         }
@@ -1003,22 +1013,55 @@ internal sealed class SqliteSearchIndex
         return $"({string.Join(" + ", termExpressions)})";
     }
 
-    private static string BuildSearchFilters(SqliteSearchIndexQuery query, SqliteCommand command)
+    private static string BuildSearchFilters(SqliteSearchIndexQuery query, DynamicParameters parameters)
     {
         var filters = new List<string>
         {
-            "search_index_fts MATCH $match",
-            "symbols.target_identity = $targetIdentity",
+            "search_index_fts MATCH @match",
+            "symbols.target_identity = @targetIdentity",
         };
 
         AddFilterValues(
-            command,
+            parameters,
             filters,
             "symbols.project_path",
-            "$projectPath",
+            "projectPath",
             query.ProjectPaths?.Select(path => path.Value).ToArray());
-        AddFilterValues(command, filters, "symbols.kind", "$kind", query.Kinds);
+        AddFilterValues(parameters, filters, "symbols.kind", "kind", query.Kinds);
         return string.Join(" AND ", filters);
+    }
+
+    private static void AddFilterValues(
+        DynamicParameters parameters,
+        ICollection<string> filters,
+        string fieldName,
+        string parameterPrefix,
+        IReadOnlyCollection<string>? values)
+    {
+        if (values is null || values.Count == 0)
+        {
+            return;
+        }
+
+        var normalizedValues = values
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (normalizedValues.Length == 0)
+        {
+            return;
+        }
+
+        var parameterNames = new List<string>(normalizedValues.Length);
+        for (var index = 0; index < normalizedValues.Length; index++)
+        {
+            var parameterName = $"{parameterPrefix}{index}";
+            parameterNames.Add($"@{parameterName}");
+            parameters.Add(parameterName, normalizedValues[index]);
+        }
+
+        filters.Add($"{fieldName} IN ({string.Join(", ", parameterNames)})");
     }
 
     private static void AddFilterValues(
