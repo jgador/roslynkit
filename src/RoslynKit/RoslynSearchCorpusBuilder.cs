@@ -199,6 +199,11 @@ internal sealed class RoslynSearchCorpusBuilder
             }
             catch (ArgumentException exception)
             {
+                if (await RoslynDocumentFilters.IsPackageInjectedGeneratedSourceAsync(document, cancellationToken).ConfigureAwait(false))
+                {
+                    continue;
+                }
+
                 issues.Add(new RoslynSearchCorpusBuildIssue("document-path-invalid", exception.Message));
                 continue;
             }
