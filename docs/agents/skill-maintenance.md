@@ -98,4 +98,4 @@ Stable versions and prerelease versions are maintained differently:
 - Stable version updates usually change package examples in [README.md](../../README.md), [docs/dotnet-tool-release.md](../dotnet-tool-release.md), and [src/RoslynKit/PackageReadme.md](../../src/RoslynKit/PackageReadme.md).
 - Prerelease dogfooding usually does not require any skill-file text change unless the install path or invocation pattern changed.
 
-Use a bare stable version such as `0.1.0` for global install examples. Use a prerelease such as `0.1.0-dev.1` for the side-by-side dev tool path.
+Use a bare stable version such as `0.2.0` for global install examples. Use a prerelease such as `0.2.0-dev.1` for the side-by-side dev tool path.

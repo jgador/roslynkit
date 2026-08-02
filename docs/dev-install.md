@@ -35,7 +35,7 @@ pwsh .\scripts\install-roslynkit-dev.ps1 -Version <prerelease>
 
 The script now does the full side-by-side prerelease flow from the current checkout:
 
-1. Verifies that `-Version` is a prerelease such as `0.1.0-dev.1`.
+1. Verifies that `-Version` is a prerelease such as `0.2.0-dev.1`.
 2. Builds the repo.
 3. Packs `src\RoslynKit\RoslynKit.csproj` with `/p:Version=<prerelease>`.
 4. Uses the dedicated dev-only folder feed `.\artifacts\packages\roslynkit-dev` by default.
@@ -81,7 +81,7 @@ $roslynkitDev = Join-Path $roslynkitDev ($(if ($IsWindows) { "roslynkit.exe" } e
 & $roslynkitDev help
 ```
 
-The reported version should include the prerelease suffix, for example `0.1.0-dev.1` or `0.1.0-dev.1+<build-metadata>`.
+The reported version should include the prerelease suffix, for example `0.2.0-dev.1` or `0.2.0-dev.1+<build-metadata>`.
 
 ## Relationship to the checked-in skills
 

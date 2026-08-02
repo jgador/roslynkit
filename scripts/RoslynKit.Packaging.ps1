@@ -28,7 +28,7 @@ function Get-RoslynKitToolingContext
 
     if ($packageVersion.StartsWith("v", [System.StringComparison]::OrdinalIgnoreCase))
     {
-        throw "Directory.Build.props <Version> must use a bare NuGet version like 0.1.0, not v0.1.0. Use the leading 'v' only for Git tags or release titles."
+        throw "Directory.Build.props <Version> must use a bare NuGet version like 0.2.0, not v0.2.0. Use the leading 'v' only for Git tags or release titles."
     }
 
     return [pscustomobject]@{
@@ -117,7 +117,7 @@ function Assert-RoslynKitPrereleaseVersion
 
     if (-not (Test-IsPrereleaseVersion -Version $Version))
     {
-        throw "Version '$Version' is not a prerelease version. Use a bare stable version like 0.1.0 for global installs and a prerelease like 0.1.1-dev.1 for the side-by-side dev tool."
+        throw "Version '$Version' is not a prerelease version. Use a bare stable version like 0.2.0 for global installs and a prerelease like 0.2.1-dev.1 for the side-by-side dev tool."
     }
 }
 

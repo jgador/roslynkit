@@ -12,7 +12,7 @@ The release version comes from `Directory.Build.props`. The public package metad
 
 ## 1. Update package metadata
 
-1. Set the new `<Version>` in `Directory.Build.props` using a bare NuGet version such as `0.1.0` or a prerelease such as `0.1.0-dev.1`. Use the leading `v` only for Git tags or release titles such as `v0.1.0`.
+1. Set the new `<Version>` in `Directory.Build.props` using a bare NuGet version such as `0.2.0` or a prerelease such as `0.2.0-dev.1`. Use the leading `v` only for Git tags or release titles such as `v0.2.0`.
 2. Confirm `src/RoslynKit/RoslynKit.csproj` still has the correct public package metadata: `PackageId` is `roslynkit`, `ToolCommandName` is `roslynkit`, and the repository URL, license, tags, and package readme values are still correct.
 3. If the public CLI surface, repo-local skill workflow, or install story changed, update [README.md](../README.md), [docs/agents/skill-maintenance.md](agents/skill-maintenance.md), and [docs/dev-install.md](dev-install.md) in the same change when applicable.
 
@@ -67,7 +67,7 @@ roslynkit version
 
 ## 5. Install or update the side-by-side prerelease dev tool
 
-Use a prerelease `<Version>` such as `0.1.0-dev.1` and run the dev installer from the current checkout:
+Use a prerelease `<Version>` such as `0.2.0-dev.1` and run the dev installer from the current checkout:
 
 ```powershell
 pwsh .\scripts\install-roslynkit-dev.ps1 -Version <prerelease>

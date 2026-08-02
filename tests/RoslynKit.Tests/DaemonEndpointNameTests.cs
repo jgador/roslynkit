@@ -16,7 +16,7 @@ public sealed class DaemonEndpointNameTests
         Assert.DoesNotContain(identity.Workspace.WorktreeRoot, endpointName, StringComparison.Ordinal);
         Assert.DoesNotContain(identity.Workspace.TargetPath, endpointName, StringComparison.Ordinal);
         Assert.Equal(
-            "roslynkit-v1-4c9a0ce207833dc26b416cd0432b39102bfb8715b0a4e4adaf06d34e3332e552",
+            "roslynkit-v1-72ad2dd9269deec8b275bf8cdfdea584c6bbad733c62df726c34efd875edb43c",
             endpointName);
     }
 
@@ -59,7 +59,7 @@ public sealed class DaemonEndpointNameTests
             identity with { Workspace = identity.Workspace with { MSBuild = identity.Workspace.MSBuild with { MSBuildAssemblyVersion = null } } },
             identity with { Workspace = identity.Workspace with { BuildEnvironment = new Dictionary<string, string?> { ["ALPHA"] = "two", ["ZETA"] = null } } },
             identity with { Workspace = identity.Workspace with { BuildEnvironment = new Dictionary<string, string?> { ["ALPHA"] = "one", ["ZETA"] = string.Empty } } },
-            identity with { Workspace = identity.Workspace with { RoslynKit = identity.Workspace.RoslynKit with { InformationalVersion = "0.2.0" } } },
+            identity with { Workspace = identity.Workspace with { RoslynKit = identity.Workspace.RoslynKit with { InformationalVersion = "0.3.0" } } },
             identity with { Workspace = identity.Workspace with { RoslynKit = identity.Workspace.RoslynKit with { ModuleVersionId = "other-mvid" } } },
             identity with { Workspace = identity.Workspace with { ProtocolVersion = 2 } },
             identity with { Workspace = identity.Workspace with { ProcessArchitecture = "other-architecture" } },
@@ -137,7 +137,7 @@ public sealed class DaemonEndpointNameTests
                 "/dotnet/sdk/10.0.100",
                 "18.0.0+build"),
             environment,
-            new RoslynKitBuildIdentity("0.1.0", "build-mvid"),
+            new RoslynKitBuildIdentity("0.2.0", "build-mvid"),
             1,
             "X64");
         return new DaemonIdentity(
