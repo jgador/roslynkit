@@ -120,7 +120,7 @@ $globalToolFolder = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".do
 $pathSeparator = [IO.Path]::PathSeparator
 $env:PATH = "$globalToolFolder$pathSeparator$env:PATH"
 $commandPath = (Get-Command roslynkit -ErrorAction Stop).Source
-$versionOutput = & roslynkit version
+$versionOutput = roslynkit --version
 if ($LASTEXITCODE -ne 0)
 {
     throw "The installed roslynkit command failed."
@@ -139,11 +139,12 @@ The final path should resolve inside the global `.dotnet\tools` folder, and the 
 
 ### 5.2 Run the end-to-end command test
 
-Paste this block into the same terminal or a new PowerShell terminal from the repository root. It fails immediately when a command returns a nonzero exit code or the daemon does not reach the expected state.
+Paste this block into the same terminal or a new PowerShell terminal from the repository root. Every product check invokes the `roslynkit` command directly. The native-command preference makes PowerShell stop when a command returns a nonzero exit code, and the daemon wait helper stops when the expected state is not reached.
 
 ```powershell
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+$PSNativeCommandUseErrorActionPreference = $true
 
 $repoRoot = (Resolve-Path ".").Path
 [xml]$versionXml = Get-Content (Join-Path $repoRoot "Directory.Build.props")
@@ -157,15 +158,6 @@ $env:PATH = "$globalToolFolder$pathSeparator$env:PATH"
 
 New-Item -ItemType Directory -Path $indexFolder -Force | Out-Null
 
-function Invoke-RoslynKit
-{
-    & roslynkit @args
-    if ($LASTEXITCODE -ne 0)
-    {
-        throw "RoslynKit failed: roslynkit $($args -join ' ')"
-    }
-}
-
 function Wait-RoslynKitDaemonState
 {
     param(
@@ -177,7 +169,7 @@ function Wait-RoslynKitDaemonState
 
     for ($attempt = 1; $attempt -le 120; $attempt++)
     {
-        $status = & roslynkit daemon status --target $Target
+        $status = roslynkit daemon status --target $Target
         if ($LASTEXITCODE -ne 0)
         {
             throw "Unable to read RoslynKit daemon status."
@@ -196,39 +188,39 @@ function Wait-RoslynKitDaemonState
 }
 
 # Confirm the globally installed command and its local help surface.
-Invoke-RoslynKit version
-Invoke-RoslynKit help
+roslynkit --version
+roslynkit help
 
 # Build a clean search index and run an English-oriented declaration search.
-Invoke-RoslynKit index --target $target --index-path $indexPath --rebuild
-Invoke-RoslynKit search --target $target --index-path $indexPath `
+roslynkit index --target $target --index-path $indexPath --rebuild
+roslynkit search --target $target --index-path $indexPath `
     --query "how does workspace daemon reload after source changes" `
     --max-results 5
 
 # Reset any daemon started by index or search, then test on-demand startup.
-Invoke-RoslynKit daemon stop --target $target
+roslynkit daemon stop --target $target
 Wait-RoslynKitDaemonState -Target $target -State "not-running"
-Invoke-RoslynKit workspace --target $target
+roslynkit workspace --target $target
 Wait-RoslynKitDaemonState -Target $target -State "running"
 
 # A second workspace command should reuse the running daemon.
-Invoke-RoslynKit workspace --target $target
-Invoke-RoslynKit daemon status --target $target
+roslynkit workspace --target $target
+roslynkit daemon status --target $target
 
 # Exercise representative discovery, navigation, source-read, and diagnostic commands.
-Invoke-RoslynKit symbols --target $target --query PositionResolver --exact --kind class
-Invoke-RoslynKit definition --target $target --symbol "T:RoslynKit.PositionResolver"
-Invoke-RoslynKit references --target $target `
+roslynkit symbols --target $target --query PositionResolver --exact --kind class
+roslynkit definition --target $target --symbol "T:RoslynKit.PositionResolver"
+roslynkit references --target $target `
     --symbol "RoslynKit.PositionResolver.GetPositionAsync" `
     --max-results 3
-Invoke-RoslynKit document-lines --target $target `
+roslynkit document-lines --target $target `
     --file (Join-Path $repoRoot "src\RoslynKit\PositionResolver.cs") `
     --start-line 1 `
     --end-line 25
-Invoke-RoslynKit diagnostics --target $target --max-results 20
+roslynkit diagnostics --target $target --max-results 20
 
 # Stop the daemon and confirm that the background process exits.
-Invoke-RoslynKit daemon stop --target $target
+roslynkit daemon stop --target $target
 Wait-RoslynKitDaemonState -Target $target -State "not-running"
 
 Write-Host "RoslynKit $version global-tool smoke test passed."
