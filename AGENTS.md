@@ -8,6 +8,7 @@ Use one source of truth per topic:
 - [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md): canonical stable RoslynKit skill bundle source and `roslynkit init` scaffold input.
 - [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md): generated runtime command reference from `BuiltinCommandRegistry`; regenerate with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --write`.
 - [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md): shared command output contract for humans, scripts, tests, and agents.
+- [docs/daemon.md](docs/daemon.md): canonical lifecycle, consistency, IPC, fallback, and supported-workspace contract for the optional workspace daemon.
 - [docs/dev-install.md](docs/dev-install.md): semi-manual side-by-side prerelease installation for RoslynKit development.
 - [docs/dotnet-tool-release.md](docs/dotnet-tool-release.md): maintainer packaging and release workflow.
 - [docs/agents/README.md](docs/agents/README.md): index for repo-maintenance coding-agent workflow docs that agents may discover and apply on their own.
@@ -36,9 +37,13 @@ RoslynKit is a .NET 10 command-line tool. Production code lives under `src/Rosly
 
 Verify conclusions against current files, tests, docs, and command output.
 
+Prefer concurrent sub-agent delegation for independent, non-overlapping work. When two or more bounded tasks can run independently, dispatch them in parallel and use the available sub-agent capacity instead of processing them serially. Favor parallel read-only mapping, scoped discovery, test selection, and independent validation. Assign exclusive file ownership before parallel write work, and keep overlapping or sequential changes with one agent.
+
 When adding or editing prose in Markdown docs, checked-in agent prompts, or skill files, write repo file references as Markdown links with the path as the link label, such as [docs/agents/README.md](docs/agents/README.md). Use code formatting only for non-file literals, globs, command arguments, generated output, or paths where Markdown links would change behavior.
 
 When writing or editing agent-facing prose, avoid second-person pronouns for coding agents. Do not use `you` or `your` to refer to an agent, sub-agent, coding tool, or future agent reader; use explicit nouns such as `the agent`, `the sub-agent`, `codex`, or `coding agents` instead.
+
+When writing prose for users or coding agents, avoid unexplained jargon and uncommon abbreviations. On first use, write the complete term followed by its abbreviation in parentheses, such as `full-text search (FTS)`; use the abbreviation alone only after that definition.
 
 For exact runtime command names, usage strings, and options, read generated [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md). Keep agent guidance concise and route-oriented; do not duplicate full command reference material in [AGENTS.md](AGENTS.md) or skill files.
 
@@ -57,6 +62,15 @@ Do not read [docs/local-repository-reference.md](docs/local-repository-reference
 Do not use Repository Synapse in this repository. Do not run `synapse ensure`, `synapse recall`, `synapse tests`, or any other command that creates `.synapse/` repo-local cache files. Use Atlas, RoslynKit, scout agents, and direct file/test inspection instead.
 
 For ad-hoc scripts, scratch files, and temporary command results, use a clear subfolder under `artifacts/` such as `artifacts/<task-name>/`. Do not create repo-root scratch folders such as `.tmp`; `artifacts/` is ignored and is the expected place for disposable local outputs.
+
+### Search Tooling
+
+For file discovery and literal text search, invoke the globally available `rg` (`ripgrep`) command from `PATH`.
+
+- Use `rg --files` for file discovery and `rg -n "pattern"` for literal text search.
+- Prefer global `rg` over recursive PowerShell file enumeration or `Select-String`.
+- Fall back to the terminal-native search tool for the current platform only when global `rg` is unavailable.
+- This search-tool rule does not replace the RoslynKit-first C# semantic-inspection rules below.
 
 ### RoslynKit Default Semantic Inspection
 
@@ -146,7 +160,7 @@ Follow the existing style in touched files. Prefer clear names and structure ove
 Navigation comments should help RoslynKit documentation-enabled navigation output guide the next hop. Add or refine public-method summaries only for entrypoints, orchestration points, cross-boundary adapters, Roslyn workspace/symbol/position resolution boundaries, or helpers whose name alone does not explain when to jump there. Keep summaries architectural and specific; avoid generic comments such as "Executes the method" and avoid documenting every public member for coverage.
 
 - Keep C# files under 1000 lines of code when practical. This is guidance, not a hard rule: when a `.cs` file grows beyond 1000 lines, consider whether it mixes concerns or has a natural refactor seam before splitting it.
-- Preserve the CLI-first architecture: no MCP server, no LSP client, no background daemon, and no editor-specific protocol coupling.
+- Preserve the CLI-first architecture: no MCP server, no LSP client, and no editor-specific protocol coupling. An on-demand, same-user workspace daemon is allowed only as a transparent performance optimization with standalone fallback and idle shutdown; follow [docs/daemon.md](docs/daemon.md).
 - Prefer direct Roslyn/MSBuild APIs over shelling out to editors, language servers, or IDEs.
 - Prioritize read-only Roslyn intelligence: inspect, navigate, understand, and verify C# code before edit-producing workflows.
 - If formatting, rename, or code-action features are added, return deterministic proposed edits before adding any source-mutating apply mode.

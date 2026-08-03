@@ -9,6 +9,80 @@ namespace RoslynKit.Tests;
 public sealed class CliOutputTests
 {
     [Fact]
+    public async Task ExecuteAsync_ReturnsBufferedStreams_WithoutWritingThem()
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        var expected = new CliProcessResult(17, "buffered stdout", "buffered stderr");
+        var application = new CliApplication(
+            stdout,
+            stderr,
+            (_, _) => Task.FromResult(expected));
+
+        var result = await application.ExecuteAsync(
+            ["symbols", "--target", "missing.slnx", "--query", "Foo"],
+            TestContext.Current.CancellationToken);
+
+        Assert.Same(expected, result);
+        Assert.Equal(string.Empty, stdout.ToString());
+        Assert.Equal(string.Empty, stderr.ToString());
+    }
+
+    [Fact]
+    public async Task RunAsync_WritesBufferedStreams_ToSeparateWriters()
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        var expected = new CliProcessResult(17, "buffered stdout", "buffered stderr");
+        var application = new CliApplication(
+            stdout,
+            stderr,
+            (_, _) => Task.FromResult(expected));
+
+        var exitCode = await application.RunAsync(
+            ["symbols", "--target", "missing.slnx", "--query", "Foo"],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(17, exitCode);
+        Assert.Equal(expected.Stdout, stdout.ToString());
+        Assert.Equal(expected.Stderr, stderr.ToString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FormatsCancellation_FromWorkspaceRouter()
+    {
+        var application = new CliApplication(
+            TextWriter.Null,
+            TextWriter.Null,
+            (_, _) => throw new OperationCanceledException());
+
+        var result = await application.ExecuteAsync(
+            ["symbols", "--target", "missing.slnx", "--query", "Foo"],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(130, result.ExitCode);
+        Assert.Equal($"error: canceled\nmessage: Operation was canceled.{Environment.NewLine}", result.Stdout);
+        Assert.Equal(string.Empty, result.Stderr);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FormatsUnexpectedException_FromWorkspaceRouter()
+    {
+        var application = new CliApplication(
+            TextWriter.Null,
+            TextWriter.Null,
+            (_, _) => throw new InvalidOperationException("test failure"));
+
+        var result = await application.ExecuteAsync(
+            ["symbols", "--target", "missing.slnx", "--query", "Foo"],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal($"error: InvalidOperationException\nmessage: test failure{Environment.NewLine}", result.Stdout);
+        Assert.Equal(string.Empty, result.Stderr);
+    }
+
+    [Fact]
     public async Task RunAsync_WritesMarkdownHelp_ForHelpCommand()
     {
         using var writer = new StringWriter();
@@ -20,6 +94,8 @@ public sealed class CliOutputTests
         Assert.StartsWith("tool: roslynkit", output, StringComparison.Ordinal);
         Assert.Contains("- command: `version` description: ", output, StringComparison.Ordinal);
         Assert.Contains("- command: `init` description: ", output, StringComparison.Ordinal);
+        Assert.Contains("- command: `daemon status` description: ", output, StringComparison.Ordinal);
+        Assert.Contains("- command: `daemon stop` description: ", output, StringComparison.Ordinal);
         Assert.Contains("- command: `symbols` description: ", output, StringComparison.Ordinal);
         Assert.DoesNotContain("\"data\"", output, StringComparison.Ordinal);
     }
@@ -82,6 +158,49 @@ public sealed class CliOutputTests
     }
 
     [Fact]
+    public async Task RunAsync_WritesNestedCommandHelp_ForDaemonStatus()
+    {
+        using var writer = new StringWriter();
+        var exitCode = await new CliApplication(writer).RunAsync(
+            ["help", "daemon", "status"],
+            TestContext.Current.CancellationToken);
+
+        var output = writer.ToString();
+
+        Assert.Equal(0, exitCode);
+        Assert.StartsWith("command: daemon status", output, StringComparison.Ordinal);
+        Assert.Contains("usage: `roslynkit daemon status --target <target>`", output, StringComparison.Ordinal);
+        Assert.Contains("- option: `--target` short: `-t` value: target required: true description: ", output, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("status")]
+    [InlineData("stop")]
+    public async Task ExecuteAsync_ExecutesDaemonCommandsLocally(string subcommand)
+    {
+        var workspaceCalls = 0;
+        var application = new CliApplication(
+            TextWriter.Null,
+            TextWriter.Null,
+            (_, _) =>
+            {
+                workspaceCalls++;
+                return Task.FromResult(new CliProcessResult(1, "workspace called", string.Empty));
+            },
+            (command, _) => Task.FromResult(
+                CliProcessResult.Success($"command: {command.Name}\nstate: not-running")));
+
+        var result = await application.ExecuteAsync(
+            ["daemon", subcommand, "--target", "repo.slnx"],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, workspaceCalls);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal($"command: daemon {subcommand}\nstate: not-running{Environment.NewLine}", result.Stdout);
+        Assert.Equal(string.Empty, result.Stderr);
+    }
+
+    [Fact]
     public async Task RunAsync_WritesPlainText_ForVersionCommand()
     {
         await AssertVersionOutputAsync("version");
@@ -130,17 +249,19 @@ public sealed class CliOutputTests
     public async Task RunAsync_WritesUsageErrorHint_ForLineBeyondDocumentEnd()
     {
         var programPath = TestPaths.RepoFile("src", "RoslynKit", "Program.cs");
+        var lineCount = File.ReadAllLines(programPath).Length + 1;
+        var requestedLine = lineCount + 1;
 
         var output = await AssertUsageErrorAsync([
             "quick-info",
             "--target", TestPaths.SolutionPath(),
             "--file", programPath,
-            "--line", "70",
+            "--line", requestedLine.ToString(),
             "--column", "1",
         ], expectedLineCount: 3);
 
-        Assert.Contains("Line 70 is outside the document range 1..16.", output, StringComparison.Ordinal);
-        Assert.Contains("hint: Retry with --line between 1 and 16", output, StringComparison.Ordinal);
+        Assert.Contains($"Line {requestedLine} is outside the document range 1..{lineCount}.", output, StringComparison.Ordinal);
+        Assert.Contains($"hint: Retry with --line between 1 and {lineCount}", output, StringComparison.Ordinal);
         Assert.Contains("document-lines", output, StringComparison.Ordinal);
     }
 
@@ -174,7 +295,8 @@ public sealed class CliOutputTests
     private static async Task<string> AssertUsageErrorAsync(string[] args, int expectedLineCount = 2)
     {
         using var writer = new StringWriter();
-        var exitCode = await new CliApplication(writer).RunAsync(args, TestContext.Current.CancellationToken);
+        using var errorWriter = new StringWriter();
+        var exitCode = await new CliApplication(writer, errorWriter).RunAsync(args, TestContext.Current.CancellationToken);
 
         var output = writer.ToString();
         var lines = output.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd('\n').Split('\n');
@@ -189,6 +311,7 @@ public sealed class CliOutputTests
         }
 
         Assert.DoesNotContain("{", output, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, errorWriter.ToString());
         return output;
     }
 
@@ -215,4 +338,5 @@ public sealed class CliOutputTests
     {
         return output.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd('\n');
     }
+
 }

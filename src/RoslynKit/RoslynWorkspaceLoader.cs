@@ -67,6 +67,8 @@ public sealed class RoslynWorkspaceLoader : IDisposable
     /// </summary>
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 
+    internal GitWorktreeFingerprint? LoadedWorktreeFingerprint { get; private set; }
+
     /// <summary>
     /// Opens the requested solution or project target with <c>MSBuildWorkspace</c> and records workspace load diagnostics.
     /// </summary>
@@ -124,6 +126,12 @@ public sealed class RoslynWorkspaceLoader : IDisposable
 
         workspace.Dispose();
         throw new CliUsageException("unknown", "Target must be a .sln, .slnx, or .csproj file.");
+    }
+
+    internal void SetLoadedWorktreeFingerprint(GitWorktreeFingerprint fingerprint)
+    {
+        ArgumentNullException.ThrowIfNull(fingerprint);
+        LoadedWorktreeFingerprint = fingerprint;
     }
 
     /// <summary>

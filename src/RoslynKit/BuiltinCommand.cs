@@ -7,7 +7,13 @@ public sealed record BuiltinCommand(
     string Name,
     string Description,
     IReadOnlyList<string> Usage,
-    IReadOnlyList<OptionSpec> Options);
+    IReadOnlyList<OptionSpec> Options)
+{
+    /// <summary>
+    /// Command tokens used for longest-prefix matching while <see cref="Name"/> remains the canonical display name.
+    /// </summary>
+    public IReadOnlyList<string> Path { get; } = Array.AsReadOnly(Name.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+}
 
 /// <summary>
 /// Describes one built-in option definition used for parser binding and help output.

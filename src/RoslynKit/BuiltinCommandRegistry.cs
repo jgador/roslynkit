@@ -21,6 +21,20 @@ public static class BuiltinCommandRegistry
                 OptionSpec.Flag(null, "overwrite", "replace existing scaffolded skill files when content differs"),
             ]),
         new BuiltinCommand(
+            "daemon status",
+            "Report the compatible workspace daemon state without starting it.",
+            ["roslynkit daemon status --target <target>"],
+            [
+                DaemonTargetOption(),
+            ]),
+        new BuiltinCommand(
+            "daemon stop",
+            "Stop the compatible workspace daemon if it is running, without starting one.",
+            ["roslynkit daemon stop --target <target>"],
+            [
+                DaemonTargetOption(),
+            ]),
+        new BuiltinCommand(
             "workspace",
             "List projects and repo-relevant documents loaded from a solution or project.",
             ["roslynkit workspace --target <solution.slnx|solution.sln|project.csproj> [--include-generated] [--include-additional] [--include-analyzer-config]"],
@@ -38,7 +52,28 @@ public static class BuiltinCommandRegistry
                 TargetOption(),
                 MaxResultsOption(),
                 OptionSpec.Flag(null, "include-hidden", "include hidden diagnostics"),
-                OptionSpec.Flag(null, "include-generated", "include diagnostics from generated and obj documents"),
+                OptionSpec.Flag(null, "include-generated", "include diagnostics from generated, bin, and obj documents"),
+            ]),
+        new BuiltinCommand(
+            "index",
+            "Build or refresh a repository-local full-text search index for the loaded target.",
+            ["roslynkit index --target <target> --index-path <path> [--rebuild]"],
+            [
+                TargetOption(),
+                IndexPathOption(),
+                OptionSpec.Flag(null, "rebuild", "discard the selected target's existing index records before indexing"),
+            ]),
+        new BuiltinCommand(
+            "search",
+            "Search indexed C# symbols using English-oriented text matching and ranking.",
+            ["roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>]"],
+            [
+                TargetOption(),
+                IndexPathOption(),
+                OptionSpec.String('q', "query", "text", "English-oriented text to search for", required: true),
+                SearchProjectOption(),
+                SymbolKindOption(),
+                SearchMaxResultsOption(),
             ]),
         new BuiltinCommand(
             "symbols",
@@ -50,7 +85,7 @@ public static class BuiltinCommandRegistry
                 MaxResultsOption(),
                 OptionSpec.Flag(null, "case-sensitive", "match query text case-sensitively"),
                 OptionSpec.Flag(null, "exact", "match the declaration name exactly"),
-                OptionSpec.String(null, "kind", "kind", "filter declarations by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate"),
+                SymbolKindOption(),
             ]),
         new BuiltinCommand(
             "document-text",
@@ -192,6 +227,9 @@ public static class BuiltinCommandRegistry
     private static readonly IReadOnlyDictionary<string, BuiltinCommand> Lookup =
         Builtins.ToDictionary(command => command.Name, StringComparer.Ordinal);
 
+    private static readonly BuiltinCommand[] ResolutionOrder =
+        Builtins.OrderByDescending(command => command.Path.Count).ToArray();
+
     /// <summary>
     /// Ordered built-in command metadata used by top-level help and parser lookup.
     /// </summary>
@@ -205,9 +243,51 @@ public static class BuiltinCommandRegistry
         return Lookup.TryGetValue(name, out var command) ? command : null;
     }
 
+    /// <summary>
+    /// Resolves the longest registered command path at the requested token offset.
+    /// </summary>
+    internal static (BuiltinCommand Command, int TokenCount)? GetLongestPrefix(
+        IReadOnlyList<string> args,
+        int startIndex = 0)
+    {
+        ArgumentNullException.ThrowIfNull(args);
+        ArgumentOutOfRangeException.ThrowIfNegative(startIndex);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(startIndex, args.Count);
+
+        foreach (var command in ResolutionOrder)
+        {
+            if (command.Path.Count > args.Count - startIndex)
+            {
+                continue;
+            }
+
+            var matches = true;
+            for (var pathIndex = 0; pathIndex < command.Path.Count; pathIndex++)
+            {
+                if (!string.Equals(command.Path[pathIndex], args[startIndex + pathIndex], StringComparison.Ordinal))
+                {
+                    matches = false;
+                    break;
+                }
+            }
+
+            if (matches)
+            {
+                return (command, command.Path.Count);
+            }
+        }
+
+        return null;
+    }
+
     private static OptionSpec TargetOption()
     {
         return OptionSpec.String('t', "target", "target", "solution or project file to load", required: true);
+    }
+
+    private static OptionSpec DaemonTargetOption()
+    {
+        return OptionSpec.String('t', "target", "target", "solution or project file identifying the compatible daemon", required: true);
     }
 
     private static OptionSpec FileOption()
@@ -215,9 +295,24 @@ public static class BuiltinCommandRegistry
         return OptionSpec.String('f', "file", "path", "document file path in the loaded target");
     }
 
+    private static OptionSpec IndexPathOption()
+    {
+        return OptionSpec.String(null, "index-path", "path", "Git-ignored repository-local SQLite database file path", required: true);
+    }
+
     private static OptionSpec ProjectOption()
     {
         return OptionSpec.String(null, "project", "path", "owning project file path when a document path is ambiguous");
+    }
+
+    private static OptionSpec SearchProjectOption()
+    {
+        return OptionSpec.String(null, "project", "path", "limit search to one project file within the loaded target");
+    }
+
+    private static OptionSpec SearchMaxResultsOption()
+    {
+        return OptionSpec.Integer(null, "max-results", "n", "maximum results to return (default: 20)");
     }
 
     private static OptionSpec TargetFrameworkOption()
@@ -258,6 +353,11 @@ public static class BuiltinCommandRegistry
     private static OptionSpec MaxResultsOption()
     {
         return OptionSpec.Integer(null, "max-results", "n", "maximum results to return");
+    }
+
+    private static OptionSpec SymbolKindOption()
+    {
+        return OptionSpec.String(null, "kind", "kind", "filter symbols by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate");
     }
 
 }

@@ -12,7 +12,7 @@ The release version comes from `Directory.Build.props`. The public package metad
 
 ## 1. Update package metadata
 
-1. Set the new `<Version>` in `Directory.Build.props` using a bare NuGet version such as `0.1.0` or a prerelease such as `0.1.0-dev.1`. Use the leading `v` only for Git tags or release titles such as `v0.1.0`.
+1. Set the new `<Version>` in `Directory.Build.props` using a bare NuGet version such as `0.2.0` or a prerelease such as `0.2.0-dev.1`. Use the leading `v` only for Git tags or release titles such as `v0.2.0`.
 2. Confirm `src/RoslynKit/RoslynKit.csproj` still has the correct public package metadata: `PackageId` is `roslynkit`, `ToolCommandName` is `roslynkit`, and the repository URL, license, tags, and package readme values are still correct.
 3. If the public CLI surface, repo-local skill workflow, or install story changed, update [README.md](../README.md), [docs/agents/skill-maintenance.md](agents/skill-maintenance.md), and [docs/dev-install.md](dev-install.md) in the same change when applicable.
 
@@ -65,9 +65,178 @@ dotnet tool update --global roslynkit --add-source .\artifacts\packages\roslynki
 roslynkit version
 ```
 
-## 5. Install or update the side-by-side prerelease dev tool
+## 5. Manually smoke-test the stable global tool
 
-Use a prerelease `<Version>` such as `0.1.0-dev.1` and run the dev installer from the current checkout:
+The following test installs or updates the freshly packed release in the standard global .NET tool folder, which is `%USERPROFILE%\.dotnet\tools` on Windows. It then uses [RoslynKit.slnx](../RoslynKit.slnx) as a real target for indexing, search, daemon lifecycle checks, and representative navigation commands.
+
+Run the blocks from the repository root in a committed Git worktree. The test database stays under the Git-ignored `artifacts\release-smoke` folder. There is no public daemon start command; the first daemon-eligible workspace command starts it on demand.
+
+### 5.1 Pack and install the release globally
+
+Paste this entire block into PowerShell. It reads the release version from [Directory.Build.props](../Directory.Build.props), recreates the local package feed, chooses `dotnet tool install` or `dotnet tool update`, adds the global tool folder to the current terminal's `PATH`, and verifies the installed version.
+
+```powershell
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$repoRoot = (Resolve-Path ".").Path
+[xml]$versionXml = Get-Content (Join-Path $repoRoot "Directory.Build.props")
+$version = [string]$versionXml.Project.PropertyGroup.Version
+$packageFeed = Join-Path $repoRoot "artifacts\packages\roslynkit"
+
+pwsh (Join-Path $repoRoot "scripts\prepare-roslynkit-package.ps1")
+if ($LASTEXITCODE -ne 0)
+{
+    throw "Package preparation failed with exit code $LASTEXITCODE."
+}
+
+$packagePath = Join-Path $packageFeed "roslynkit.$version.nupkg"
+if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf))
+{
+    throw "Expected package was not found: $packagePath"
+}
+
+$toolListJson = & dotnet tool list --global --format json
+if ($LASTEXITCODE -ne 0)
+{
+    throw "Unable to list global .NET tools."
+}
+
+$installedTool = @(($toolListJson | ConvertFrom-Json).data) |
+    Where-Object packageId -EQ "roslynkit" |
+    Select-Object -First 1
+$toolAction = if ($null -eq $installedTool) { "install" } else { "update" }
+
+& dotnet tool $toolAction --global roslynkit `
+    --add-source $packageFeed `
+    --version $version `
+    --ignore-failed-sources
+if ($LASTEXITCODE -ne 0)
+{
+    throw "Global RoslynKit $toolAction failed with exit code $LASTEXITCODE."
+}
+
+$globalToolFolder = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".dotnet\tools"
+$pathSeparator = [IO.Path]::PathSeparator
+$env:PATH = "$globalToolFolder$pathSeparator$env:PATH"
+$commandPath = (Get-Command roslynkit -ErrorAction Stop).Source
+$versionOutput = roslynkit --version
+if ($LASTEXITCODE -ne 0)
+{
+    throw "The installed roslynkit command failed."
+}
+
+if (-not ($versionOutput -match "roslynkit version $([Regex]::Escape($version))"))
+{
+    throw "Expected RoslynKit $version, but received: $versionOutput"
+}
+
+Write-Host "Installed command: $commandPath"
+$versionOutput
+```
+
+The final path should resolve inside the global `.dotnet\tools` folder, and the version output should contain the version from [Directory.Build.props](../Directory.Build.props). Informational build metadata after the version is expected.
+
+### 5.2 Run the end-to-end command test
+
+Paste this block into the same terminal or a new PowerShell terminal from the repository root. Every product check invokes the `roslynkit` command directly. The native-command preference makes PowerShell stop when a command returns a nonzero exit code, and the daemon wait helper stops when the expected state is not reached.
+
+```powershell
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+$PSNativeCommandUseErrorActionPreference = $true
+
+$repoRoot = (Resolve-Path ".").Path
+[xml]$versionXml = Get-Content (Join-Path $repoRoot "Directory.Build.props")
+$version = [string]$versionXml.Project.PropertyGroup.Version
+$target = Join-Path $repoRoot "RoslynKit.slnx"
+$indexFolder = Join-Path $repoRoot "artifacts\release-smoke"
+$indexPath = Join-Path $indexFolder "roslynkit.db"
+$globalToolFolder = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".dotnet\tools"
+$pathSeparator = [IO.Path]::PathSeparator
+$env:PATH = "$globalToolFolder$pathSeparator$env:PATH"
+
+New-Item -ItemType Directory -Path $indexFolder -Force | Out-Null
+
+function Wait-RoslynKitDaemonState
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Target,
+        [Parameter(Mandatory = $true)]
+        [string]$State
+    )
+
+    for ($attempt = 1; $attempt -le 120; $attempt++)
+    {
+        $status = roslynkit daemon status --target $Target
+        if ($LASTEXITCODE -ne 0)
+        {
+            throw "Unable to read RoslynKit daemon status."
+        }
+
+        if (($status -join "`n") -match "(?m)^state: $([Regex]::Escape($State))$")
+        {
+            $status
+            return
+        }
+
+        Start-Sleep -Milliseconds 250
+    }
+
+    throw "The RoslynKit daemon did not reach state '$State'."
+}
+
+# Confirm the globally installed command and its local help surface.
+roslynkit --version
+roslynkit help
+
+# Build a clean search index and run an English-oriented declaration search.
+roslynkit index --target $target --index-path $indexPath --rebuild
+roslynkit search --target $target --index-path $indexPath `
+    --query "how does workspace daemon reload after source changes" `
+    --max-results 5
+
+# Reset any daemon started by index or search, then test on-demand startup.
+roslynkit daemon stop --target $target
+Wait-RoslynKitDaemonState -Target $target -State "not-running"
+roslynkit workspace --target $target
+Wait-RoslynKitDaemonState -Target $target -State "running"
+
+# A second workspace command should reuse the running daemon.
+roslynkit workspace --target $target
+roslynkit daemon status --target $target
+
+# Exercise representative discovery, navigation, source-read, and diagnostic commands.
+roslynkit symbols --target $target --query PositionResolver --exact --kind class
+roslynkit definition --target $target --symbol "T:RoslynKit.PositionResolver"
+roslynkit references --target $target `
+    --symbol "RoslynKit.PositionResolver.GetPositionAsync" `
+    --max-results 3
+roslynkit document-lines --target $target `
+    --file (Join-Path $repoRoot "src\RoslynKit\PositionResolver.cs") `
+    --start-line 1 `
+    --end-line 25
+roslynkit diagnostics --target $target --max-results 20
+
+# Stop the daemon and confirm that the background process exits.
+roslynkit daemon stop --target $target
+Wait-RoslynKitDaemonState -Target $target -State "not-running"
+
+Write-Host "RoslynKit $version global-tool smoke test passed."
+```
+
+Expected success markers include:
+
+- `index-state: fresh` and `rebuilt: true` from `index`;
+- one or more ranked results from `search`;
+- `state: running`, `workspace: ready`, a process ID, and a positive generation after `workspace` starts the daemon;
+- `command: symbols`, `command: definition`, `command: references`, `command: document-lines`, and `command: diagnostics`; and
+- `state: stopping` followed by `state: not-running` during final daemon shutdown.
+
+## 6. Install or update the side-by-side prerelease dev tool
+
+Use a prerelease `<Version>` such as `0.2.0-dev.1` and run the dev installer from the current checkout:
 
 ```powershell
 pwsh .\scripts\install-roslynkit-dev.ps1 -Version <prerelease>
@@ -87,7 +256,7 @@ The stable global `roslynkit` install can remain in place. The dev tool path is 
 
 See [docs/dev-install.md](dev-install.md) for the operator-facing dev install flow and [docs/agents/skill-maintenance.md](agents/skill-maintenance.md) for the checked-in `roslynkit` and `roslynkit-dev` skill update rules.
 
-## 6. Publish later if needed
+## 7. Publish later if needed
 
 When you are ready to push a public package, upload the `.nupkg` from `.\artifacts\packages\roslynkit` or run `dotnet nuget push` against that file.
 

@@ -45,4 +45,22 @@ public sealed partial class CommandExecutionTests
         Assert.Equal(Path.Combine("tests", "FixtureWorkspace", "App", "Source.cs"), source.DisplayPath);
         Assert.Equal(Path.Combine("tests", "FixtureWorkspace", "App", "App.csproj"), source.DisplayProjectPath);
     }
+
+    [Fact]
+    public async Task Workspace_CallerOwnedLoader_DoesNotReloadOrDisposeWorkspace()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var loaded = await RoslynWorkspaceLoader.LoadAsync(TestPaths.FixtureProjectPath(), cancellationToken);
+        var missingTarget = TestPaths.RepoFile("artifacts", "missing", "Missing.csproj");
+        var command = CliParser.Parse(["workspace", "--target", missingTarget]);
+
+        var first = Assert.IsType<WorkspaceResult>(
+            await RoslynCommandExecutor.ExecuteAsync(command, loaded, cancellationToken));
+        var second = Assert.IsType<WorkspaceResult>(
+            await RoslynCommandExecutor.ExecuteAsync(command, loaded, cancellationToken));
+
+        Assert.Equal(loaded.TargetPath, first.TargetPath);
+        Assert.Equal(first.TargetPath, second.TargetPath);
+        Assert.NotEmpty(second.Documents);
+    }
 }
