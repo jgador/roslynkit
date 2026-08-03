@@ -1,5 +1,7 @@
 # RoslynKit
 
+[![Total lines](https://sloc.xyz/github/jgador/roslynkit/)](https://github.com/jgador/roslynkit)
+
 RoslynKit is an independent Roslyn-powered command-line tool plus the [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md) workflow that helps coding agents navigate C# solutions through Roslyn instead of relying only on grep-style text search.
 
 Install the CLI, point it at a `.slnx`, `.sln`, or `.csproj` file, and it can answer source questions that normally require an IDE:
