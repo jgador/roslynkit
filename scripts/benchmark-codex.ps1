@@ -63,17 +63,17 @@ function Get-SelectedCases {
     }
     return $selected
 }
-function New-ArmPrompt {
-    param([string] $Arm, [string] $Prompt, [string] $ResolvedRoslynKitPath)
+function New-ConditionPrompt {
+    param([string] $Condition, [string] $Prompt, [string] $ResolvedRoslynKitPath)
     $rules = @(
-        "Read-only benchmark arm: $Arm.",
+        "Read-only benchmark condition: $Condition.",
         "Do not edit files or change Git state.",
         "Do not run builds, restores, tests, or other commands that write caches; inspect test source instead.",
         "Do not use web search, browsers, network requests, subagents, memory, prior-session files, Atlas, CODEX_HOME, .codex, .agents, or AGENTS.md.",
         "Do not inspect benchmark scripts, benchmark data, or benchmark documentation.",
         "Return concise source-and-test evidence; do not change files."
     )
-    if ($Arm -eq "raw-codex") {
+    if ($Condition -eq "raw-codex") {
         $rules += "Use ordinary local shell and text inspection only. Do not invoke RoslynKit, roslynkit-dev, or dotnet run for RoslynKit."
     }
     else {
@@ -341,13 +341,13 @@ function Test-RoslynKitInvocation {
     return $Command -match $namedPattern -or $Command -match $dotnetPattern
 }
 function Get-ComplianceIssues {
-    param([string] $Arm, [string[]] $Commands, [object[]] $Events, [string[]] $SnapshotChanges, [string] $ResolvedRoslynKitPath)
+    param([string] $Condition, [string[]] $Commands, [object[]] $Events, [string[]] $SnapshotChanges, [string] $ResolvedRoslynKitPath)
     $issues = New-Object System.Collections.Generic.List[string]
     $usedRoslynKit = $false
     foreach ($command in $Commands) {
         $usesRoslynKit = Test-RoslynKitInvocation -Command $command -ResolvedRoslynKitPath $ResolvedRoslynKitPath
         $usedRoslynKit = $usedRoslynKit -or $usesRoslynKit
-        if ($Arm -eq "raw-codex" -and $usesRoslynKit) {
+        if ($Condition -eq "raw-codex" -and $usesRoslynKit) {
             $issues.Add("raw-codex invoked RoslynKit: $command")
         }
         if ($command -match "(?i)\b(curl|wget|Invoke-WebRequest|Invoke-RestMethod)\b|https?://") {
@@ -368,8 +368,8 @@ function Get-ComplianceIssues {
             $issues.Add("used forbidden event surface: $eventText")
         }
     }
-    if ($Arm -eq "roslynkit" -and -not $usedRoslynKit) {
-        $issues.Add("roslynkit arm did not invoke RoslynKit")
+    if ($Condition -eq "roslynkit" -and -not $usedRoslynKit) {
+        $issues.Add("RoslynKit condition did not invoke RoslynKit")
     }
     if ($Commands.Count -eq 0) {
         $issues.Add("run recorded no inspection commands")
@@ -392,13 +392,13 @@ function Get-SnapshotChanges {
     return @(Compare-Object -ReferenceObject $Baseline -DifferenceObject (Get-SnapshotState -SnapshotPath $SnapshotPath) | ForEach-Object { $_.InputObject })
 }
 function Invoke-BenchmarkRun {
-    param([object] $Case, [string] $Arm, [int] $Trial, [string] $SnapshotPath, [string[]] $SnapshotBaseline, [string] $RunRoot, [string] $TemporaryRoot, [string] $AuthenticationSeedPath, [string] $ResolvedRoslynKitPath, [string[]] $DisabledFeatures)
-    $runId = "{0}-{1}-trial{2}" -f $Case.id, $Arm, $Trial
+    param([object] $Case, [string] $Condition, [int] $Trial, [string] $SnapshotPath, [string[]] $SnapshotBaseline, [string] $RunRoot, [string] $TemporaryRoot, [string] $AuthenticationSeedPath, [string] $ResolvedRoslynKitPath, [string[]] $DisabledFeatures)
+    $runId = "{0}-{1}-trial{2}" -f $Case.id, $Condition, $Trial
     $answerPath = Join-Path $RunRoot "answers\$runId.md"
     $eventPath = Join-Path $RunRoot "events\$runId.jsonl"
     $stderrPath = Join-Path $RunRoot "stderr\$runId.txt"
     $commandsPath = Join-Path $RunRoot "commands\$runId.txt"
-    $prompt = New-ArmPrompt -Arm $Arm -Prompt $Case.prompt -ResolvedRoslynKitPath $ResolvedRoslynKitPath
+    $prompt = New-ConditionPrompt -Condition $Condition -Prompt $Case.prompt -ResolvedRoslynKitPath $ResolvedRoslynKitPath
     $arguments = New-CodexArguments -Prompt $prompt -SnapshotPath $SnapshotPath -AnswerPath $answerPath -DisabledFeatures $DisabledFeatures
     $childRoot = Join-Path $TemporaryRoot "homes"
     $childHome = Join-Path $childRoot ([Guid]::NewGuid().ToString("N"))
@@ -447,13 +447,13 @@ function Invoke-BenchmarkRun {
     $commands | Set-Content -LiteralPath $commandsPath -Encoding UTF8
     $usage = Get-TokenUsage -Events $events
     $snapshotChanges = Get-SnapshotChanges -SnapshotPath $SnapshotPath -Baseline $SnapshotBaseline
-    $issues = Get-ComplianceIssues -Arm $Arm -Commands $commands -Events $events -SnapshotChanges $snapshotChanges -ResolvedRoslynKitPath $ResolvedRoslynKitPath
+    $issues = Get-ComplianceIssues -Condition $Condition -Commands $commands -Events $events -SnapshotChanges $snapshotChanges -ResolvedRoslynKitPath $ResolvedRoslynKitPath
     if (-not (Test-NonEmptyFile -Path $answerPath)) { $issues = @($issues + "no final answer was written") }
     $inputTokens = if ($null -ne $usage) { [long] $usage.input_tokens } else { $null }
     $cachedInputTokens = if ($null -ne $usage -and $null -ne $usage.cached_input_tokens) { [long] $usage.cached_input_tokens } else { $null }
     $uncachedInputTokens = if ($null -ne $inputTokens -and $null -ne $cachedInputTokens) { $inputTokens - $cachedInputTokens } else { $null }
     return [pscustomobject]@{
-        timestamp_utc = [DateTime]::UtcNow.ToString("o"); case_id = $Case.id; arm = $Arm; trial = $Trial
+        timestamp_utc = [DateTime]::UtcNow.ToString("o"); case_id = $Case.id; condition = $Condition; trial = $Trial
         model = $Model; reasoning_effort = $ReasoningEffort; valid = ($exitCode -eq 0 -and $null -ne $inputTokens -and $issues.Count -eq 0)
         exit_code = $exitCode; duration_seconds = [Math]::Round(($completedAt - $startedAt).TotalSeconds, 3)
         input_tokens = $inputTokens; cached_input_tokens = $cachedInputTokens; uncached_input_tokens = $uncachedInputTokens
@@ -479,9 +479,9 @@ function Get-SavingsPercent {
 function Write-Reports {
     param([string] $RunRoot, [object[]] $Rows, [object[]] $Cases)
     $Rows | Export-Csv -LiteralPath (Join-Path $RunRoot "runs.csv") -NoTypeInformation -Encoding UTF8
-    $summary = @("# Codex Benchmark", "", "## By Case And Arm", "", "| Case | Arm | Valid runs | Median input | Median uncached input | Median duration (s) |", "| --- | --- | ---: | ---: | ---: | ---: |")
+    $summary = @("# Codex Benchmark", "", "## By Case And Condition", "", "| Case | Condition | Valid runs | Median input | Median uncached input | Median duration (s) |", "| --- | --- | ---: | ---: | ---: | ---: |")
     $valid = @($Rows | Where-Object { $_.valid -eq $true -and $null -ne $_.input_tokens })
-    foreach ($group in $Rows | Group-Object case_id, arm | Sort-Object Name) {
+    foreach ($group in $Rows | Group-Object case_id, condition | Sort-Object Name) {
         $validRows = @($group.Group | Where-Object { $_.valid -and $null -ne $_.input_tokens })
         $input = Get-Median -Values @($validRows | ForEach-Object { $_.input_tokens })
         $uncached = Get-Median -Values @($validRows | Where-Object { $null -ne $_.uncached_input_tokens } | ForEach-Object { $_.uncached_input_tokens })
@@ -491,8 +491,8 @@ function Write-Reports {
     }
     $summary += @("", "## Raw-Codex Versus RoslynKit Savings", "", "| Case | Raw median input | RoslynKit median input | Input savings % | Raw median uncached | RoslynKit median uncached | Uncached savings % |", "| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
     foreach ($case in $Cases) {
-        $raw = @($valid | Where-Object { $_.case_id -eq $case.id -and $_.arm -eq "raw-codex" })
-        $roslynKit = @($valid | Where-Object { $_.case_id -eq $case.id -and $_.arm -eq "roslynkit" })
+        $raw = @($valid | Where-Object { $_.case_id -eq $case.id -and $_.condition -eq "raw-codex" })
+        $roslynKit = @($valid | Where-Object { $_.case_id -eq $case.id -and $_.condition -eq "roslynkit" })
         $rawInput = Get-Median -Values @($raw | ForEach-Object { $_.input_tokens }); $roslynInput = Get-Median -Values @($roslynKit | ForEach-Object { $_.input_tokens })
         $rawUncached = Get-Median -Values @($raw | Where-Object { $null -ne $_.uncached_input_tokens } | ForEach-Object { $_.uncached_input_tokens })
         $roslynUncached = Get-Median -Values @($roslynKit | Where-Object { $null -ne $_.uncached_input_tokens } | ForEach-Object { $_.uncached_input_tokens })
@@ -502,8 +502,8 @@ function Write-Reports {
     $summary += @("", "## Invalid Runs", "")
     if ($invalid.Count -eq 0) { $summary += "None." }
     else {
-        $summary += "| Case | Arm | Trial | Exit | Issues |", "| --- | --- | ---: | ---: | --- |"
-        foreach ($row in $invalid) { $summary += "| $($row.case_id) | $($row.arm) | $($row.trial) | $($row.exit_code) | $($row.issues -replace '\|', '/') |" }
+        $summary += "| Case | Condition | Trial | Exit | Issues |", "| --- | --- | ---: | ---: | --- |"
+        foreach ($row in $invalid) { $summary += "| $($row.case_id) | $($row.condition) | $($row.trial) | $($row.exit_code) | $($row.issues -replace '\|', '/') |" }
     }
     $summary | Set-Content -LiteralPath (Join-Path $RunRoot "summary.md") -Encoding UTF8
     $review = @("# Manual Review", "", "Review final answers against the private criteria below. These criteria are never included in child prompts.")
@@ -512,7 +512,7 @@ function Write-Reports {
         $review += "## $($case.id)"
         $review += ""
         foreach ($criterion in $case.manualReviewCriteria) { $review += "- $criterion" }
-        foreach ($row in $Rows | Where-Object { $_.case_id -eq $case.id }) { $review += "- $($row.arm) trial $($row.trial): $($row.answer_path) (valid: $($row.valid))" }
+        foreach ($row in $Rows | Where-Object { $_.case_id -eq $case.id }) { $review += "- $($row.condition) trial $($row.trial): $($row.answer_path) (valid: $($row.valid))" }
     }
     $review | Set-Content -LiteralPath (Join-Path $RunRoot "review.md") -Encoding UTF8
 }
@@ -523,12 +523,12 @@ if ($DryRun) {
     $placeholderSnapshot = "<clean-snapshot>"
     $disabledFeatures = Get-DisabledFeatures -DryRunMode
     foreach ($trial in 1..$Trials) {
-        $arms = if (($trial % 2) -eq 1) { @("raw-codex", "roslynkit") } else { @("roslynkit", "raw-codex") }
+        $conditions = if (($trial % 2) -eq 1) { @("raw-codex", "roslynkit") } else { @("roslynkit", "raw-codex") }
         foreach ($case in $cases) {
-            foreach ($arm in $arms) {
-                $prompt = New-ArmPrompt -Arm $arm -Prompt $case.prompt -ResolvedRoslynKitPath $resolvedRoslynKitPath
+            foreach ($condition in $conditions) {
+                $prompt = New-ConditionPrompt -Condition $condition -Prompt $case.prompt -ResolvedRoslynKitPath $resolvedRoslynKitPath
                 $arguments = New-CodexArguments -Prompt $prompt -SnapshotPath $placeholderSnapshot -AnswerPath "<artifacts-answer-path>" -DisabledFeatures $disabledFeatures
-                Write-Host "[$($case.id)] $arm trial $trial"
+                Write-Host "[$($case.id)] $condition trial $trial"
                 Write-Host ("codex " + (Format-CommandLine -Arguments $arguments))
                 Write-Host "Prompt:"
                 Write-Host $prompt
@@ -565,17 +565,17 @@ try {
     $authenticationSeedPath = New-AuthenticationSeed -TemporaryRoot $temporaryRoot -SourceCodexHome (Get-CodexHome)
     $rows = New-Object System.Collections.Generic.List[object]
     foreach ($trial in 1..$Trials) {
-        $arms = if (($trial % 2) -eq 1) { @("raw-codex", "roslynkit") } else { @("roslynkit", "raw-codex") }
+        $conditions = if (($trial % 2) -eq 1) { @("raw-codex", "roslynkit") } else { @("roslynkit", "raw-codex") }
         foreach ($case in $cases) {
-            foreach ($arm in $arms) {
-                $snapshotPath = if ($arm -eq "raw-codex") { $rawSnapshot } else { $roslynKitSnapshot }
-                $snapshotBaseline = if ($arm -eq "raw-codex") { $rawSnapshotBaseline } else { $roslynKitSnapshotBaseline }
+            foreach ($condition in $conditions) {
+                $snapshotPath = if ($condition -eq "raw-codex") { $rawSnapshot } else { $roslynKitSnapshot }
+                $snapshotBaseline = if ($condition -eq "raw-codex") { $rawSnapshotBaseline } else { $roslynKitSnapshotBaseline }
                 try {
-                    $rows.Add((Invoke-BenchmarkRun -Case $case -Arm $arm -Trial $trial -SnapshotPath $snapshotPath -SnapshotBaseline $snapshotBaseline -RunRoot $runRoot -TemporaryRoot $temporaryRoot -AuthenticationSeedPath $authenticationSeedPath -ResolvedRoslynKitPath $resolvedRoslynKitPath -DisabledFeatures $disabledFeatures))
+                    $rows.Add((Invoke-BenchmarkRun -Case $case -Condition $condition -Trial $trial -SnapshotPath $snapshotPath -SnapshotBaseline $snapshotBaseline -RunRoot $runRoot -TemporaryRoot $temporaryRoot -AuthenticationSeedPath $authenticationSeedPath -ResolvedRoslynKitPath $resolvedRoslynKitPath -DisabledFeatures $disabledFeatures))
                     Write-Reports -RunRoot $runRoot -Rows $rows -Cases $cases
                 }
                 finally {
-                    if ($arm -eq "roslynkit") {
+                    if ($condition -eq "roslynkit") {
                         Stop-RoslynKitDaemon -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
                     }
                 }
