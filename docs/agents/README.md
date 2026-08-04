@@ -17,7 +17,7 @@ Keep manual references, roadmap inventories, and benchmark procedures outside th
 
 - [docs/local-repository-reference.md](../local-repository-reference.md): user-owned local reference repository map.
 - [docs/roslyn-lsp-commands.md](../roslyn-lsp-commands.md): Roslyn language-server method inventory and RoslynKit command planning coverage.
-- [docs/token-efficiency-benchmark.md](../token-efficiency-benchmark.md): manual Codex token-efficiency benchmark procedure.
+- [docs/benchmark-codex.md](../benchmark-codex.md): manual Codex token-efficiency benchmark procedure.
 
 ## Linked Shared Docs
 

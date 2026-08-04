@@ -1,0 +1,34 @@
+{
+  "cases": [
+    {
+      "id": "daemon-disconnect",
+      "prompt": "Find out what happens when the background workspace process disconnects after it starts returning a response. I want to know whether partial output can leak, when it runs locally instead, and which failures do not recover. Trace the source and tests. Don't just summarize docs or change files.",
+      "manualReviewCriteria": [
+        "Traces DaemonClient and DaemonFallbackWorkspaceCommandRouter in src/RoslynKit, plus DaemonFallbackProcessIntegrationTests.",
+        "States that a disconnect after response start leaks neither partial stdout nor partial stderr because completed process results stay buffered.",
+        "States that only DaemonClientInfrastructureException emits one warning and performs exactly one standalone retry; cancellation, ordinary semantic failures, and unexpected failures do not use that recovery path.",
+        "Cites focused fallback and process-integration tests, not only daemon documentation."
+      ]
+    },
+    {
+      "id": "workspace-generation",
+      "prompt": "Find out how the repo keeps code-navigation requests on a consistent compiler view when tracked files change while reads are still running. Explain what waits, when the old view is discarded, and what happens if files change again during reload. Show the source and tests. Don't change files.",
+      "manualReviewCriteria": [
+        "Traces src/RoslynKit/WorkspaceDaemonSession.cs and tests/RoslynKit.Tests/WorkspaceDaemonSessionTests.cs, including fingerprint and generation collaboration.",
+        "Explains the maximum of three clean readers, pending reload priority, reader draining, and when the old generation is discarded.",
+        "Explains the one 250 millisecond quiet-period retry; a second mismatch is served once from the new generation and marked nonreusable instead of exposing a mixed view.",
+        "Cites WorkspaceDaemonSessionTests or equivalent focused coverage."
+      ]
+    },
+    {
+      "id": "stale-search-index",
+      "prompt": "Why can an English-oriented code search return older results instead of waiting for an index update? Trace how it chooses fresh versus stale data and whether partial updates can become visible. Show the implementation and tests. Don't change files.",
+      "manualReviewCriteria": [
+        "Traces SearchCommandService, SearchIndexFingerprint, and SqliteSearchIndex in src/RoslynKit, plus SearchCommandTests.",
+        "Explains that an absent or unusable partition waits, while a coherent existing partition uses a nonblocking writer lease and can answer stale during refresh.",
+        "Explains state recapture, atomic partition visibility, and fresh versus stale fingerprint reporting so partial updates never become visible.",
+        "Cites search command or SQLite index tests that cover stale, refresh, or replacement behavior."
+      ]
+    }
+  ]
+}
