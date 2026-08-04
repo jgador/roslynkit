@@ -80,6 +80,10 @@ Use [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md) only 
 
 For literal search, prose inspection, non-C# files, or RoslynKit workspace-load failures, fall back to the terminal-native tool for the current platform instead of forcing RoslynKit.
 
+### Intent-Based C# Search
+
+When an English-oriented question describes a C# responsibility but no declaration name is known, follow the intent-based symbol discovery workflow in [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). For this repository, always pass `--target .\RoslynKit.slnx` and `--index-path .\artifacts\roslynkit.db`; `artifacts/` is Git-ignored, so the repository-local SQLite database and its write-ahead logging (WAL) sidecars remain local. `search` creates, validates, and refreshes the index automatically. Use `index` only to prepare it deliberately, and use `--rebuild` only when the selected target partition must be recreated. See [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md) for exact runtime syntax and options.
+
 ### No-Primer C# Tool Gate
 
 When the task does not already confirm C#/.NET from the user prompt, named files, project/solution files, or known C# symbols, do not ask whether to use RoslynKit and do not mention RoslynKit in the classifier. First separate code investigation from C#/.NET confirmation with this no-primer shape:
