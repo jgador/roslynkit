@@ -33,29 +33,36 @@ Use [scripts/benchmark-codex.ps1](../scripts/benchmark-codex.ps1) directly or in
 
 | Parameter | Purpose |
 | --- | --- |
-| `-Model` | Codex model used for both conditions. |
+| `-Model` | Codex model used for both conditions; defaults to `gpt-5.6-luna`. |
 | `-ReasoningEffort` | Codex reasoning effort used for both conditions. |
 | `-Trials` | Number of trials for each selected case and condition. |
 | `-CaseId` | One case ID, or `all` for every case. |
-| `-RoslynKitPath` | RoslynKit executable used by the `roslynkit` condition. |
 | `-DryRun` | Print the planned invocations without starting Codex. |
 | `-KeepSnapshot` | Preserve the temporary clean-room snapshots for inspection; copied authentication is still deleted. |
 
 For example, inspect a complete planned invocation without running a benchmark:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\benchmark-codex.ps1 -Model gpt-5.6-sol -ReasoningEffort high -Trials 1 -CaseId daemon-disconnect -RoslynKitPath roslynkit -DryRun
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\benchmark-codex.ps1 -Model gpt-5.6-luna -ReasoningEffort high -Trials 1 -CaseId daemon-disconnect -DryRun
 ```
 
 Use full parameter names in benchmark commands. Omit `-DryRun` only after an explicit request to execute the benchmark.
 
+The runner always resolves the global `roslynkit` application from `PATH`. It does not use or accept the side-by-side `roslynkit-dev` installation.
+
+A one-trial run with `-CaseId all` starts six measured Codex sessions: three cases across two conditions. Runtime therefore includes six independent investigations in addition to snapshot preparation and one short, unmeasured RoslynKit preflight.
+
 ## Clean-room contract
 
-The runner creates separate sanitized, one-commit temporary snapshots for the two conditions. Sanitization removes repository instructions, skills, Atlas data, agent-maintenance guidance, benchmark files, and prior Git history. Both snapshots receive dependency restore outputs before timing starts. Only the RoslynKit snapshot receives a Git-ignored search index, so the raw Codex condition cannot discover that RoslynKit data. The preparation daemon is stopped before timing, and the RoslynKit daemon is stopped after every Codex session so trials do not share an in-memory workspace. Every condition and trial receives a separate temporary `CODEX_HOME`; it is seeded only with `auth.json` when that file is available. Token refreshes stay in the temporary authentication seed between trials and never update the workstation copy. Copied authentication is deleted even when `-KeepSnapshot` retains the repository snapshots. User configuration and rule files are ignored, memory and optional features are disabled, and each Codex session is ephemeral. The sessions use a read-only sandbox with approval set to `never`.
+The runner creates separate sanitized, one-commit temporary snapshots for the two conditions. Sanitization removes repository instructions, skills, Atlas data, agent-maintenance guidance, benchmark files, and prior Git history. Both snapshots receive dependency restore outputs before timing starts. Only the RoslynKit snapshot receives a Git-ignored search index and a snapshot-local copy of the global RoslynKit executable and its package payload. Keeping the executable inside the read-only snapshot avoids external-path command-policy exceptions on Windows. No generated or user command rules are installed in either condition.
+
+Before measured work begins, one isolated Codex preflight must run the snapshot-local RoslynKit version command successfully with the same sandbox, temporary home, authentication seed, and model-provider seed used by measured sessions. A failed preflight aborts before any measured session. During measurement, any declined command or nonzero command exit invalidates the current session, writes its evidence, and stops the benchmark before another session starts. This fail-fast behavior prevents a broken tool or command policy from consuming the rest of a full benchmark run.
+
+The preparation daemon is stopped before timing, and the RoslynKit daemon is stopped after every Codex session so trials do not share an in-memory workspace. Expected SQLite write-ahead logging (WAL) and shared-memory sidecars for that prepared index are excluded from snapshot-mutation checks; tracked and other untracked changes still invalidate a run. Every condition and trial receives a separate temporary `CODEX_HOME`; it is seeded with `auth.json` when that file is available and an allowlisted configuration for the selected model provider when required. The provider seed contains only transport and model-compatibility fields; approval, sandbox, search, memory, skill, plugin, and other user settings are not copied. Token refreshes stay in the temporary authentication seed between trials and never update the workstation copy. Copied authentication and provider configuration are deleted even when `-KeepSnapshot` retains the repository snapshots. Memory and optional features are disabled, and each Codex session is ephemeral. The sessions use a read-only sandbox with approval set to `never`.
 
 Accounting reads only Codex `stdout` JSON Lines (JSONL) events. The run does not use rollout files, prior sessions, or memory as a token source. Artifacts are written to `artifacts/codex-benchmark/<timestamp>/`.
 
-Each artifact directory contains `runs.csv`, `summary.md`, controller-only `review.md`, and per-run `answers/`, `commands/`, `events/`, and `stderr/` evidence.
+Each completed artifact directory contains `runs.csv`, `summary.md`, controller-only `review.md`, per-run `answers/`, `commands/`, `events/`, and `stderr/` evidence, plus the unmeasured `preflight/` evidence. A preflight failure can leave only the preflight evidence.
 
 ## Review results
 
@@ -63,6 +70,6 @@ Compare total input tokens, uncached input tokens, and duration for each conditi
 
 The clean room has limits:
 
-- Copying `auth.json` supplies credentials only; it does not copy memory or session context.
+- Copying `auth.json`, allowlisted model-provider fields, and the global RoslynKit package into an ignored snapshot directory supplies connectivity and the intended tool only; it does not copy memory or session context.
 - The runner does not claim operating-system-level read isolation.
-- A command-policy violation invalidates the affected run.
+- Any declined or nonzero command invalidates the affected run and stops the remaining benchmark sessions.

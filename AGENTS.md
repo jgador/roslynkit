@@ -205,4 +205,6 @@ Recent history uses short imperative subjects and conventional prefixes such as 
 
 Do not commit secrets, local credentials, generated caches, package outputs, or accidental binaries.
 
+When accessing the Windows user-profile directory, use `%USERPROFILE%` in Command Prompt-style paths or `$env:USERPROFILE` in PowerShell. Do not hard-code a user-specific path such as `C:\Users\<name>`.
+
 If the task explicitly uses [docs/local-repository-reference.md](docs/local-repository-reference.md), treat every repository listed there as a strict read-only reference while working in RoslynKit. Never suggest making changes in any of those reference repositories as part of a RoslynKit task, even when issues, gaps, or possible improvements are noticed there. Keep all recommended changes scoped to RoslynKit unless the user explicitly changes the task to one of those repositories.
