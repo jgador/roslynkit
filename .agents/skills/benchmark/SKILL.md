@@ -26,6 +26,6 @@ Dry-run with full parameter names:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\benchmark-codex.ps1 -DryRun -Trials 1
 ```
 
-For measured runs, pass the requested `-Model` and `-ReasoningEffort` explicitly. Do not weaken the runner's temporary `CODEX_HOME`, sanitized snapshots, read-only sandbox, approval, memory, skill, plugin, or session-isolation controls.
+For measured runs, pass the requested `-Model` and `-ReasoningEffort` explicitly. Keep the active workstation `CODEX_HOME` and its referenced environment variables stable for the entire comparison. Do not broaden the runner's `workspace-write` sandbox or weaken its sanitized snapshots, approval, memory, skill, plugin, or ephemeral-session controls.
 
 Treat lower token use or elapsed time as meaningful only when both conditions produce correct answers and the run is valid. Keep raw events and answers available for audit; do not expose controller-only review criteria in child prompts.

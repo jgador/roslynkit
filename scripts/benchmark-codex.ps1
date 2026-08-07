@@ -11,6 +11,7 @@ param(
     [switch] $KeepSnapshot
 )
 $ErrorActionPreference = "Stop"
+[Environment]::SetEnvironmentVariable("CODEX_THREAD_ID", $null, "Process")
 function Resolve-RepoRoot {
     $root = & git rev-parse --show-toplevel
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($root)) { throw "Run the benchmark from a Git worktree." }
@@ -51,12 +52,12 @@ function Get-SelectedCases {
 function New-ConditionPrompt {
     param([string] $Condition, [string] $Prompt, [string] $ResolvedRoslynKitPath)
     $rules = @(
-        "Read-only benchmark condition: $Condition.",
+        "Inspection-only benchmark condition: $Condition.",
         "Do not edit files or change Git state.",
         "Do not run builds, restores, tests, or other commands that write caches; inspect test source instead.",
-        "Do not use web search, browsers, network requests, subagents, memory, prior-session files, Atlas, CODEX_HOME, .codex, .agents, or AGENTS.md.",
+        "Do not use web search, browsers, network requests, or subagents. Do not inspect memory, prior-session files, Atlas, CODEX_HOME, .codex, .agents, or AGENTS.md.",
         "Do not inspect benchmark scripts, benchmark data, or benchmark documentation.",
-        "Use only simple read-only shell commands that are expected to succeed. A declined command or nonzero exit code invalidates the run.",
+        "Use only simple inspection commands that do not modify the snapshot and are expected to succeed. A declined command or nonzero exit code invalidates the run.",
         "Return concise source-and-test evidence; do not change files."
     )
     if ($Condition -eq "raw-codex") {
@@ -64,7 +65,7 @@ function New-ConditionPrompt {
     }
     else {
         $rules += "Use this RoslynKit executable for code investigation: '$ResolvedRoslynKitPath'."
-        $rules += "Pass --target .\RoslynKit.slnx to RoslynKit. The prepared read-only search index is .\.benchmark\roslynkit.db; pass --index-path .\.benchmark\roslynkit.db to search."
+        $rules += "Pass --target .\RoslynKit.slnx to RoslynKit. The prepared snapshot-local search index is .\.benchmark\roslynkit.db; pass --index-path .\.benchmark\roslynkit.db to search."
     }
     return (($rules + "" + $Prompt) -join [Environment]::NewLine)
 }
@@ -74,7 +75,7 @@ function New-CodexArguments {
         "exec", "--config", 'approval_policy="never"', "--config", ('model_reasoning_effort="{0}"' -f $ReasoningEffort),
         "--config", "project_doc_max_bytes=0", "--config", "memories.use_memories=false", "--config", "memories.generate_memories=false",
         "--config", 'shell_environment_policy.inherit="core"',
-        "--config", "shell_environment_policy.ignore_default_excludes=false", "--model", $Model, "--sandbox", "read-only",
+        "--config", "shell_environment_policy.ignore_default_excludes=false", "--model", $Model, "--sandbox", "workspace-write",
         "--ephemeral", "--json", "--color", "never", "--cd", $SnapshotPath, "--output-last-message", $AnswerPath
     )
     foreach ($feature in $DisabledFeatures) { $arguments += "--disable", $feature }
@@ -241,130 +242,23 @@ function Stop-RoslynKitDaemon {
         Pop-Location
     }
 }
-function Get-CodexHome {
-    if (-not [string]::IsNullOrWhiteSpace($env:CODEX_HOME)) {
-        return $env:CODEX_HOME
+function Set-WorkstationCodexHome {
+    $codexHome = if (-not [string]::IsNullOrWhiteSpace($env:CODEX_HOME)) {
+        $env:CODEX_HOME
     }
-    return (Join-Path $HOME ".codex")
-}
-function New-AuthenticationSeed {
-    param([string] $TemporaryRoot, [string] $SourceCodexHome)
-    $seedDirectory = Join-Path $TemporaryRoot "auth"
-    $seedPath = Join-Path $seedDirectory "auth.json"
-    New-Item -ItemType Directory -Force -Path $seedDirectory | Out-Null
-    $sourcePath = Join-Path $SourceCodexHome "auth.json"
-    if (Test-Path -LiteralPath $sourcePath -PathType Leaf) {
-        Copy-Item -LiteralPath $sourcePath -Destination $seedPath -Force
+    else {
+        Join-Path $env:USERPROFILE ".codex"
     }
-    return $seedPath
-}
-function New-ProviderConfigurationSeed {
-    param([string] $TemporaryRoot, [string] $SourceCodexHome)
-    $sourcePath = Join-Path $SourceCodexHome "config.toml"
-    if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
-        return $null
+    if (-not (Test-Path -LiteralPath $codexHome -PathType Container)) {
+        throw "The active workstation CODEX_HOME directory was not found: '$codexHome'."
     }
-    $sourceLines = @(Get-Content -LiteralPath $sourcePath)
-    $providerNames = New-Object System.Collections.Generic.List[string]
-    $currentSection = $null
-    foreach ($line in $sourceLines) {
-        $trimmed = $line.Trim()
-        if ($trimmed -match '^\[(?<section>[^]]+)\]$') {
-            $currentSection = $Matches.section
-            continue
-        }
-        if ($null -eq $currentSection -and $trimmed -match '^model_provider\s*=\s*["'']?(?<provider>[A-Za-z0-9._-]+)["'']?\s*(?:#.*)?$') {
-            $providerNames.Add($Matches.provider)
-        }
+    $resolvedHome = (Resolve-Path -LiteralPath $codexHome).Path
+    $configPath = Join-Path $resolvedHome "config.toml"
+    if (-not (Test-Path -LiteralPath $configPath -PathType Leaf)) {
+        throw "The active workstation Codex configuration was not found: '$configPath'."
     }
-    if ($providerNames.Count -eq 0) {
-        return $null
-    }
-    if ($providerNames.Count -ne 1) {
-        throw "Codex config must declare exactly one active model_provider for benchmark isolation."
-    }
-    $providerName = $providerNames[0]
-    $providerSection = "model_providers.$providerName"
-    $allowedKeys = @(
-        "name", "base_url", "env_key", "wire_api", "request_max_retries", "stream_max_retries",
-        "stream_idle_timeout_ms", "requires_openai_auth", "model_auto_compact_token_limit"
-    )
-    $providerLines = New-Object System.Collections.Generic.List[string]
-    $credentialEnvironmentVariable = $null
-    $currentSection = $null
-    foreach ($line in $sourceLines) {
-        $trimmed = $line.Trim()
-        if ($trimmed -match '^\[(?<section>[^]]+)\]$') {
-            $currentSection = $Matches.section
-            continue
-        }
-        if ($currentSection -eq $providerSection -and $trimmed -match '^(?<key>[A-Za-z0-9_.-]+)\s*=') {
-            if ($allowedKeys -contains $Matches.key) {
-                $providerLines.Add($trimmed)
-                if ($Matches.key -eq "env_key") {
-                    if ($trimmed -notmatch '^env_key\s*=\s*["''](?<name>[A-Za-z_][A-Za-z0-9_]*)["'']\s*(?:#.*)?$') {
-                        throw "The selected Codex model provider '$providerName' has an unsupported env_key value."
-                    }
-                    $credentialEnvironmentVariable = $Matches.name
-                }
-            }
-        }
-    }
-    if ($providerLines.Count -eq 0) {
-        throw "The selected Codex model provider '$providerName' has no allowlisted configuration fields."
-    }
-    if (-not [string]::IsNullOrWhiteSpace($credentialEnvironmentVariable) -and
-        [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($credentialEnvironmentVariable, "Process"))) {
-        throw "The selected Codex model provider '$providerName' requires environment variable '$credentialEnvironmentVariable'."
-    }
-    $seedDirectory = Join-Path $TemporaryRoot "provider"
-    $seedPath = Join-Path $seedDirectory "config.toml"
-    New-Item -ItemType Directory -Force -Path $seedDirectory | Out-Null
-    $seedLines = @(
-        ('model_provider = "{0}"' -f $providerName),
-        "",
-        "[$providerSection]"
-    ) + $providerLines.ToArray()
-    [IO.File]::WriteAllLines($seedPath, $seedLines, (New-Object Text.UTF8Encoding($false)))
-    return $seedPath
-}
-function Set-ChildHome {
-    param([string] $ChildHome, [string] $AuthenticationSeedPath, [string] $ProviderConfigurationSeedPath)
-    New-Item -ItemType Directory -Force -Path $ChildHome | Out-Null
-    $childCodexHome = Join-Path $ChildHome ".codex"
-    New-Item -ItemType Directory -Force -Path $childCodexHome | Out-Null
-    if (Test-Path -LiteralPath $AuthenticationSeedPath -PathType Leaf) {
-        Copy-Item -LiteralPath $AuthenticationSeedPath -Destination (Join-Path $childCodexHome "auth.json") -Force
-    }
-    if (-not [string]::IsNullOrWhiteSpace($ProviderConfigurationSeedPath) -and (Test-Path -LiteralPath $ProviderConfigurationSeedPath -PathType Leaf)) {
-        Copy-Item -LiteralPath $ProviderConfigurationSeedPath -Destination (Join-Path $childCodexHome "config.toml") -Force
-    }
-    $names = @("CODEX_HOME", "HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "CODEX_THREAD_ID")
-    $previous = @{}
-    foreach ($name in $names) {
-        $previous[$name] = [Environment]::GetEnvironmentVariable($name, "Process")
-    }
-    $homeDrive = Split-Path -Qualifier $ChildHome
-    [Environment]::SetEnvironmentVariable("CODEX_HOME", $childCodexHome, "Process")
-    [Environment]::SetEnvironmentVariable("HOME", $ChildHome, "Process")
-    [Environment]::SetEnvironmentVariable("USERPROFILE", $ChildHome, "Process")
-    [Environment]::SetEnvironmentVariable("HOMEDRIVE", $homeDrive, "Process")
-    [Environment]::SetEnvironmentVariable("HOMEPATH", $ChildHome.Substring($homeDrive.Length), "Process")
-    [Environment]::SetEnvironmentVariable("CODEX_THREAD_ID", $null, "Process")
-    return $previous
-}
-function Update-AuthenticationSeed {
-    param([string] $ChildHome, [string] $AuthenticationSeedPath)
-    $childAuthPath = Join-Path $ChildHome ".codex\auth.json"
-    if (Test-Path -LiteralPath $childAuthPath -PathType Leaf) {
-        Copy-Item -LiteralPath $childAuthPath -Destination $AuthenticationSeedPath -Force
-    }
-}
-function Restore-ChildHome {
-    param([hashtable] $Previous)
-    foreach ($name in $Previous.Keys) {
-        [Environment]::SetEnvironmentVariable($name, $Previous[$name], "Process")
-    }
+    [Environment]::SetEnvironmentVariable("CODEX_HOME", $resolvedHome, "Process")
+    return $configPath
 }
 function Remove-ManagedDirectory {
     param([string] $Path, [string] $ParentPath)
@@ -509,7 +403,7 @@ function Get-SnapshotChanges {
         Where-Object { $_ -notmatch '^!! \.benchmark/roslynkit\.db-(shm|wal)$' })
 }
 function Invoke-BenchmarkRun {
-    param([object] $Case, [string] $Condition, [int] $Trial, [string] $SnapshotPath, [string[]] $SnapshotBaseline, [string] $RunRoot, [string] $TemporaryRoot, [string] $AuthenticationSeedPath, [string] $ProviderConfigurationSeedPath, [string] $ResolvedRoslynKitPath, [string[]] $DisabledFeatures)
+    param([object] $Case, [string] $Condition, [int] $Trial, [string] $SnapshotPath, [string[]] $SnapshotBaseline, [string] $RunRoot, [string] $ResolvedRoslynKitPath, [string[]] $DisabledFeatures)
     $runId = "{0}-{1}-trial{2}" -f $Case.id, $Condition, $Trial
     $answerPath = Join-Path $RunRoot "answers\$runId.md"
     $eventPath = Join-Path $RunRoot "events\$runId.jsonl"
@@ -517,17 +411,13 @@ function Invoke-BenchmarkRun {
     $commandsPath = Join-Path $RunRoot "commands\$runId.txt"
     $prompt = New-ConditionPrompt -Condition $Condition -Prompt $Case.prompt -ResolvedRoslynKitPath $ResolvedRoslynKitPath
     $arguments = New-CodexArguments -Prompt $prompt -SnapshotPath $SnapshotPath -AnswerPath $answerPath -DisabledFeatures $DisabledFeatures
-    $childRoot = Join-Path $TemporaryRoot "homes"
-    $childHome = Join-Path $childRoot ([Guid]::NewGuid().ToString("N"))
     $exitCode = -1
     $startedAt = [DateTime]::UtcNow
     $completedAt = $startedAt
-    $previous = $null
     if ((Get-SnapshotChanges -SnapshotPath $SnapshotPath -Baseline $SnapshotBaseline).Count -gt 0) {
         throw "The prepared snapshot is dirty before '$runId'."
     }
     try {
-        $previous = Set-ChildHome -ChildHome $childHome -AuthenticationSeedPath $AuthenticationSeedPath -ProviderConfigurationSeedPath $ProviderConfigurationSeedPath
         $startedAt = [DateTime]::UtcNow
         $oldPreference = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
@@ -545,19 +435,6 @@ function Invoke-BenchmarkRun {
     catch {
         $completedAt = [DateTime]::UtcNow
         $_ | Out-String | Set-Content -LiteralPath $stderrPath -Encoding UTF8
-    }
-    finally {
-        try {
-            if ($null -ne $previous) {
-                Update-AuthenticationSeed -ChildHome $childHome -AuthenticationSeedPath $AuthenticationSeedPath
-            }
-        }
-        finally {
-            if ($null -ne $previous) {
-                Restore-ChildHome -Previous $previous
-            }
-            Remove-ManagedDirectory -Path $childHome -ParentPath $childRoot
-        }
     }
     $events = Read-Events -Path $eventPath
     $commands = Get-Commands -Events $events
@@ -579,7 +456,7 @@ function Invoke-BenchmarkRun {
     }
 }
 function Invoke-RoslynKitPreflight {
-    param([string] $SnapshotPath, [string] $RunRoot, [string] $TemporaryRoot, [string] $AuthenticationSeedPath, [string] $ProviderConfigurationSeedPath, [string] $ResolvedRoslynKitPath, [string[]] $DisabledFeatures)
+    param([string] $SnapshotPath, [string] $RunRoot, [string] $ResolvedRoslynKitPath, [string[]] $DisabledFeatures)
     $preflightRoot = Join-Path $RunRoot "preflight"
     New-Item -ItemType Directory -Force -Path $preflightRoot | Out-Null
     $answerPath = Join-Path $preflightRoot "answer.md"
@@ -589,12 +466,10 @@ function Invoke-RoslynKitPreflight {
     $escapedPath = $ResolvedRoslynKitPath.Replace("'", "''")
     $prompt = "Run exactly this command once: & '$escapedPath' --version. Then reply with exactly the version output and nothing else."
     $arguments = New-CodexArguments -Prompt $prompt -SnapshotPath $SnapshotPath -AnswerPath $answerPath -DisabledFeatures $DisabledFeatures
-    $childRoot = Join-Path $TemporaryRoot "homes"
-    $childHome = Join-Path $childRoot ([Guid]::NewGuid().ToString("N"))
-    $previous = $null
     $exitCode = -1
+    $oldPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     try {
-        $previous = Set-ChildHome -ChildHome $childHome -AuthenticationSeedPath $AuthenticationSeedPath -ProviderConfigurationSeedPath $ProviderConfigurationSeedPath
         Push-Location $SnapshotPath
         try {
             & codex @arguments 1> $eventPath 2> $stderrPath
@@ -605,15 +480,7 @@ function Invoke-RoslynKitPreflight {
         }
     }
     finally {
-        try {
-            if ($null -ne $previous) {
-                Update-AuthenticationSeed -ChildHome $childHome -AuthenticationSeedPath $AuthenticationSeedPath
-            }
-        }
-        finally {
-            if ($null -ne $previous) { Restore-ChildHome -Previous $previous }
-            Remove-ManagedDirectory -Path $childHome -ParentPath $childRoot
-        }
+        $ErrorActionPreference = $oldPreference
     }
     $events = Read-Events -Path $eventPath
     $commands = Get-Commands -Events $events
@@ -688,12 +555,14 @@ function Write-Reports {
 $repoRoot = Resolve-RepoRoot
 $resolvedRoslynKitPath = Resolve-GlobalRoslynKitPath
 $cases = Get-SelectedCases -Cases (Get-CaseData -RepoRoot $repoRoot) -SelectedCaseId $CaseId
+$activeCodexConfigPath = Set-WorkstationCodexHome
 if ($DryRun) {
     $placeholderSnapshot = "<clean-snapshot>"
     $placeholderRoslynKitPath = ".\.benchmark\tools\roslynkit.exe"
     $disabledFeatures = Get-DisabledFeatures -DryRunMode
-    Write-Host "Environment: isolated temporary CODEX_HOME with authentication and allowlisted provider configuration seeds when available."
-    Write-Host "RoslynKit condition: the global tool and its package payload are staged inside the read-only snapshot; no command-policy rules are installed."
+    Write-Host "Active Codex config: $activeCodexConfigPath"
+    Write-Host "Environment: the workstation CODEX_HOME is used directly; benchmark-specific command-line overrides remain in effect."
+    Write-Host "RoslynKit condition: the global tool and its package payload are staged inside the isolated snapshot; child sessions use the workspace-write sandbox, the runner installs no command-policy rules, and workstation rules remain active."
     Write-Host "Preflight: one isolated, unmeasured RoslynKit version command must succeed before any measured session starts."
     Write-Host "Validity: any declined or nonzero command invalidates the session and stops the benchmark before the next session."
     Write-Host ""
@@ -724,7 +593,7 @@ $disabledFeatures = Get-DisabledFeatures
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $runRoot = Join-Path $repoRoot "artifacts\codex-benchmark\$timestamp"
 $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) ("roslynkit-codex-benchmark-" + [Guid]::NewGuid().ToString("N"))
-foreach ($directory in @($runRoot, (Join-Path $runRoot "answers"), (Join-Path $runRoot "events"), (Join-Path $runRoot "stderr"), (Join-Path $runRoot "commands"), $temporaryRoot, (Join-Path $temporaryRoot "homes"))) {
+foreach ($directory in @($runRoot, (Join-Path $runRoot "answers"), (Join-Path $runRoot "events"), (Join-Path $runRoot "stderr"), (Join-Path $runRoot "commands"), $temporaryRoot)) {
     New-Item -ItemType Directory -Force -Path $directory | Out-Null
 }
 $rawSnapshot = $null
@@ -740,10 +609,7 @@ try {
     Stop-RoslynKitDaemon -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $snapshotRoslynKitPath
     $rawSnapshotBaseline = Get-SnapshotState -SnapshotPath $rawSnapshot
     $roslynKitSnapshotBaseline = Get-SnapshotState -SnapshotPath $roslynKitSnapshot
-    $sourceCodexHome = Get-CodexHome
-    $authenticationSeedPath = New-AuthenticationSeed -TemporaryRoot $temporaryRoot -SourceCodexHome $sourceCodexHome
-    $providerConfigurationSeedPath = New-ProviderConfigurationSeed -TemporaryRoot $temporaryRoot -SourceCodexHome $sourceCodexHome
-    Invoke-RoslynKitPreflight -SnapshotPath $roslynKitSnapshot -RunRoot $runRoot -TemporaryRoot $temporaryRoot -AuthenticationSeedPath $authenticationSeedPath -ProviderConfigurationSeedPath $providerConfigurationSeedPath -ResolvedRoslynKitPath $snapshotRoslynKitPath -DisabledFeatures $disabledFeatures
+    Invoke-RoslynKitPreflight -SnapshotPath $roslynKitSnapshot -RunRoot $runRoot -ResolvedRoslynKitPath $snapshotRoslynKitPath -DisabledFeatures $disabledFeatures
     $rows = New-Object System.Collections.Generic.List[object]
     foreach ($trial in 1..$Trials) {
         $conditions = if (($trial % 2) -eq 1) { @("raw-codex", "roslynkit") } else { @("roslynkit", "raw-codex") }
@@ -753,7 +619,7 @@ try {
                 $snapshotBaseline = if ($condition -eq "raw-codex") { $rawSnapshotBaseline } else { $roslynKitSnapshotBaseline }
                 $conditionRoslynKitPath = if ($condition -eq "raw-codex") { $resolvedRoslynKitPath } else { $snapshotRoslynKitPath }
                 try {
-                    $row = Invoke-BenchmarkRun -Case $case -Condition $condition -Trial $trial -SnapshotPath $snapshotPath -SnapshotBaseline $snapshotBaseline -RunRoot $runRoot -TemporaryRoot $temporaryRoot -AuthenticationSeedPath $authenticationSeedPath -ProviderConfigurationSeedPath $providerConfigurationSeedPath -ResolvedRoslynKitPath $conditionRoslynKitPath -DisabledFeatures $disabledFeatures
+                    $row = Invoke-BenchmarkRun -Case $case -Condition $condition -Trial $trial -SnapshotPath $snapshotPath -SnapshotBaseline $snapshotBaseline -RunRoot $runRoot -ResolvedRoslynKitPath $conditionRoslynKitPath -DisabledFeatures $disabledFeatures
                     $rows.Add($row)
                     Write-Reports -RunRoot $runRoot -Rows $rows -Cases $cases
                     if (-not $row.valid) {
@@ -773,9 +639,6 @@ finally {
     try {
         Stop-RoslynKitDaemon -SnapshotPath $rawSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
         Stop-RoslynKitDaemon -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $snapshotRoslynKitPath
-        Remove-ManagedDirectory -Path (Join-Path $temporaryRoot "auth") -ParentPath $temporaryRoot
-        Remove-ManagedDirectory -Path (Join-Path $temporaryRoot "provider") -ParentPath $temporaryRoot
-        Remove-ManagedDirectory -Path (Join-Path $temporaryRoot "homes") -ParentPath $temporaryRoot
     }
     finally {
         if (-not $KeepSnapshot) {
