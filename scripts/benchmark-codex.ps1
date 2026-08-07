@@ -55,7 +55,7 @@ function Get-SelectedCases {
     return $selected
 }
 function New-ConditionPrompt {
-    param([string] $Condition, [string] $Prompt, [string] $ResolvedRoslynKitPath)
+    param([string] $Condition, [string] $Prompt)
     $rules = @(
         "Inspection-only benchmark condition: $Condition.",
         "Do not edit files or change Git state.",
@@ -69,7 +69,7 @@ function New-ConditionPrompt {
         $rules += "Use ordinary local shell and text inspection only. Do not invoke RoslynKit, roslynkit-dev, or dotnet run for RoslynKit."
     }
     else {
-        $rules += "Use this RoslynKit executable for code investigation: '$ResolvedRoslynKitPath'."
+        $rules += "Invoke the snapshot-local RoslynKit from PATH as 'roslynkit' for code investigation."
         $rules += "Pass --target .\RoslynKit.slnx to RoslynKit. The prepared snapshot-local search index is .\.benchmark\roslynkit.db; pass --index-path .\.benchmark\roslynkit.db to search."
     }
     return (($rules + "" + $Prompt) -join [Environment]::NewLine)
@@ -354,7 +354,14 @@ function Test-RoslynKitInvocation {
     $resolvedPathPattern = '(?i)(?:&\s*)?' + $quote + $path + $quote + '\s+\S+'
     $namedPattern = $prefix + '(?:' + $quote + $file + $quote + '|roslynkit(?:-dev)?(?:\.exe)?)\s+\S+'
     $dotnetPattern = '(?i)(^|[;&|]\s*)dotnet(?:\.exe)?\s+run\b(?=[^\r\n]*--project\s+' + $quote + '[^;\r\n]*src[\\/]RoslynKit(?:[\\/]|["'']|\s))'
-    return $Command -match $resolvedPathPattern -or $Command -match $namedPattern -or $Command -match $dotnetPattern
+    $resolverMatch = [regex]::Match($Command, '(?i)\$(?<variable>[a-z_][a-z0-9_]*)\s*=\s*\(\s*Get-Command\s+roslynkit(?:\.exe)?\b[^)]*\)')
+    $resolvedVariablePattern = if ($resolverMatch.Success) {
+        $prefix + '\$' + [regex]::Escape($resolverMatch.Groups['variable'].Value) + '\s+(?!=)\S+'
+    }
+    else {
+        '(?!)'
+    }
+    return $Command -match $resolvedPathPattern -or $Command -match $namedPattern -or $Command -match $resolvedVariablePattern -or $Command -match $dotnetPattern
 }
 function Test-ForbiddenContextSurface {
     param([string] $Command)
@@ -430,7 +437,7 @@ function Invoke-BenchmarkRun {
     $eventPath = Join-Path $RunRoot "events\$runId.jsonl"
     $stderrPath = Join-Path $RunRoot "stderr\$runId.txt"
     $commandsPath = Join-Path $RunRoot "commands\$runId.txt"
-    $prompt = New-ConditionPrompt -Condition $Condition -Prompt $Case.prompt -ResolvedRoslynKitPath $ResolvedRoslynKitPath
+    $prompt = New-ConditionPrompt -Condition $Condition -Prompt $Case.prompt
     $arguments = New-CodexArguments -Prompt $prompt -SnapshotPath $SnapshotPath -AnswerPath $answerPath -DisabledFeatures $DisabledFeatures
     $exitCode = -1
     $startedAt = [DateTime]::UtcNow
@@ -487,8 +494,8 @@ function Invoke-BenchmarkPreflight {
     $eventPath = Join-Path $preflightRoot "events.jsonl"
     $stderrPath = Join-Path $preflightRoot "stderr.txt"
     $commandsPath = Join-Path $preflightRoot "commands.txt"
-    $escapedPath = $ResolvedRoslynKitPath.Replace("'", "''")
-    $prompt = "Run exactly this command once: `$rgPath = (Get-Command rg -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source; & `$rgPath --version; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & '$escapedPath' --version. Then reply with exactly both version outputs and nothing else."
+    $preflightCommand = "`$rgPath = (Get-Command rg -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source; `$roslynKitPath = (Get-Command roslynkit -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source; & `$rgPath --version; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & `$roslynKitPath --version"
+    $prompt = "Run exactly this PowerShell command once:`n`n$preflightCommand`n`nThen reply with exactly both version outputs and nothing else."
     $arguments = New-CodexArguments -Prompt $prompt -SnapshotPath $SnapshotPath -AnswerPath $answerPath -DisabledFeatures $DisabledFeatures
     $exitCode = -1
     $oldPreference = $ErrorActionPreference
@@ -591,20 +598,18 @@ $cases = Get-SelectedCases -Cases (Get-CaseData -RepoRoot $repoRoot) -SelectedCa
 $activeCodexConfigPath = Set-WorkstationCodexHome
 if ($DryRun) {
     $placeholderSnapshot = "<clean-snapshot>"
-    $placeholderRoslynKitPath = ".\.benchmark\tools\roslynkit.exe"
     $disabledFeatures = Get-DisabledFeatures -DryRunMode
     Write-Host "Active Codex config: $activeCodexConfigPath"
     Write-Host "Environment: the workstation CODEX_HOME is used directly; benchmark-specific command-line overrides remain in effect."
-    Write-Host "RoslynKit condition: the global tool and its package payload are staged inside the isolated snapshot; child sessions use the workspace-write sandbox, the runner installs no command-policy rules, and workstation rules remain active."
-    Write-Host "Preflight: one isolated, unmeasured command must resolve snapshot-local ripgrep and run both ripgrep and RoslynKit version checks before any measured session starts."
+    Write-Host "RoslynKit condition: the global tool and its package payload are staged inside the isolated snapshot and exposed as 'roslynkit' through the child PATH; child sessions use the workspace-write sandbox, the runner installs no command-policy rules, and workstation rules remain active."
+    Write-Host "Preflight: one isolated, unmeasured command must resolve snapshot-local ripgrep and RoslynKit through the child PATH and run both version checks before any measured session starts."
     Write-Host "Validity: any declined or nonzero command invalidates the session and stops the benchmark before the next session."
     Write-Host ""
     foreach ($trial in 1..$Trials) {
         $conditions = if (($trial % 2) -eq 1) { @("raw-codex", "roslynkit") } else { @("roslynkit", "raw-codex") }
         foreach ($case in $cases) {
             foreach ($condition in $conditions) {
-                $conditionRoslynKitPath = if ($condition -eq "roslynkit") { $placeholderRoslynKitPath } else { $resolvedRoslynKitPath }
-                $prompt = New-ConditionPrompt -Condition $condition -Prompt $case.prompt -ResolvedRoslynKitPath $conditionRoslynKitPath
+                $prompt = New-ConditionPrompt -Condition $condition -Prompt $case.prompt
                 $arguments = New-CodexArguments -Prompt $prompt -SnapshotPath $placeholderSnapshot -AnswerPath "<artifacts-answer-path>" -DisabledFeatures $disabledFeatures
                 Write-Host "[$($case.id)] $condition trial $trial"
                 Write-Host ("codex " + (Format-CommandLine -Arguments $arguments))
