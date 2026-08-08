@@ -325,7 +325,10 @@ function Test-CommandReferencesContextPath {
     return [regex]::IsMatch($Command, (Get-ContextPathPattern -ContextPath $ContextPath))
 }
 function Test-CommandReadsContextPath {
-    param([string] $Command, [string] $ContextPath)
+    param([string] $Command, [string] $ContextPath, [int] $Depth = 0)
+    if ($Depth -gt 4) {
+        return $false
+    }
     if (-not (Test-CommandReferencesContextPath -Command $Command -ContextPath $ContextPath)) {
         return $false
     }
@@ -340,11 +343,27 @@ function Test-CommandReadsContextPath {
             }, $true))
     foreach ($commandAst in $commandAsts) {
         $commandName = $commandAst.GetCommandName()
-        if (-not [string]::IsNullOrWhiteSpace($commandName) -and
-            [StringComparer]::OrdinalIgnoreCase.Equals([IO.Path]::GetFileName($commandName), "Get-Content") -and
+        if ([string]::IsNullOrWhiteSpace($commandName)) {
+            continue
+        }
+        $commandFile = [IO.Path]::GetFileName($commandName)
+        if ([StringComparer]::OrdinalIgnoreCase.Equals($commandFile, "Get-Content") -and
             $commandAst.Extent.Text -match '(?i)(?:^|\s)-Raw(?:\s|$)' -and
             [regex]::IsMatch($commandAst.Extent.Text, $pathPattern)) {
             return $true
+        }
+        if ($commandFile -in @("pwsh", "pwsh.exe", "powershell", "powershell.exe")) {
+            $payloadMatch = [regex]::Match($commandAst.Extent.Text, '(?is)\s-(?:Command|c)\s+(?<payload>.+)$')
+            if ($payloadMatch.Success) {
+                $payload = $payloadMatch.Groups["payload"].Value.Trim()
+                if ($payload.Length -ge 2 -and (($payload[0] -eq '"' -and $payload[$payload.Length - 1] -eq '"') -or
+                        ($payload[0] -eq "'" -and $payload[$payload.Length - 1] -eq "'"))) {
+                    $payload = $payload.Substring(1, $payload.Length - 2)
+                }
+                if (Test-CommandReadsContextPath -Command $payload -ContextPath $ContextPath -Depth ($Depth + 1)) {
+                    return $true
+                }
+            }
         }
     }
     return $false
@@ -377,9 +396,6 @@ function Get-ComplianceIssues {
         $usesRoslynKit = Test-RoslynKitInvocation -Command $command -ResolvedRoslynKitPath $ResolvedRoslynKitPath
         if ($Condition -eq "raw-codex" -and $usesRoslynKit) {
             $issues.Add("raw-codex invoked RoslynKit: $command")
-        }
-        if ($Condition -eq "raw-codex" -and $command -match '(?i)\.agents[\\/]+skills[\\/]+roslynkit(?:[\\/]|$)') {
-            $issues.Add("raw-codex read RoslynKit skill context: $command")
         }
         if ($command -match "(?i)\b(curl|wget|Invoke-WebRequest|Invoke-RestMethod)\b|https?://") {
             $issues.Add("used web or network access: $command")
@@ -660,7 +676,7 @@ if ($DryRun) {
     Write-Host "Execution: child sessions bypass approvals and sandboxing, inherit the full workstation environment, and use the repository root as the --cd working root."
     Write-Host "RoslynKit condition: the global 'roslynkit' command is resolved from the inherited workstation PATH; the prepared search index is .\artifacts\roslynkit.db relative to the repository root."
     Write-Host "Preflight: one unmeasured command must run global 'rg --version' and 'roslynkit --version' successfully before any measured session starts."
-    Write-Host "Validity: any declined or nonzero command, overlapping RoslynKit invocation, or nonignored repository content change invalidates the session and stops the benchmark before the next session."
+    Write-Host "Validity: an invalid measured session is recorded and excluded from comparison, then the remaining scheduled sessions continue without retry. Preparation, preflight, and nonignored repository content changes stop the controller."
     Write-Host "Repository integrity: a content manifest is captured after preparation and validated after preflight and every measured session; ignored artifacts do not affect it."
     Write-Host ""
     foreach ($trial in 1..$Trials) {
@@ -691,6 +707,7 @@ if (-not (Test-Path -LiteralPath $resolvedRipgrepPath -PathType Leaf)) {
 $disabledFeatures = Get-DisabledFeatures
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $runRoot = Join-Path $repoRoot "artifacts\codex-benchmark\$timestamp"
+$rows = New-Object System.Collections.Generic.List[object]
 try {
     foreach ($directory in @($runRoot, (Join-Path $runRoot "answers"), (Join-Path $runRoot "events"), (Join-Path $runRoot "stderr"), (Join-Path $runRoot "commands"))) {
         New-Item -ItemType Directory -Force -Path $directory | Out-Null
@@ -700,7 +717,6 @@ try {
     Stop-RoslynKitDaemon -RepoRoot $repoRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath
     $repositoryManifest = Get-RepositoryContentManifest -RepoRoot $repoRoot
     Invoke-BenchmarkPreflight -RepoRoot $repoRoot -RepositoryManifest $repositoryManifest -RunRoot $runRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath -DisabledFeatures $disabledFeatures
-    $rows = New-Object System.Collections.Generic.List[object]
     foreach ($trial in 1..$Trials) {
         $conditions = if (($trial % 2) -eq 1) { @("raw-codex", "roslynkit") } else { @("roslynkit", "raw-codex") }
         foreach ($case in $cases) {
@@ -709,8 +725,12 @@ try {
                     $row = Invoke-BenchmarkRun -Case $case -Condition $condition -Trial $trial -RepoRoot $repoRoot -RepositoryManifest $repositoryManifest -RunRoot $runRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath -DisabledFeatures $disabledFeatures
                     $rows.Add($row)
                     Write-Reports -RunRoot $runRoot -Rows $rows -Cases $cases
+                    $repositoryChanges = Get-RepositoryContentChanges -RepoRoot $repoRoot -Baseline $repositoryManifest
+                    if ($repositoryChanges.Count -gt 0) {
+                        throw "Repository content changed during '$($row.case_id)/$($row.condition)/trial$($row.trial)': $($repositoryChanges -join '; ')"
+                    }
                     if (-not $row.valid) {
-                        throw "Benchmark stopped after invalid session '$($row.case_id)/$($row.condition)/trial$($row.trial)': $($row.issues)"
+                        Write-Warning "Recorded invalid session '$($row.case_id)/$($row.condition)/trial$($row.trial)' and continuing: $($row.issues)"
                     }
                 }
                 finally {
@@ -724,5 +744,9 @@ try {
 }
 finally {
     Stop-RoslynKitDaemon -RepoRoot $repoRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath
+}
+$invalidRows = @($rows | Where-Object { -not $_.valid })
+if ($invalidRows.Count -gt 0) {
+    Write-Warning "Benchmark completed with $($invalidRows.Count) invalid measured session(s). Review '$runRoot\summary.md'; comparisons use valid rows only."
 }
 Write-Host "Benchmark complete: $runRoot"

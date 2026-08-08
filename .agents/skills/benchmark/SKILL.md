@@ -36,7 +36,7 @@ For measured runs, pass the requested `-Model` and `-ReasoningEffort` explicitly
 
 Prepare the one shared repository-local `artifacts/roslynkit.db` index once before timed sessions. Reuse that index for every case and trial. Preserve the runner's unmeasured preflight exactly: one Codex session runs `rg --version; roslynkit --version`, and the controller validates the recorded output and exit status before measurement starts.
 
-For the RoslynKit condition, confirm that the dry-run prompt requires the stable RoslynKit skill and its command and output references, followed by serial, bounded RoslynKit searches. After measurement, inspect `events/` and `commands/` for the controller-validated RoslynKit invocation. Treat command overlap or a cold-start timeout as an invalid run; do not compare or retry it inside the same measured session.
+For the RoslynKit condition, confirm that the dry-run prompt requires the stable RoslynKit skill and its command and output references, followed by serial, bounded RoslynKit searches. After measurement, inspect `events/` and `commands/` for the controller-validated RoslynKit invocation. Treat command overlap or a cold-start timeout as an invalid run; do not compare or retry it inside the same measured session. The controller records ordinary invalid sessions and continues the remaining scheduled sessions without retry. Preparation failures, preflight failures, and repository content changes still stop the controller because later measurements would not share a valid baseline.
 
 Treat lower token use or elapsed time as meaningful only when both conditions produce correct answers and the run is valid. Keep raw events and answers available for audit; do not expose controller-only review criteria in child prompts.
 
