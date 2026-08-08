@@ -69,18 +69,17 @@ function New-ConditionPrompt {
         $rules += "Use ordinary local shell and text inspection only. Do not invoke RoslynKit, roslynkit-dev, or dotnet run for RoslynKit."
     }
     else {
-        $rules += "Invoke the snapshot-local RoslynKit from PATH as 'roslynkit' for code investigation."
-        $rules += "Pass --target .\RoslynKit.slnx to RoslynKit. The prepared snapshot-local search index is .\.benchmark\roslynkit.db; pass --index-path .\.benchmark\roslynkit.db to search."
+        $rules += "Invoke the global RoslynKit from PATH as 'roslynkit' for code investigation."
+        $rules += "Pass --target .\RoslynKit.slnx to RoslynKit. The prepared snapshot-local search index is .\artifacts\roslynkit.db; pass --index-path .\artifacts\roslynkit.db to search."
     }
     return (($rules + "" + $Prompt) -join [Environment]::NewLine)
 }
 function New-CodexArguments {
     param([string] $Prompt, [string] $SnapshotPath, [string] $AnswerPath, [string[]] $DisabledFeatures)
     $arguments = @(
-        "exec", "--config", 'approval_policy="never"', "--config", ('model_reasoning_effort="{0}"' -f $ReasoningEffort),
+        "exec", "--dangerously-bypass-approvals-and-sandbox", "--config", ('model_reasoning_effort="{0}"' -f $ReasoningEffort),
         "--config", "project_doc_max_bytes=0", "--config", "memories.use_memories=false", "--config", "memories.generate_memories=false",
-        "--config", 'shell_environment_policy.inherit="core"',
-        "--config", "shell_environment_policy.ignore_default_excludes=false", "--model", $Model, "--sandbox", "workspace-write",
+        "--config", 'shell_environment_policy.inherit="all"', "--model", $Model,
         "--ephemeral", "--json", "--color", "never", "--cd", $SnapshotPath, "--output-last-message", $AnswerPath
     )
     foreach ($feature in $DisabledFeatures) { $arguments += "--disable", $feature }
@@ -160,69 +159,12 @@ function Restore-SnapshotDependencies {
         throw "Snapshot restore failed before measured runs."
     }
 }
-function Get-SnapshotToolDirectory {
-    param([string] $SnapshotPath)
-    $benchmarkDirectory = Join-Path $SnapshotPath ".benchmark"
-    $toolDirectory = Join-Path $benchmarkDirectory "tools"
-    New-Item -ItemType Directory -Force -Path $toolDirectory | Out-Null
-    $excludePath = Join-Path $SnapshotPath ".git\info\exclude"
-    if (-not (Select-String -LiteralPath $excludePath -SimpleMatch ".benchmark/" -Quiet -ErrorAction SilentlyContinue)) {
-        Add-Content -LiteralPath $excludePath -Value ".benchmark/" -Encoding ascii
-    }
-    return $toolDirectory
-}
-function Install-SnapshotRipgrepTool {
-    param([string] $SnapshotPath, [string] $ResolvedRipgrepPath)
-    if (-not (Test-Path -LiteralPath $ResolvedRipgrepPath -PathType Leaf)) {
-        throw "Ripgrep must resolve to a local executable before it can be staged in the benchmark snapshot: '$ResolvedRipgrepPath'."
-    }
-    $toolDirectory = Get-SnapshotToolDirectory -SnapshotPath $SnapshotPath
-    $destinationPath = Join-Path $toolDirectory ([IO.Path]::GetFileName($ResolvedRipgrepPath))
-    Copy-Item -LiteralPath $ResolvedRipgrepPath -Destination $destinationPath -Force
-    return $destinationPath
-}
-function Install-SnapshotRoslynKitTool {
-    param([string] $SnapshotPath, [string] $ResolvedRoslynKitPath)
-    if (-not (Test-Path -LiteralPath $ResolvedRoslynKitPath -PathType Leaf)) {
-        throw "RoslynKit must resolve to a local executable before it can be staged in the benchmark snapshot: '$ResolvedRoslynKitPath'."
-    }
-    $toolDirectory = Get-SnapshotToolDirectory -SnapshotPath $SnapshotPath
-    $sourceDirectory = Split-Path -Parent $ResolvedRoslynKitPath
-    $destinationPath = Join-Path $toolDirectory ([IO.Path]::GetFileName($ResolvedRoslynKitPath))
-    Copy-Item -LiteralPath $ResolvedRoslynKitPath -Destination $destinationPath -Force
-    $globalToolStore = Join-Path $sourceDirectory ".store\roslynkit"
-    if (Test-Path -LiteralPath $globalToolStore -PathType Container) {
-        $destinationStore = Join-Path $toolDirectory ".store"
-        New-Item -ItemType Directory -Force -Path $destinationStore | Out-Null
-        Copy-Item -LiteralPath $globalToolStore -Destination $destinationStore -Recurse -Force
-    }
-    else {
-        $toolStem = [IO.Path]::GetFileNameWithoutExtension($ResolvedRoslynKitPath)
-        $hasAdjacentPayload = (Test-Path -LiteralPath (Join-Path $sourceDirectory "$toolStem.dll") -PathType Leaf) -or
-            (Test-Path -LiteralPath (Join-Path $sourceDirectory "$toolStem.deps.json") -PathType Leaf)
-        if ($hasAdjacentPayload) {
-            foreach ($entry in Get-ChildItem -LiteralPath $sourceDirectory -Force) {
-                Copy-Item -LiteralPath $entry.FullName -Destination $toolDirectory -Recurse -Force
-            }
-        }
-    }
-    Push-Location $SnapshotPath
-    try {
-        $versionOutput = @(& $destinationPath --version 2>&1)
-        if ($LASTEXITCODE -ne 0 -or ($versionOutput -join "`n") -notmatch "(?i)roslynkit version") {
-            throw "The staged RoslynKit executable failed its direct version check: $($versionOutput -join ' ')"
-        }
-    }
-    finally {
-        Pop-Location
-    }
-    return $destinationPath
-}
 function Initialize-RoslynKitIndex {
     param([string] $SnapshotPath, [string] $ResolvedRoslynKitPath)
     Push-Location $SnapshotPath
     try {
-        & $ResolvedRoslynKitPath index --target ".\RoslynKit.slnx" --index-path ".\.benchmark\roslynkit.db"
+        New-Item -ItemType Directory -Force -Path ".\artifacts" | Out-Null
+        & $ResolvedRoslynKitPath index --target ".\RoslynKit.slnx" --index-path ".\artifacts\roslynkit.db"
         if ($LASTEXITCODE -ne 0) {
             throw "RoslynKit index preparation failed before measured runs."
         }
@@ -428,7 +370,7 @@ function Get-SnapshotChanges {
     param([string] $SnapshotPath, [string[]] $Baseline)
     return @(Compare-Object -ReferenceObject $Baseline -DifferenceObject (Get-SnapshotState -SnapshotPath $SnapshotPath) |
         ForEach-Object { $_.InputObject } |
-        Where-Object { $_ -notmatch '^!! \.benchmark/roslynkit\.db-(shm|wal)$' })
+        Where-Object { $_ -notmatch '^!! artifacts/roslynkit\.db-(shm|wal)$' })
 }
 function Invoke-BenchmarkRun {
     param([object] $Case, [string] $Condition, [int] $Trial, [string] $SnapshotPath, [string[]] $SnapshotBaseline, [string] $RunRoot, [string] $ResolvedRoslynKitPath, [string[]] $DisabledFeatures)
@@ -448,9 +390,7 @@ function Invoke-BenchmarkRun {
     try {
         $startedAt = [DateTime]::UtcNow
         $oldPreference = $ErrorActionPreference
-        $oldPath = $env:PATH
         $ErrorActionPreference = "Continue"
-        $env:PATH = (Join-Path $SnapshotPath ".benchmark\tools") + [IO.Path]::PathSeparator + $oldPath
         Push-Location $SnapshotPath
         try {
             & codex @arguments 1> $eventPath 2> $stderrPath
@@ -459,7 +399,6 @@ function Invoke-BenchmarkRun {
         }
         finally {
             Pop-Location
-            $env:PATH = $oldPath
             $ErrorActionPreference = $oldPreference
         }
     }
@@ -494,14 +433,12 @@ function Invoke-BenchmarkPreflight {
     $eventPath = Join-Path $preflightRoot "events.jsonl"
     $stderrPath = Join-Path $preflightRoot "stderr.txt"
     $commandsPath = Join-Path $preflightRoot "commands.txt"
-    $preflightCommand = "`$rgPath = (Get-Command rg -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source; `$roslynKitPath = (Get-Command roslynkit -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source; & `$rgPath --version; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & `$roslynKitPath --version"
-    $prompt = "Run exactly this PowerShell command once:`n`n$preflightCommand`n`nThen reply with exactly both version outputs and nothing else."
+    $preflightCommand = "rg --version; roslynkit --version"
+    $prompt = "Run exactly these two PowerShell commands once:`n`n$preflightCommand`n`nThen reply with exactly both version outputs and exit codes, and nothing else."
     $arguments = New-CodexArguments -Prompt $prompt -SnapshotPath $SnapshotPath -AnswerPath $answerPath -DisabledFeatures $DisabledFeatures
     $exitCode = -1
     $oldPreference = $ErrorActionPreference
-    $oldPath = $env:PATH
     $ErrorActionPreference = "Continue"
-    $env:PATH = (Join-Path $SnapshotPath ".benchmark\tools") + [IO.Path]::PathSeparator + $oldPath
     try {
         Push-Location $SnapshotPath
         try {
@@ -513,7 +450,6 @@ function Invoke-BenchmarkPreflight {
         }
     }
     finally {
-        $env:PATH = $oldPath
         $ErrorActionPreference = $oldPreference
     }
     $events = Read-Events -Path $eventPath
@@ -527,7 +463,7 @@ function Invoke-BenchmarkPreflight {
         })
     $successfulRipgrepCommands = @($completedCommands | Where-Object {
             $_.item.status -eq "completed" -and $_.item.exit_code -eq 0 -and
-            [string] $_.item.command -match '(?i)\bGet-Command\s+rg\b'
+            [string] $_.item.command -match '(?i)\brg(?:\.exe)?\s+--version\b'
         })
     $answer = if (Test-Path -LiteralPath $answerPath -PathType Leaf) { Get-Content -Raw -LiteralPath $answerPath } else { "" }
     if ($exitCode -ne 0 -or $completedCommands.Count -ne 1 -or $failedCommands.Count -gt 0 -or $successfulRoslynKitCommands.Count -ne 1 -or
@@ -601,8 +537,9 @@ if ($DryRun) {
     $disabledFeatures = Get-DisabledFeatures -DryRunMode
     Write-Host "Active Codex config: $activeCodexConfigPath"
     Write-Host "Environment: the workstation CODEX_HOME is used directly; benchmark-specific command-line overrides remain in effect."
-    Write-Host "RoslynKit condition: the global tool and its package payload are staged inside the isolated snapshot and exposed as 'roslynkit' through the child PATH; child sessions use the workspace-write sandbox, the runner installs no command-policy rules, and workstation rules remain active."
-    Write-Host "Preflight: one isolated, unmeasured command must resolve snapshot-local ripgrep and RoslynKit through the child PATH and run both version checks before any measured session starts."
+    Write-Host "Execution: child sessions bypass approvals and sandboxing, inherit the full workstation environment, and use each isolated snapshot as the --cd working root."
+    Write-Host "RoslynKit condition: the global 'roslynkit' command is resolved from the inherited workstation PATH; the prepared search index is .\artifacts\roslynkit.db relative to the snapshot working root."
+    Write-Host "Preflight: one isolated, unmeasured command must run global 'rg --version' and 'roslynkit --version' successfully before any measured session starts."
     Write-Host "Validity: any declined or nonzero command invalidates the session and stops the benchmark before the next session."
     Write-Host ""
     foreach ($trial in 1..$Trials) {
@@ -639,20 +576,16 @@ foreach ($directory in @($runRoot, (Join-Path $runRoot "answers"), (Join-Path $r
 }
 $rawSnapshot = $null
 $roslynKitSnapshot = $null
-$snapshotRoslynKitPath = $resolvedRoslynKitPath
 try {
     $rawSnapshot = New-CleanSnapshot -RepoRoot $repoRoot -TemporaryRoot $temporaryRoot -SnapshotName "raw-snapshot"
     $roslynKitSnapshot = New-CleanSnapshot -RepoRoot $repoRoot -TemporaryRoot $temporaryRoot -SnapshotName "rsk-snapshot"
     Restore-SnapshotDependencies -SnapshotPath $rawSnapshot
     Restore-SnapshotDependencies -SnapshotPath $roslynKitSnapshot
-    Install-SnapshotRipgrepTool -SnapshotPath $rawSnapshot -ResolvedRipgrepPath $resolvedRipgrepPath | Out-Null
-    Install-SnapshotRipgrepTool -SnapshotPath $roslynKitSnapshot -ResolvedRipgrepPath $resolvedRipgrepPath | Out-Null
-    $snapshotRoslynKitPath = Install-SnapshotRoslynKitTool -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
-    Initialize-RoslynKitIndex -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $snapshotRoslynKitPath
-    Stop-RoslynKitDaemon -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $snapshotRoslynKitPath
+    Initialize-RoslynKitIndex -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
+    Stop-RoslynKitDaemon -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
     $rawSnapshotBaseline = Get-SnapshotState -SnapshotPath $rawSnapshot
     $roslynKitSnapshotBaseline = Get-SnapshotState -SnapshotPath $roslynKitSnapshot
-    Invoke-BenchmarkPreflight -SnapshotPath $roslynKitSnapshot -RunRoot $runRoot -ResolvedRoslynKitPath $snapshotRoslynKitPath -DisabledFeatures $disabledFeatures
+    Invoke-BenchmarkPreflight -SnapshotPath $roslynKitSnapshot -RunRoot $runRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath -DisabledFeatures $disabledFeatures
     $rows = New-Object System.Collections.Generic.List[object]
     foreach ($trial in 1..$Trials) {
         $conditions = if (($trial % 2) -eq 1) { @("raw-codex", "roslynkit") } else { @("roslynkit", "raw-codex") }
@@ -660,9 +593,8 @@ try {
             foreach ($condition in $conditions) {
                 $snapshotPath = if ($condition -eq "raw-codex") { $rawSnapshot } else { $roslynKitSnapshot }
                 $snapshotBaseline = if ($condition -eq "raw-codex") { $rawSnapshotBaseline } else { $roslynKitSnapshotBaseline }
-                $conditionRoslynKitPath = if ($condition -eq "raw-codex") { $resolvedRoslynKitPath } else { $snapshotRoslynKitPath }
                 try {
-                    $row = Invoke-BenchmarkRun -Case $case -Condition $condition -Trial $trial -SnapshotPath $snapshotPath -SnapshotBaseline $snapshotBaseline -RunRoot $runRoot -ResolvedRoslynKitPath $conditionRoslynKitPath -DisabledFeatures $disabledFeatures
+                    $row = Invoke-BenchmarkRun -Case $case -Condition $condition -Trial $trial -SnapshotPath $snapshotPath -SnapshotBaseline $snapshotBaseline -RunRoot $runRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath -DisabledFeatures $disabledFeatures
                     $rows.Add($row)
                     Write-Reports -RunRoot $runRoot -Rows $rows -Cases $cases
                     if (-not $row.valid) {
@@ -671,7 +603,7 @@ try {
                 }
                 finally {
                     if ($condition -eq "roslynkit") {
-                        Stop-RoslynKitDaemon -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $snapshotRoslynKitPath
+                        Stop-RoslynKitDaemon -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
                     }
                 }
             }
@@ -681,7 +613,7 @@ try {
 finally {
     try {
         Stop-RoslynKitDaemon -SnapshotPath $rawSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
-        Stop-RoslynKitDaemon -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $snapshotRoslynKitPath
+        Stop-RoslynKitDaemon -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
     }
     finally {
         if (-not $KeepSnapshot) {

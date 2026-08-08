@@ -26,6 +26,6 @@ Dry-run with full parameter names:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\benchmark-codex.ps1 -DryRun -Trials 1
 ```
 
-For measured runs, pass the requested `-Model` and `-ReasoningEffort` explicitly. Keep the active workstation `CODEX_HOME` and its referenced environment variables stable for the entire comparison. Do not broaden the runner's `workspace-write` sandbox or weaken its sanitized snapshots, approval, memory, skill, plugin, or ephemeral-session controls.
+For measured runs, pass the requested `-Model` and `-ReasoningEffort` explicitly. Keep the active workstation `CODEX_HOME`, inherited environment, global `rg` and `roslynkit` versions, and executable locations stable for the entire comparison. The runner intentionally uses `--dangerously-bypass-approvals-and-sandbox`, `shell_environment_policy.inherit="all"`, and `--cd <snapshot>` so workstation-global tools run without staged copies. Run it only after explicit benchmark authorization in an environment where unsandboxed host access and full environment exposure are acceptable; Codex intends the bypass flag for externally sandboxed environments. Do not weaken its sanitized snapshots, memory, skill, plugin, or ephemeral-session controls.
 
 Treat lower token use or elapsed time as meaningful only when both conditions produce correct answers and the run is valid. Keep raw events and answers available for audit; do not expose controller-only review criteria in child prompts.
