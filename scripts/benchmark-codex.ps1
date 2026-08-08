@@ -8,7 +8,7 @@ param(
     [int] $Trials = 1,
     [string] $CaseId = "all",
     [switch] $DryRun,
-    [switch] $KeepSnapshot
+    [switch] $KeepSnapshot = $true
 )
 $ErrorActionPreference = "Stop"
 [Environment]::SetEnvironmentVariable("CODEX_THREAD_ID", $null, "Process")
@@ -596,6 +596,8 @@ if ($DryRun) {
     Write-Host "RoslynKit condition: the global 'roslynkit' command is resolved from the inherited workstation PATH; the prepared search index is .\artifacts\roslynkit.db relative to the snapshot working root."
     Write-Host "Preflight: one isolated, unmeasured command must run global 'rg --version' and 'roslynkit --version' successfully before any measured session starts."
     Write-Host "Validity: any declined or nonzero command, or overlapping RoslynKit invocation, invalidates the session and stops the benchmark before the next session."
+    $snapshotDisposition = if ($KeepSnapshot) { "retain both snapshots" } else { "delete both snapshots after the run" }
+    Write-Host "Snapshots: dry-run mode creates no snapshot directories; a measured run with these parameters would $snapshotDisposition and always print their locations."
     Write-Host ""
     foreach ($trial in 1..$Trials) {
         $conditions = if (($trial % 2) -eq 1) { @("raw-codex", "roslynkit") } else { @("roslynkit", "raw-codex") }
@@ -626,12 +628,15 @@ $disabledFeatures = Get-DisabledFeatures
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $runRoot = Join-Path $repoRoot "artifacts\codex-benchmark\$timestamp"
 $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) ("roslynkit-codex-benchmark-" + [Guid]::NewGuid().ToString("N"))
-foreach ($directory in @($runRoot, (Join-Path $runRoot "answers"), (Join-Path $runRoot "events"), (Join-Path $runRoot "stderr"), (Join-Path $runRoot "commands"), $temporaryRoot)) {
-    New-Item -ItemType Directory -Force -Path $directory | Out-Null
-}
-$rawSnapshot = $null
-$roslynKitSnapshot = $null
+$rawSnapshot = Join-Path $temporaryRoot "raw-snapshot"
+$roslynKitSnapshot = Join-Path $temporaryRoot "rsk-snapshot"
+Write-Host "Snapshot root: $temporaryRoot"
+Write-Host "Raw snapshot: $rawSnapshot"
+Write-Host "RoslynKit snapshot: $roslynKitSnapshot"
 try {
+    foreach ($directory in @($runRoot, (Join-Path $runRoot "answers"), (Join-Path $runRoot "events"), (Join-Path $runRoot "stderr"), (Join-Path $runRoot "commands"), $temporaryRoot)) {
+        New-Item -ItemType Directory -Force -Path $directory | Out-Null
+    }
     $rawSnapshot = New-CleanSnapshot -RepoRoot $repoRoot -TemporaryRoot $temporaryRoot -SnapshotName "raw-snapshot"
     $roslynKitSnapshot = New-CleanSnapshot -RepoRoot $repoRoot -TemporaryRoot $temporaryRoot -SnapshotName "rsk-snapshot"
     Restore-SnapshotDependencies -SnapshotPath $rawSnapshot
@@ -672,11 +677,16 @@ finally {
     }
     finally {
         if (-not $KeepSnapshot) {
+            Write-Host "Raw snapshot cleanup location: $rawSnapshot"
+            Write-Host "RoslynKit snapshot cleanup location: $roslynKitSnapshot"
             Remove-ManagedDirectory -Path $temporaryRoot -ParentPath ([IO.Path]::GetTempPath())
+            Write-Host "Deleted snapshot root: $temporaryRoot"
         }
         else {
-            if ($null -ne $rawSnapshot) { Write-Host "Retained raw snapshot: $rawSnapshot" }
-            if ($null -ne $roslynKitSnapshot) { Write-Host "Retained RoslynKit snapshot: $roslynKitSnapshot" }
+            $rawSnapshotStatus = if (Test-Path -LiteralPath $rawSnapshot -PathType Container) { "retained" } else { "not created" }
+            $roslynKitSnapshotStatus = if (Test-Path -LiteralPath $roslynKitSnapshot -PathType Container) { "retained" } else { "not created" }
+            Write-Host "Raw snapshot ($rawSnapshotStatus): $rawSnapshot"
+            Write-Host "RoslynKit snapshot ($roslynKitSnapshotStatus): $roslynKitSnapshot"
         }
     }
 }
