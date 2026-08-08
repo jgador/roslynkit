@@ -7,8 +7,7 @@ param(
     [ValidateRange(1, 100)]
     [int] $Trials = 1,
     [string] $CaseId = "all",
-    [switch] $DryRun,
-    [switch] $KeepSnapshot = $true
+    [switch] $DryRun
 )
 $ErrorActionPreference = "Stop"
 [Environment]::SetEnvironmentVariable("CODEX_THREAD_ID", $null, "Process")
@@ -58,31 +57,34 @@ function New-ConditionPrompt {
     param([string] $Condition, [string] $Prompt)
     $rules = @(
         "Inspection-only benchmark condition: $Condition.",
+        "As the first command, read .agents/skills/benchmark/SKILL.md with Get-Content -Raw before investigating code.",
         "Do not edit files or change Git state.",
         "Do not run builds, restores, tests, or other commands that write caches; inspect test source instead.",
-        "Do not use web search, browsers, network requests, or subagents. Do not inspect memory, prior-session files, Atlas, CODEX_HOME, .codex, .agents, or AGENTS.md.",
-        "Do not inspect benchmark scripts, benchmark data, or benchmark documentation.",
-        "Use only simple inspection commands that do not modify the snapshot and are expected to succeed. A declined command or nonzero exit code invalidates the run.",
+        "Do not use web search, browsers, network requests, or subagents. Do not inspect memory, prior-session files, Atlas, CODEX_HOME, .codex, AGENTS.md, or agent context not explicitly permitted here.",
+        "Do not inspect the benchmark controller, private benchmark data, prior benchmark artifacts, or benchmark procedure documentation.",
+        "Use only simple inspection commands that do not modify the repository and are expected to succeed. A declined command or nonzero exit code invalidates the run.",
         "Return concise source-and-test evidence; do not change files."
     )
     if ($Condition -eq "raw-codex") {
+        $rules += "Do not read .agents/skills/roslynkit or any file below it."
         $rules += "Use ordinary local shell and text inspection only. Do not invoke RoslynKit, roslynkit-dev, or dotnet run for RoslynKit."
     }
     else {
+        $rules += "Then read .agents/skills/roslynkit/SKILL.md, .agents/skills/roslynkit/references/commands.md, and .agents/skills/roslynkit/references/output.md with Get-Content -Raw before invoking RoslynKit."
         $rules += "Invoke the global RoslynKit from PATH as 'roslynkit' for code investigation."
-        $rules += "Pass --target .\RoslynKit.slnx to RoslynKit. The prepared snapshot-local search index is .\artifacts\roslynkit.db; pass --index-path .\artifacts\roslynkit.db to search."
+        $rules += "Pass --target .\RoslynKit.slnx to RoslynKit. The prepared repository-local search index is .\artifacts\roslynkit.db; pass --index-path .\artifacts\roslynkit.db to search."
         $rules += "Run only one RoslynKit command at a time and wait for it to finish before starting another. Do not use concurrent tool calls, background jobs, or parallel pipelines for RoslynKit."
         $rules += "Start intent discovery with one narrow roslynkit search query and --max-results 5. Refine serially only when the first result set is insufficient, and prefer bounded source slices over whole-file output."
     }
     return (($rules + "" + $Prompt) -join [Environment]::NewLine)
 }
 function New-CodexArguments {
-    param([string] $Prompt, [string] $SnapshotPath, [string] $AnswerPath, [string[]] $DisabledFeatures)
+    param([string] $Prompt, [string] $RepoRoot, [string] $AnswerPath, [string[]] $DisabledFeatures)
     $arguments = @(
         "exec", "--dangerously-bypass-approvals-and-sandbox", "--config", ('model_reasoning_effort="{0}"' -f $ReasoningEffort),
         "--config", "project_doc_max_bytes=0", "--config", "memories.use_memories=false", "--config", "memories.generate_memories=false",
         "--config", 'shell_environment_policy.inherit="all"', "--model", $Model,
-        "--ephemeral", "--json", "--color", "never", "--cd", $SnapshotPath, "--output-last-message", $AnswerPath
+        "--ephemeral", "--json", "--color", "never", "--cd", $RepoRoot, "--output-last-message", $AnswerPath
     )
     foreach ($feature in $DisabledFeatures) { $arguments += "--disable", $feature }
     $arguments += $Prompt; return $arguments
@@ -92,7 +94,7 @@ function Get-DisabledFeatures {
     $requested = @("apps", "browser_use", "browser_use_external", "browser_use_full_cdp_access", "computer_use", "external_agent_memory_import", "goals", "hooks", "image_generation", "in_app_browser", "memories", "multi_agent", "multi_agent_v2", "plugin_sharing", "plugins", "remote_plugin", "shell_snapshot", "skill_mcp_dependency_install", "skill_search", "standalone_web_search", "workspace_dependencies")
     if ($DryRunMode) { return $requested }
     $featureLines = @(& codex features list)
-    if ($LASTEXITCODE -ne 0) { throw "The installed Codex CLI could not enumerate features for clean-room isolation." }
+    if ($LASTEXITCODE -ne 0) { throw "The installed Codex CLI could not enumerate features for benchmark isolation." }
     $available = @($featureLines | ForEach-Object { ($_ -split '\s+')[0] })
     return @($requested | Where-Object { $available -contains $_ })
 }
@@ -102,68 +104,17 @@ function Format-CommandLine {
                 if ($_ -match '^[A-Za-z0-9_./:\\=-]+$') { $_ } else { "'" + $_.Replace("'", "''") + "'" }
             }) -join " ")
 }
-function Test-ExcludedSnapshotFile {
-    param([string] $RelativePath)
-    $path = $RelativePath.Replace("\\", "/")
-    return $path -match "(^|/)(bin|obj)(/|$)" -or
-        $path -match "(^|/)(\.agents|\.codex|\.claude|artifacts)(/|$)" -or
-        $path -match "(^|/)(AGENTS|MEMORY|SKILL)\.md$" -or
-        $path -match "(^|/)\.github/(skills(/|$)|copilot-instructions\.md$)" -or
-        $path -match "^docs/agents(/|$)" -or
-        $path -match "^benchmarks(/|$)" -or
-        $path -match "^scripts/(benchmark-.*|measure-.*benchmark.*)\.ps1$" -or
-        $path -match "^docs/.*benchmark.*\.md$" -or
-        $path -eq "docs/local-repository-reference.md"
-}
-function New-CleanSnapshot {
-    param([string] $RepoRoot, [string] $TemporaryRoot, [string] $SnapshotName = "snapshot")
-    $snapshot = Join-Path $TemporaryRoot $SnapshotName
-    New-Item -ItemType Directory -Force -Path $snapshot | Out-Null
-    $files = @(& git -C $RepoRoot ls-files --cached --others --exclude-standard)
-    if ($LASTEXITCODE -ne 0) {
-        throw "Could not list nonignored repository files for the benchmark snapshot."
-    }
-    foreach ($relativePath in $files) {
-        if (Test-ExcludedSnapshotFile -RelativePath $relativePath) {
-            continue
-        }
-        $source = Join-Path $RepoRoot $relativePath
-        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
-            continue
-        }
-        $destination = Join-Path $snapshot $relativePath
-        $destinationDirectory = Split-Path -Parent $destination
-        New-Item -ItemType Directory -Force -Path $destinationDirectory | Out-Null
-        Copy-Item -LiteralPath $source -Destination $destination -Force
-    }
-    & git -C $snapshot init --quiet
-    & git -C $snapshot config user.name "Codex benchmark"
-    & git -C $snapshot config user.email "codex-benchmark@localhost"
-    & git -C $snapshot config core.autocrlf false
-    & git -C $snapshot config core.eol lf
-    & git -C $snapshot config core.safecrlf false
-    & git -C $snapshot config commit.gpgSign false
-    $emptyHooksPath = Join-Path $snapshot ".git\benchmark-hooks"
-    New-Item -ItemType Directory -Force -Path $emptyHooksPath | Out-Null
-    & git -C $snapshot config core.hooksPath $emptyHooksPath
-    & git -C $snapshot add --all --force
-    & git -C $snapshot commit --quiet --message "benchmark snapshot"
-    if ($LASTEXITCODE -ne 0) {
-        throw "Could not commit the clean benchmark snapshot."
-    }
-    return $snapshot
-}
-function Restore-SnapshotDependencies {
-    param([string] $SnapshotPath)
-    $solution = Join-Path $SnapshotPath "RoslynKit.slnx"
+function Restore-RepositoryDependencies {
+    param([string] $RepoRoot)
+    $solution = Join-Path $RepoRoot "RoslynKit.slnx"
     & dotnet restore $solution --nologo --verbosity quiet
     if ($LASTEXITCODE -ne 0) {
-        throw "Snapshot restore failed before measured runs."
+        throw "Repository restore failed before measured runs."
     }
 }
 function Initialize-RoslynKitIndex {
-    param([string] $SnapshotPath, [string] $ResolvedRoslynKitPath)
-    Push-Location $SnapshotPath
+    param([string] $RepoRoot, [string] $ResolvedRoslynKitPath)
+    Push-Location $RepoRoot
     try {
         New-Item -ItemType Directory -Force -Path ".\artifacts" | Out-Null
         & $ResolvedRoslynKitPath index --target ".\RoslynKit.slnx" --index-path ".\artifacts\roslynkit.db"
@@ -176,15 +127,15 @@ function Initialize-RoslynKitIndex {
     }
 }
 function Stop-RoslynKitDaemon {
-    param([string] $SnapshotPath, [string] $ResolvedRoslynKitPath)
-    if ([string]::IsNullOrWhiteSpace($SnapshotPath) -or -not (Test-Path -LiteralPath (Join-Path $SnapshotPath "RoslynKit.slnx") -PathType Leaf)) {
+    param([string] $RepoRoot, [string] $ResolvedRoslynKitPath)
+    if ([string]::IsNullOrWhiteSpace($RepoRoot) -or -not (Test-Path -LiteralPath (Join-Path $RepoRoot "RoslynKit.slnx") -PathType Leaf)) {
         return
     }
-    Push-Location $SnapshotPath
+    Push-Location $RepoRoot
     try {
         $stopOutput = @(& $ResolvedRoslynKitPath daemon stop --target ".\RoslynKit.slnx" 2>&1)
         if ($LASTEXITCODE -ne 0) {
-            Write-Warning "RoslynKit daemon cleanup failed for '$SnapshotPath': $($stopOutput -join ' ')"
+            Write-Warning "RoslynKit daemon cleanup failed for '$RepoRoot': $($stopOutput -join ' ')"
             return
         }
         if (($stopOutput -join "`n") -match "state: not-running") {
@@ -197,10 +148,10 @@ function Stop-RoslynKitDaemon {
             }
             Start-Sleep -Milliseconds 250
         }
-        Write-Warning "RoslynKit daemon did not stop within five seconds for '$SnapshotPath'."
+        Write-Warning "RoslynKit daemon did not stop within five seconds for '$RepoRoot'."
     }
     catch {
-        Write-Warning "RoslynKit daemon cleanup failed for '$SnapshotPath': $($_.Exception.Message)"
+        Write-Warning "RoslynKit daemon cleanup failed for '$RepoRoot': $($_.Exception.Message)"
     }
     finally {
         Pop-Location
@@ -223,20 +174,6 @@ function Set-WorkstationCodexHome {
     }
     [Environment]::SetEnvironmentVariable("CODEX_HOME", $resolvedHome, "Process")
     return $configPath
-}
-function Remove-ManagedDirectory {
-    param([string] $Path, [string] $ParentPath)
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return
-    }
-    $trimCharacters = [char[]]@([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
-    $resolvedPath = (Resolve-Path -LiteralPath $Path).Path.TrimEnd($trimCharacters)
-    $resolvedParent = (Resolve-Path -LiteralPath $ParentPath).Path.TrimEnd($trimCharacters)
-    $parentPrefix = $resolvedParent + [IO.Path]::DirectorySeparatorChar
-    if (-not $resolvedPath.StartsWith($parentPrefix, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Refusing to delete a directory outside the managed benchmark area: '$resolvedPath'."
-    }
-    Remove-Item -LiteralPath $resolvedPath -Recurse -Force
 }
 function Read-Events {
     param([string] $Path)
@@ -336,7 +273,14 @@ function Test-RoslynKitInvocation {
     else {
         '(?!)'
     }
-    return $Command -match $resolvedVariablePattern -or $Command -match $dotnetPattern
+    $directResolverInvocationPattern = '(?is)&\s*(?:\(\s*Get-Command\s+roslynkit(?:\.exe)?\b[^)]*\)(?:\.(?:Path|Source))?|\$\(\s*Get-Command\s+roslynkit(?:\.exe)?\b[^)]*\))\s+\S+'
+    $indirectShellPattern = '(?is)\b(?:cmd(?:\.exe)?\s+/(?:c|k)|Invoke-Expression|iex)\b[^\r\n;]*["'']?(?:[^"''\s]*[\\/])?roslynkit(?:-dev)?(?:\.exe)?(?:["'']|\s|$)'
+    $processStartPattern = '(?is)::Start\(\s*["''](?:[^"'']*[\\/])?roslynkit(?:-dev)?(?:\.exe)?["'']'
+    return $Command -match $resolvedVariablePattern -or
+        $Command -match $dotnetPattern -or
+        $Command -match $directResolverInvocationPattern -or
+        $Command -match $indirectShellPattern -or
+        $Command -match $processStartPattern
 }
 function Test-ConcurrentRoslynKitInvocations {
     param([object[]] $Events, [string] $ResolvedRoslynKitPath)
@@ -357,14 +301,73 @@ function Test-ConcurrentRoslynKitInvocations {
     }
     return $false
 }
+function Get-RequiredContextPaths {
+    param([string] $Condition)
+    $paths = @(
+        ".agents/skills/benchmark/SKILL.md"
+    )
+    if ($Condition -eq "roslynkit") {
+        $paths += @(
+            ".agents/skills/roslynkit/SKILL.md",
+            ".agents/skills/roslynkit/references/commands.md",
+            ".agents/skills/roslynkit/references/output.md"
+        )
+    }
+    return $paths
+}
+function Get-ContextPathPattern {
+    param([string] $ContextPath)
+    $escapedPath = [regex]::Escape($ContextPath).Replace("/", "[\\/]")
+    return '(?i)(?<![A-Za-z0-9_.-])(?:\.[\\/])?' + $escapedPath + '(?![A-Za-z0-9_.\\/\\-])'
+}
+function Test-CommandReferencesContextPath {
+    param([string] $Command, [string] $ContextPath)
+    return [regex]::IsMatch($Command, (Get-ContextPathPattern -ContextPath $ContextPath))
+}
+function Test-CommandReadsContextPath {
+    param([string] $Command, [string] $ContextPath)
+    if (-not (Test-CommandReferencesContextPath -Command $Command -ContextPath $ContextPath)) {
+        return $false
+    }
+    $parseInput = if ($Command.Trim() -match '^["'']') { "& $Command" } else { $Command }
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseInput($parseInput, [ref] $tokens, [ref] $parseErrors)
+    $pathPattern = Get-ContextPathPattern -ContextPath $ContextPath
+    $commandAsts = @($ast.FindAll({
+                param($node)
+                $node -is [System.Management.Automation.Language.CommandAst]
+            }, $true))
+    foreach ($commandAst in $commandAsts) {
+        $commandName = $commandAst.GetCommandName()
+        if (-not [string]::IsNullOrWhiteSpace($commandName) -and
+            [StringComparer]::OrdinalIgnoreCase.Equals([IO.Path]::GetFileName($commandName), "Get-Content") -and
+            $commandAst.Extent.Text -match '(?i)(?:^|\s)-Raw(?:\s|$)' -and
+            [regex]::IsMatch($commandAst.Extent.Text, $pathPattern)) {
+            return $true
+        }
+    }
+    return $false
+}
 function Test-ForbiddenContextSurface {
-    param([string] $Command)
+    param([string] $Condition, [string] $Command, [bool] $UsesRoslynKit)
     $commandWithoutNegativeGlobs = [regex]::Replace($Command, '![^\s]+', '')
     $commandWithoutExclusionFilters = [regex]::Replace($commandWithoutNegativeGlobs, '(?is)-notin\s+@\([^)]*\)', '')
-    return $commandWithoutExclusionFilters -match "(?i)(CODEX_HOME|\.codex|\.agents|AGENTS\.md|MEMORY\.md|rollout-|history\.jsonl|atlas-(csharp|doc|test)-mapper|codex-benchmark|benchmark-codex|codex-cases\.json|token-efficiency-benchmark)"
+    if ($commandWithoutExclusionFilters -match "(?i)(CODEX_HOME|\.codex|\.claude(?:[\\/]|$)|\.github[\\/](?:skills(?:[\\/]|$)|copilot-instructions\.md)|AGENTS\.md|CLAUDE\.md|MEMORY\.md|rollout-|history\.jsonl|atlas-(csharp|doc|test)-mapper|benchmarks[\\/]|scripts[\\/]benchmark-codex\.ps1|artifacts[\\/]codex-benchmark(?:[\\/]|$)|docs[\\/]agents(?:[\\/]|$)|docs[\\/]local-repository-reference\.md|benchmark-codex|codex-cases\.json|token-efficiency-benchmark)") {
+        return $true
+    }
+    $remainingCommand = $commandWithoutExclusionFilters
+    foreach ($allowedPath in Get-RequiredContextPaths -Condition $Condition) {
+        $remainingCommand = [regex]::Replace($remainingCommand, (Get-ContextPathPattern -ContextPath $allowedPath), '')
+    }
+    if ($Condition -eq "roslynkit" -and $UsesRoslynKit) {
+        $allowedIndexArgumentPattern = '(?i)--index-path(?:\s+|=)["'']?(?:\.[\\/])?artifacts[\\/]roslynkit\.db["'']?'
+        $remainingCommand = [regex]::Replace($remainingCommand, $allowedIndexArgumentPattern, '')
+    }
+    return $remainingCommand -match '(?i)\.agents(?:[\\/]|$)|(?:^|[^A-Za-z0-9_.-])artifacts[\\/]|AGENTS\.md'
 }
 function Get-ComplianceIssues {
-    param([string] $Condition, [string[]] $Commands, [object[]] $Events, [string[]] $SnapshotChanges, [string] $ResolvedRoslynKitPath)
+    param([string] $Condition, [string[]] $Commands, [object[]] $Events, [string[]] $RepositoryChanges, [string] $ResolvedRoslynKitPath)
     $issues = New-Object System.Collections.Generic.List[string]
     $usedRoslynKit = @($Events | Where-Object {
             $_.item.type -eq "command_execution" -and $_.item.status -eq "completed" -and $_.item.exit_code -eq 0 -and
@@ -375,10 +378,13 @@ function Get-ComplianceIssues {
         if ($Condition -eq "raw-codex" -and $usesRoslynKit) {
             $issues.Add("raw-codex invoked RoslynKit: $command")
         }
+        if ($Condition -eq "raw-codex" -and $command -match '(?i)\.agents[\\/]+skills[\\/]+roslynkit(?:[\\/]|$)') {
+            $issues.Add("raw-codex read RoslynKit skill context: $command")
+        }
         if ($command -match "(?i)\b(curl|wget|Invoke-WebRequest|Invoke-RestMethod)\b|https?://") {
             $issues.Add("used web or network access: $command")
         }
-        if (Test-ForbiddenContextSurface -Command $command) {
+        if (Test-ForbiddenContextSurface -Condition $Condition -Command $command -UsesRoslynKit $usesRoslynKit) {
             $issues.Add("used forbidden context surface: $command")
         }
         if ($command -match "(?i)\b(apply_patch|Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item)\b|git\s+(add|commit|checkout|switch|reset|restore|clean|stash)\b|\b(dotnet|msbuild)\s+(build|test|restore|pack|run)\b") {
@@ -405,11 +411,45 @@ function Get-ComplianceIssues {
     if ($Condition -eq "roslynkit" -and (Test-ConcurrentRoslynKitInvocations -Events $Events -ResolvedRoslynKitPath $ResolvedRoslynKitPath)) {
         $issues.Add("RoslynKit commands overlapped; run one invocation at a time")
     }
+    $requiredReadIndices = @{}
+    foreach ($requiredPath in Get-RequiredContextPaths -Condition $Condition) {
+        $readIndex = -1
+        for ($commandIndex = 0; $commandIndex -lt $Commands.Count; $commandIndex++) {
+            if (Test-CommandReadsContextPath -Command $Commands[$commandIndex] -ContextPath $requiredPath) {
+                $readIndex = $commandIndex
+                break
+            }
+        }
+        $requiredReadIndices[$requiredPath] = $readIndex
+        if ($readIndex -lt 0) {
+            $issues.Add("did not read required context: $requiredPath")
+        }
+    }
+    $benchmarkSkillPath = ".agents/skills/benchmark/SKILL.md"
+    if ($requiredReadIndices[$benchmarkSkillPath] -gt 0) {
+        $issues.Add("benchmark skill was not read by the first command")
+    }
+    if ($Condition -eq "roslynkit") {
+        $firstRoslynKitCommandIndex = -1
+        for ($commandIndex = 0; $commandIndex -lt $Commands.Count; $commandIndex++) {
+            if (Test-RoslynKitInvocation -Command $Commands[$commandIndex] -ResolvedRoslynKitPath $ResolvedRoslynKitPath) {
+                $firstRoslynKitCommandIndex = $commandIndex
+                break
+            }
+        }
+        if ($firstRoslynKitCommandIndex -ge 0) {
+            foreach ($requiredPath in Get-RequiredContextPaths -Condition $Condition) {
+                if ($requiredReadIndices[$requiredPath] -ge $firstRoslynKitCommandIndex) {
+                    $issues.Add("required context was not read before RoslynKit invocation: $requiredPath")
+                }
+            }
+        }
+    }
     if ($Commands.Count -eq 0) {
         $issues.Add("run recorded no inspection commands")
     }
-    if ($SnapshotChanges.Count -gt 0) {
-        $issues.Add("snapshot changed: $($SnapshotChanges -join '; ')")
+    if ($RepositoryChanges.Count -gt 0) {
+        $issues.Add("repository content changed: $($RepositoryChanges -join '; ')")
     }
     return @($issues | Select-Object -Unique)
 }
@@ -417,36 +457,57 @@ function Test-NonEmptyFile {
     param([string] $Path)
     return (Test-Path -LiteralPath $Path -PathType Leaf) -and -not [string]::IsNullOrWhiteSpace((Get-Content -Raw -LiteralPath $Path))
 }
-function Get-SnapshotState {
-    param([string] $SnapshotPath)
-    return @(& git -C $SnapshotPath status --porcelain --ignored --untracked-files=all)
+function Get-RepositoryContentManifest {
+    param([string] $RepoRoot)
+    $paths = @(& git -C $RepoRoot ls-files --cached --others --exclude-standard)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not list nonignored repository files for the content manifest."
+    }
+    $entries = New-Object System.Collections.Generic.List[object]
+    foreach ($relativePath in $paths) {
+        $fullPath = Join-Path $RepoRoot $relativePath
+        $exists = Test-Path -LiteralPath $fullPath -PathType Leaf
+        $sha256 = if ($exists) { (Get-FileHash -Algorithm SHA256 -LiteralPath $fullPath).Hash } else { $null }
+        $entries.Add([pscustomobject]@{
+                path = $relativePath.Replace("\", "/")
+                exists = $exists
+                sha256 = $sha256
+            })
+    }
+    return @($entries.ToArray() | Sort-Object path)
 }
-function Get-SnapshotChanges {
-    param([string] $SnapshotPath, [string[]] $Baseline)
-    return @(Compare-Object -ReferenceObject $Baseline -DifferenceObject (Get-SnapshotState -SnapshotPath $SnapshotPath) |
-        ForEach-Object { $_.InputObject } |
-        Where-Object { $_ -notmatch '^!! artifacts/roslynkit\.db-(shm|wal)$' })
+function ConvertTo-RepositoryManifestRecord {
+    param([object] $Entry)
+    return "{0}|{1}|{2}" -f $Entry.path, $Entry.exists, $Entry.sha256
+}
+function Get-RepositoryContentChanges {
+    param([string] $RepoRoot, [object[]] $Baseline)
+    $current = Get-RepositoryContentManifest -RepoRoot $RepoRoot
+    $baselineRecords = @($Baseline | ForEach-Object { ConvertTo-RepositoryManifestRecord -Entry $_ })
+    $currentRecords = @($current | ForEach-Object { ConvertTo-RepositoryManifestRecord -Entry $_ })
+    return @(Compare-Object -ReferenceObject $baselineRecords -DifferenceObject $currentRecords |
+        ForEach-Object { $_.InputObject })
 }
 function Invoke-BenchmarkRun {
-    param([object] $Case, [string] $Condition, [int] $Trial, [string] $SnapshotPath, [string[]] $SnapshotBaseline, [string] $RunRoot, [string] $ResolvedRoslynKitPath, [string[]] $DisabledFeatures)
+    param([object] $Case, [string] $Condition, [int] $Trial, [string] $RepoRoot, [object[]] $RepositoryManifest, [string] $RunRoot, [string] $ResolvedRoslynKitPath, [string[]] $DisabledFeatures)
     $runId = "{0}-{1}-trial{2}" -f $Case.id, $Condition, $Trial
     $answerPath = Join-Path $RunRoot "answers\$runId.md"
     $eventPath = Join-Path $RunRoot "events\$runId.jsonl"
     $stderrPath = Join-Path $RunRoot "stderr\$runId.txt"
     $commandsPath = Join-Path $RunRoot "commands\$runId.txt"
     $prompt = New-ConditionPrompt -Condition $Condition -Prompt $Case.prompt
-    $arguments = New-CodexArguments -Prompt $prompt -SnapshotPath $SnapshotPath -AnswerPath $answerPath -DisabledFeatures $DisabledFeatures
+    $arguments = New-CodexArguments -Prompt $prompt -RepoRoot $RepoRoot -AnswerPath $answerPath -DisabledFeatures $DisabledFeatures
     $exitCode = -1
     $startedAt = [DateTime]::UtcNow
     $completedAt = $startedAt
-    if ((Get-SnapshotChanges -SnapshotPath $SnapshotPath -Baseline $SnapshotBaseline).Count -gt 0) {
-        throw "The prepared snapshot is dirty before '$runId'."
+    if ((Get-RepositoryContentChanges -RepoRoot $RepoRoot -Baseline $RepositoryManifest).Count -gt 0) {
+        throw "Repository content changed before '$runId'."
     }
     try {
         $startedAt = [DateTime]::UtcNow
         $oldPreference = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
-        Push-Location $SnapshotPath
+        Push-Location $RepoRoot
         try {
             & codex @arguments 1> $eventPath 2> $stderrPath
             $completedAt = [DateTime]::UtcNow
@@ -465,8 +526,8 @@ function Invoke-BenchmarkRun {
     $commands = Get-Commands -Events $events
     $commands | Set-Content -LiteralPath $commandsPath -Encoding UTF8
     $usage = Get-TokenUsage -Events $events
-    $snapshotChanges = Get-SnapshotChanges -SnapshotPath $SnapshotPath -Baseline $SnapshotBaseline
-    $issues = Get-ComplianceIssues -Condition $Condition -Commands $commands -Events $events -SnapshotChanges $snapshotChanges -ResolvedRoslynKitPath $ResolvedRoslynKitPath
+    $repositoryChanges = Get-RepositoryContentChanges -RepoRoot $RepoRoot -Baseline $RepositoryManifest
+    $issues = Get-ComplianceIssues -Condition $Condition -Commands $commands -Events $events -RepositoryChanges $repositoryChanges -ResolvedRoslynKitPath $ResolvedRoslynKitPath
     if (-not (Test-NonEmptyFile -Path $answerPath)) { $issues = @($issues + "no final answer was written") }
     $inputTokens = if ($null -ne $usage) { [long] $usage.input_tokens } else { $null }
     $cachedInputTokens = if ($null -ne $usage -and $null -ne $usage.cached_input_tokens) { [long] $usage.cached_input_tokens } else { $null }
@@ -481,7 +542,7 @@ function Invoke-BenchmarkRun {
     }
 }
 function Invoke-BenchmarkPreflight {
-    param([string] $SnapshotPath, [string] $RunRoot, [string] $ResolvedRoslynKitPath, [string[]] $DisabledFeatures)
+    param([string] $RepoRoot, [object[]] $RepositoryManifest, [string] $RunRoot, [string] $ResolvedRoslynKitPath, [string[]] $DisabledFeatures)
     $preflightRoot = Join-Path $RunRoot "preflight"
     New-Item -ItemType Directory -Force -Path $preflightRoot | Out-Null
     $answerPath = Join-Path $preflightRoot "answer.md"
@@ -490,12 +551,12 @@ function Invoke-BenchmarkPreflight {
     $commandsPath = Join-Path $preflightRoot "commands.txt"
     $preflightCommand = "rg --version; roslynkit --version"
     $prompt = "Run exactly these two PowerShell commands once:`n`n$preflightCommand`n`nThen reply with exactly both version outputs and exit codes, and nothing else."
-    $arguments = New-CodexArguments -Prompt $prompt -SnapshotPath $SnapshotPath -AnswerPath $answerPath -DisabledFeatures $DisabledFeatures
+    $arguments = New-CodexArguments -Prompt $prompt -RepoRoot $RepoRoot -AnswerPath $answerPath -DisabledFeatures $DisabledFeatures
     $exitCode = -1
     $oldPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        Push-Location $SnapshotPath
+        Push-Location $RepoRoot
         try {
             & codex @arguments 1> $eventPath 2> $stderrPath
             $exitCode = $LASTEXITCODE
@@ -524,6 +585,10 @@ function Invoke-BenchmarkPreflight {
     if ($exitCode -ne 0 -or $completedCommands.Count -ne 1 -or $failedCommands.Count -gt 0 -or $successfulRoslynKitCommands.Count -ne 1 -or
         $successfulRipgrepCommands.Count -ne 1 -or $preflightOutput -notmatch "(?im)^(?:ripgrep|rg)\s+\d" -or $preflightOutput -notmatch "(?i)roslynkit version") {
         throw "Benchmark preflight failed before measured sessions. Inspect '$preflightRoot'."
+    }
+    $repositoryChanges = Get-RepositoryContentChanges -RepoRoot $RepoRoot -Baseline $RepositoryManifest
+    if ($repositoryChanges.Count -gt 0) {
+        throw "Repository content changed during benchmark preflight: $($repositoryChanges -join '; ')"
     }
     Write-Host "Benchmark preflight passed: $preflightRoot"
 }
@@ -588,23 +653,22 @@ $resolvedRipgrepPath = Resolve-GlobalRipgrepPath
 $cases = Get-SelectedCases -Cases (Get-CaseData -RepoRoot $repoRoot) -SelectedCaseId $CaseId
 $activeCodexConfigPath = Set-WorkstationCodexHome
 if ($DryRun) {
-    $placeholderSnapshot = "<clean-snapshot>"
+    $placeholderRepoRoot = "<repository-root>"
     $disabledFeatures = Get-DisabledFeatures -DryRunMode
     Write-Host "Active Codex config: $activeCodexConfigPath"
     Write-Host "Environment: the workstation CODEX_HOME is used directly; benchmark-specific command-line overrides remain in effect."
-    Write-Host "Execution: child sessions bypass approvals and sandboxing, inherit the full workstation environment, and use each isolated snapshot as the --cd working root."
-    Write-Host "RoslynKit condition: the global 'roslynkit' command is resolved from the inherited workstation PATH; the prepared search index is .\artifacts\roslynkit.db relative to the snapshot working root."
-    Write-Host "Preflight: one isolated, unmeasured command must run global 'rg --version' and 'roslynkit --version' successfully before any measured session starts."
-    Write-Host "Validity: any declined or nonzero command, or overlapping RoslynKit invocation, invalidates the session and stops the benchmark before the next session."
-    $snapshotDisposition = if ($KeepSnapshot) { "retain both snapshots" } else { "delete both snapshots after the run" }
-    Write-Host "Snapshots: dry-run mode creates no snapshot directories; a measured run with these parameters would $snapshotDisposition and always print their locations."
+    Write-Host "Execution: child sessions bypass approvals and sandboxing, inherit the full workstation environment, and use the repository root as the --cd working root."
+    Write-Host "RoslynKit condition: the global 'roslynkit' command is resolved from the inherited workstation PATH; the prepared search index is .\artifacts\roslynkit.db relative to the repository root."
+    Write-Host "Preflight: one unmeasured command must run global 'rg --version' and 'roslynkit --version' successfully before any measured session starts."
+    Write-Host "Validity: any declined or nonzero command, overlapping RoslynKit invocation, or nonignored repository content change invalidates the session and stops the benchmark before the next session."
+    Write-Host "Repository integrity: a content manifest is captured after preparation and validated after preflight and every measured session; ignored artifacts do not affect it."
     Write-Host ""
     foreach ($trial in 1..$Trials) {
         $conditions = if (($trial % 2) -eq 1) { @("raw-codex", "roslynkit") } else { @("roslynkit", "raw-codex") }
         foreach ($case in $cases) {
             foreach ($condition in $conditions) {
                 $prompt = New-ConditionPrompt -Condition $condition -Prompt $case.prompt
-                $arguments = New-CodexArguments -Prompt $prompt -SnapshotPath $placeholderSnapshot -AnswerPath "<artifacts-answer-path>" -DisabledFeatures $disabledFeatures
+                $arguments = New-CodexArguments -Prompt $prompt -RepoRoot $placeholderRepoRoot -AnswerPath "<artifacts-answer-path>" -DisabledFeatures $disabledFeatures
                 Write-Host "[$($case.id)] $condition trial $trial"
                 Write-Host ("codex " + (Format-CommandLine -Arguments $arguments))
                 Write-Host "Prompt:"
@@ -627,34 +691,22 @@ if (-not (Test-Path -LiteralPath $resolvedRipgrepPath -PathType Leaf)) {
 $disabledFeatures = Get-DisabledFeatures
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $runRoot = Join-Path $repoRoot "artifacts\codex-benchmark\$timestamp"
-$temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) ("roslynkit-codex-benchmark-" + [Guid]::NewGuid().ToString("N"))
-$rawSnapshot = Join-Path $temporaryRoot "raw-snapshot"
-$roslynKitSnapshot = Join-Path $temporaryRoot "rsk-snapshot"
-Write-Host "Snapshot root: $temporaryRoot"
-Write-Host "Raw snapshot: $rawSnapshot"
-Write-Host "RoslynKit snapshot: $roslynKitSnapshot"
 try {
-    foreach ($directory in @($runRoot, (Join-Path $runRoot "answers"), (Join-Path $runRoot "events"), (Join-Path $runRoot "stderr"), (Join-Path $runRoot "commands"), $temporaryRoot)) {
+    foreach ($directory in @($runRoot, (Join-Path $runRoot "answers"), (Join-Path $runRoot "events"), (Join-Path $runRoot "stderr"), (Join-Path $runRoot "commands"))) {
         New-Item -ItemType Directory -Force -Path $directory | Out-Null
     }
-    $rawSnapshot = New-CleanSnapshot -RepoRoot $repoRoot -TemporaryRoot $temporaryRoot -SnapshotName "raw-snapshot"
-    $roslynKitSnapshot = New-CleanSnapshot -RepoRoot $repoRoot -TemporaryRoot $temporaryRoot -SnapshotName "rsk-snapshot"
-    Restore-SnapshotDependencies -SnapshotPath $rawSnapshot
-    Restore-SnapshotDependencies -SnapshotPath $roslynKitSnapshot
-    Initialize-RoslynKitIndex -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
-    Stop-RoslynKitDaemon -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
-    $rawSnapshotBaseline = Get-SnapshotState -SnapshotPath $rawSnapshot
-    $roslynKitSnapshotBaseline = Get-SnapshotState -SnapshotPath $roslynKitSnapshot
-    Invoke-BenchmarkPreflight -SnapshotPath $roslynKitSnapshot -RunRoot $runRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath -DisabledFeatures $disabledFeatures
+    Restore-RepositoryDependencies -RepoRoot $repoRoot
+    Initialize-RoslynKitIndex -RepoRoot $repoRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath
+    Stop-RoslynKitDaemon -RepoRoot $repoRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath
+    $repositoryManifest = Get-RepositoryContentManifest -RepoRoot $repoRoot
+    Invoke-BenchmarkPreflight -RepoRoot $repoRoot -RepositoryManifest $repositoryManifest -RunRoot $runRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath -DisabledFeatures $disabledFeatures
     $rows = New-Object System.Collections.Generic.List[object]
     foreach ($trial in 1..$Trials) {
         $conditions = if (($trial % 2) -eq 1) { @("raw-codex", "roslynkit") } else { @("roslynkit", "raw-codex") }
         foreach ($case in $cases) {
             foreach ($condition in $conditions) {
-                $snapshotPath = if ($condition -eq "raw-codex") { $rawSnapshot } else { $roslynKitSnapshot }
-                $snapshotBaseline = if ($condition -eq "raw-codex") { $rawSnapshotBaseline } else { $roslynKitSnapshotBaseline }
                 try {
-                    $row = Invoke-BenchmarkRun -Case $case -Condition $condition -Trial $trial -SnapshotPath $snapshotPath -SnapshotBaseline $snapshotBaseline -RunRoot $runRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath -DisabledFeatures $disabledFeatures
+                    $row = Invoke-BenchmarkRun -Case $case -Condition $condition -Trial $trial -RepoRoot $repoRoot -RepositoryManifest $repositoryManifest -RunRoot $runRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath -DisabledFeatures $disabledFeatures
                     $rows.Add($row)
                     Write-Reports -RunRoot $runRoot -Rows $rows -Cases $cases
                     if (-not $row.valid) {
@@ -663,7 +715,7 @@ try {
                 }
                 finally {
                     if ($condition -eq "roslynkit") {
-                        Stop-RoslynKitDaemon -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
+                        Stop-RoslynKitDaemon -RepoRoot $repoRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath
                     }
                 }
             }
@@ -671,23 +723,6 @@ try {
     }
 }
 finally {
-    try {
-        Stop-RoslynKitDaemon -SnapshotPath $rawSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
-        Stop-RoslynKitDaemon -SnapshotPath $roslynKitSnapshot -ResolvedRoslynKitPath $resolvedRoslynKitPath
-    }
-    finally {
-        if (-not $KeepSnapshot) {
-            Write-Host "Raw snapshot cleanup location: $rawSnapshot"
-            Write-Host "RoslynKit snapshot cleanup location: $roslynKitSnapshot"
-            Remove-ManagedDirectory -Path $temporaryRoot -ParentPath ([IO.Path]::GetTempPath())
-            Write-Host "Deleted snapshot root: $temporaryRoot"
-        }
-        else {
-            $rawSnapshotStatus = if (Test-Path -LiteralPath $rawSnapshot -PathType Container) { "retained" } else { "not created" }
-            $roslynKitSnapshotStatus = if (Test-Path -LiteralPath $roslynKitSnapshot -PathType Container) { "retained" } else { "not created" }
-            Write-Host "Raw snapshot ($rawSnapshotStatus): $rawSnapshot"
-            Write-Host "RoslynKit snapshot ($roslynKitSnapshotStatus): $roslynKitSnapshot"
-        }
-    }
+    Stop-RoslynKitDaemon -RepoRoot $repoRoot -ResolvedRoslynKitPath $resolvedRoslynKitPath
 }
 Write-Host "Benchmark complete: $runRoot"

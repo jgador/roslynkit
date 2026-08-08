@@ -1,7 +1,7 @@
 interface:
   display_name: "Benchmark"
-  short_description: "Run reproducible repository benchmarks"
-  default_prompt: "Use $benchmark to run the Codex clean-room benchmark."
+  short_description: "Run direct-worktree Codex benchmarks"
+  default_prompt: "Use $benchmark to dry-run the direct-worktree Codex benchmark."
 
 policy:
   allow_implicit_invocation: false
