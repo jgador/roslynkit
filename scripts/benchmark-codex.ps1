@@ -11,6 +11,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 [Environment]::SetEnvironmentVariable("CODEX_THREAD_ID", $null, "Process")
+$RoslynKitShellTimeoutMilliseconds = 120000
 function Resolve-RepoRoot {
     $root = & git rev-parse --show-toplevel
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($root)) { throw "Run the benchmark from a Git worktree." }
@@ -73,8 +74,10 @@ function New-ConditionPrompt {
         $rules += "Then read .agents/skills/roslynkit/SKILL.md, .agents/skills/roslynkit/references/commands.md, and .agents/skills/roslynkit/references/output.md with Get-Content -Raw before invoking RoslynKit."
         $rules += "Invoke the global RoslynKit from PATH as 'roslynkit' for code investigation."
         $rules += "Pass --target .\RoslynKit.slnx to RoslynKit. The prepared repository-local search index is .\artifacts\roslynkit.db; pass --index-path .\artifacts\roslynkit.db to search."
+        $rules += "Set timeout_ms to $RoslynKitShellTimeoutMilliseconds on every shell tool call that invokes RoslynKit; the shell tool's default deadline is too short for a cold workspace command."
         $rules += "Run only one RoslynKit command at a time and wait for it to finish before starting another. Do not use concurrent tool calls, background jobs, or parallel pipelines for RoslynKit."
         $rules += "Start intent discovery with one narrow roslynkit search query and --max-results 5. Refine serially only when the first result set is insufficient, and prefer bounded source slices over whole-file output."
+        $rules += "Treat every id: selector as opaque and copy it verbatim. When an id contains PowerShell backticks, either pass it as one single-quoted --symbol value or use its returned loc with a bounded document-lines call; never reconstruct or rewrite the id."
     }
     return (($rules + "" + $Prompt) -join [Environment]::NewLine)
 }
@@ -234,7 +237,12 @@ function Test-RoslynKitInvocation {
     $parseErrors = $null
     $ast = [System.Management.Automation.Language.Parser]::ParseInput($parseInput, [ref] $tokens, [ref] $parseErrors)
     $resolvedPath = $ResolvedRoslynKitPath.Replace("/", "\")
-    $resolvedFile = [IO.Path]::GetFileName($resolvedPath)
+    try {
+        $resolvedFile = [IO.Path]::GetFileName($resolvedPath)
+    }
+    catch {
+        $resolvedFile = ""
+    }
     $knownFiles = @("roslynkit", "roslynkit.exe", "roslynkit-dev", "roslynkit-dev.exe", $resolvedFile)
     $commandAsts = @($ast.FindAll({
                 param($node)
@@ -244,7 +252,12 @@ function Test-RoslynKitInvocation {
         $commandName = $commandAst.GetCommandName()
         if ([string]::IsNullOrWhiteSpace($commandName)) { continue }
         $normalizedName = $commandName.Trim('"', "'").Replace("/", "\")
-        $commandFile = [IO.Path]::GetFileName($normalizedName)
+        try {
+            $commandFile = [IO.Path]::GetFileName($normalizedName)
+        }
+        catch {
+            $commandFile = ""
+        }
         if ([StringComparer]::OrdinalIgnoreCase.Equals($normalizedName, $resolvedPath) -or
             @($knownFiles | Where-Object { [StringComparer]::OrdinalIgnoreCase.Equals($_, $commandFile) }).Count -gt 0) {
             return $true
@@ -322,7 +335,8 @@ function Get-ContextPathPattern {
 }
 function Test-CommandReferencesContextPath {
     param([string] $Command, [string] $ContextPath)
-    return [regex]::IsMatch($Command, (Get-ContextPathPattern -ContextPath $ContextPath))
+    $normalizedCommand = $Command.Replace("\\", "\").Replace("//", "/")
+    return [regex]::IsMatch($normalizedCommand, (Get-ContextPathPattern -ContextPath $ContextPath))
 }
 function Test-CommandReadsContextPath {
     param([string] $Command, [string] $ContextPath, [int] $Depth = 0)
@@ -332,6 +346,7 @@ function Test-CommandReadsContextPath {
     if (-not (Test-CommandReferencesContextPath -Command $Command -ContextPath $ContextPath)) {
         return $false
     }
+    $Command = $Command.Replace("\\", "\").Replace("//", "/")
     $parseInput = if ($Command.Trim() -match '^["'']') { "& $Command" } else { $Command }
     $tokens = $null
     $parseErrors = $null
@@ -346,7 +361,12 @@ function Test-CommandReadsContextPath {
         if ([string]::IsNullOrWhiteSpace($commandName)) {
             continue
         }
-        $commandFile = [IO.Path]::GetFileName($commandName)
+        try {
+            $commandFile = [IO.Path]::GetFileName($commandName)
+        }
+        catch {
+            $commandFile = ""
+        }
         if ([StringComparer]::OrdinalIgnoreCase.Equals($commandFile, "Get-Content") -and
             $commandAst.Extent.Text -match '(?i)(?:^|\s)-Raw(?:\s|$)' -and
             [regex]::IsMatch($commandAst.Extent.Text, $pathPattern)) {
@@ -370,6 +390,7 @@ function Test-CommandReadsContextPath {
 }
 function Test-ForbiddenContextSurface {
     param([string] $Condition, [string] $Command, [bool] $UsesRoslynKit)
+    $Command = $Command.Replace("\\", "\").Replace("//", "/")
     $commandWithoutNegativeGlobs = [regex]::Replace($Command, '![^\s]+', '')
     $commandWithoutExclusionFilters = [regex]::Replace($commandWithoutNegativeGlobs, '(?is)-notin\s+@\([^)]*\)', '')
     if ($commandWithoutExclusionFilters -match "(?i)(CODEX_HOME|\.codex|\.claude(?:[\\/]|$)|\.github[\\/](?:skills(?:[\\/]|$)|copilot-instructions\.md)|AGENTS\.md|CLAUDE\.md|MEMORY\.md|rollout-|history\.jsonl|atlas-(csharp|doc|test)-mapper|benchmarks[\\/]|scripts[\\/]benchmark-codex\.ps1|artifacts[\\/]codex-benchmark(?:[\\/]|$)|docs[\\/]agents(?:[\\/]|$)|docs[\\/]local-repository-reference\.md|benchmark-codex|codex-cases\.json|token-efficiency-benchmark)") {
@@ -388,9 +409,8 @@ function Test-ForbiddenContextSurface {
 function Get-ComplianceIssues {
     param([string] $Condition, [string[]] $Commands, [object[]] $Events, [string[]] $RepositoryChanges, [string] $ResolvedRoslynKitPath)
     $issues = New-Object System.Collections.Generic.List[string]
-    $usedRoslynKit = @($Events | Where-Object {
-            $_.item.type -eq "command_execution" -and $_.item.status -eq "completed" -and $_.item.exit_code -eq 0 -and
-            (Test-RoslynKitInvocation -Command ([string] $_.item.command) -ResolvedRoslynKitPath $ResolvedRoslynKitPath)
+    $observedRoslynKit = @($Commands | Where-Object {
+            Test-RoslynKitInvocation -Command $_ -ResolvedRoslynKitPath $ResolvedRoslynKitPath
         }).Count -gt 0
     foreach ($command in $Commands) {
         $usesRoslynKit = Test-RoslynKitInvocation -Command $command -ResolvedRoslynKitPath $ResolvedRoslynKitPath
@@ -421,7 +441,7 @@ function Get-ComplianceIssues {
             $issues.Add("command failed (status=$($event.item.status), exit=$($event.item.exit_code)): $command")
         }
     }
-    if ($Condition -eq "roslynkit" -and -not $usedRoslynKit) {
+    if ($Condition -eq "roslynkit" -and -not $observedRoslynKit) {
         $issues.Add("RoslynKit condition did not invoke RoslynKit")
     }
     if ($Condition -eq "roslynkit" -and (Test-ConcurrentRoslynKitInvocations -Events $Events -ResolvedRoslynKitPath $ResolvedRoslynKitPath)) {
