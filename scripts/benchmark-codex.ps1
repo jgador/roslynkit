@@ -71,6 +71,8 @@ function New-ConditionPrompt {
     else {
         $rules += "Invoke the global RoslynKit from PATH as 'roslynkit' for code investigation."
         $rules += "Pass --target .\RoslynKit.slnx to RoslynKit. The prepared snapshot-local search index is .\artifacts\roslynkit.db; pass --index-path .\artifacts\roslynkit.db to search."
+        $rules += "Run only one RoslynKit command at a time and wait for it to finish before starting another. Do not use concurrent tool calls, background jobs, or parallel pipelines for RoslynKit."
+        $rules += "Start intent discovery with one narrow roslynkit search query and --max-results 5. Refine serially only when the first result set is insufficient, and prefer bounded source slices over whole-file output."
     }
     return (($rules + "" + $Prompt) -join [Environment]::NewLine)
 }
@@ -286,15 +288,46 @@ function Get-Commands {
     return @($commands | Select-Object -Unique)
 }
 function Test-RoslynKitInvocation {
-    param([string] $Command, [string] $ResolvedRoslynKitPath)
-    if ([string]::IsNullOrWhiteSpace($Command)) { return $false }
+    param([string] $Command, [string] $ResolvedRoslynKitPath, [int] $Depth = 0)
+    if ([string]::IsNullOrWhiteSpace($Command) -or $Depth -gt 4) { return $false }
     $Command = $Command.Replace("\\", "\")
-    $path = [regex]::Escape($ResolvedRoslynKitPath.Replace("/", "\\"))
-    $file = [regex]::Escape([IO.Path]::GetFileName($ResolvedRoslynKitPath))
+    $trimmedCommand = $Command.Trim()
+    $parseInput = if ($trimmedCommand -match '^["'']') { "& $trimmedCommand" } else { $trimmedCommand }
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseInput($parseInput, [ref] $tokens, [ref] $parseErrors)
+    $resolvedPath = $ResolvedRoslynKitPath.Replace("/", "\")
+    $resolvedFile = [IO.Path]::GetFileName($resolvedPath)
+    $knownFiles = @("roslynkit", "roslynkit.exe", "roslynkit-dev", "roslynkit-dev.exe", $resolvedFile)
+    $commandAsts = @($ast.FindAll({
+                param($node)
+                $node -is [System.Management.Automation.Language.CommandAst]
+            }, $true))
+    foreach ($commandAst in $commandAsts) {
+        $commandName = $commandAst.GetCommandName()
+        if ([string]::IsNullOrWhiteSpace($commandName)) { continue }
+        $normalizedName = $commandName.Trim('"', "'").Replace("/", "\")
+        $commandFile = [IO.Path]::GetFileName($normalizedName)
+        if ([StringComparer]::OrdinalIgnoreCase.Equals($normalizedName, $resolvedPath) -or
+            @($knownFiles | Where-Object { [StringComparer]::OrdinalIgnoreCase.Equals($_, $commandFile) }).Count -gt 0) {
+            return $true
+        }
+        if ($commandFile -in @("pwsh", "pwsh.exe", "powershell", "powershell.exe")) {
+            $payloadMatch = [regex]::Match($commandAst.Extent.Text, '(?is)\s-(?:Command|c)\s+(?<payload>.+)$')
+            if ($payloadMatch.Success) {
+                $payload = $payloadMatch.Groups["payload"].Value.Trim()
+                if ($payload.Length -ge 2 -and (($payload[0] -eq '"' -and $payload[$payload.Length - 1] -eq '"') -or
+                        ($payload[0] -eq "'" -and $payload[$payload.Length - 1] -eq "'"))) {
+                    $payload = $payload.Substring(1, $payload.Length - 2)
+                }
+                if (Test-RoslynKitInvocation -Command $payload -ResolvedRoslynKitPath $ResolvedRoslynKitPath -Depth ($Depth + 1)) {
+                    return $true
+                }
+            }
+        }
+    }
     $prefix = '(?i)(^|[;&|]\s*)(?:&\s*)?'
     $quote = '["'']?'
-    $resolvedPathPattern = '(?i)(?:&\s*)?' + $quote + $path + $quote + '\s+\S+'
-    $namedPattern = $prefix + '(?:' + $quote + $file + $quote + '|roslynkit(?:-dev)?(?:\.exe)?)\s+\S+'
     $dotnetPattern = '(?i)(^|[;&|]\s*)dotnet(?:\.exe)?\s+run\b(?=[^\r\n]*--project\s+' + $quote + '[^;\r\n]*src[\\/]RoslynKit(?:[\\/]|["'']|\s))'
     $resolverMatch = [regex]::Match($Command, '(?i)\$(?<variable>[a-z_][a-z0-9_]*)\s*=\s*\(\s*Get-Command\s+roslynkit(?:\.exe)?\b[^)]*\)')
     $resolvedVariablePattern = if ($resolverMatch.Success) {
@@ -303,7 +336,26 @@ function Test-RoslynKitInvocation {
     else {
         '(?!)'
     }
-    return $Command -match $resolvedPathPattern -or $Command -match $namedPattern -or $Command -match $resolvedVariablePattern -or $Command -match $dotnetPattern
+    return $Command -match $resolvedVariablePattern -or $Command -match $dotnetPattern
+}
+function Test-ConcurrentRoslynKitInvocations {
+    param([object[]] $Events, [string] $ResolvedRoslynKitPath)
+    $activeCommands = New-Object System.Collections.Generic.HashSet[string]
+    foreach ($event in $Events) {
+        if ($event.type -notin @("item.started", "item.completed") -or $event.item.type -ne "command_execution" -or
+            -not (Test-RoslynKitInvocation -Command ([string] $event.item.command) -ResolvedRoslynKitPath $ResolvedRoslynKitPath)) {
+            continue
+        }
+        $itemId = [string] $event.item.id
+        if ($event.type -eq "item.started") {
+            if ($activeCommands.Count -gt 0) { return $true }
+            if (-not [string]::IsNullOrWhiteSpace($itemId)) { $null = $activeCommands.Add($itemId) }
+        }
+        elseif (-not [string]::IsNullOrWhiteSpace($itemId)) {
+            $null = $activeCommands.Remove($itemId)
+        }
+    }
+    return $false
 }
 function Test-ForbiddenContextSurface {
     param([string] $Command)
@@ -349,6 +401,9 @@ function Get-ComplianceIssues {
     }
     if ($Condition -eq "roslynkit" -and -not $usedRoslynKit) {
         $issues.Add("RoslynKit condition did not invoke RoslynKit")
+    }
+    if ($Condition -eq "roslynkit" -and (Test-ConcurrentRoslynKitInvocations -Events $Events -ResolvedRoslynKitPath $ResolvedRoslynKitPath)) {
+        $issues.Add("RoslynKit commands overlapped; run one invocation at a time")
     }
     if ($Commands.Count -eq 0) {
         $issues.Add("run recorded no inspection commands")
@@ -540,7 +595,7 @@ if ($DryRun) {
     Write-Host "Execution: child sessions bypass approvals and sandboxing, inherit the full workstation environment, and use each isolated snapshot as the --cd working root."
     Write-Host "RoslynKit condition: the global 'roslynkit' command is resolved from the inherited workstation PATH; the prepared search index is .\artifacts\roslynkit.db relative to the snapshot working root."
     Write-Host "Preflight: one isolated, unmeasured command must run global 'rg --version' and 'roslynkit --version' successfully before any measured session starts."
-    Write-Host "Validity: any declined or nonzero command invalidates the session and stops the benchmark before the next session."
+    Write-Host "Validity: any declined or nonzero command, or overlapping RoslynKit invocation, invalidates the session and stops the benchmark before the next session."
     Write-Host ""
     foreach ($trial in 1..$Trials) {
         $conditions = if (($trial % 2) -eq 1) { @("raw-codex", "roslynkit") } else { @("roslynkit", "raw-codex") }
