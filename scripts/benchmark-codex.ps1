@@ -520,9 +520,9 @@ function Invoke-BenchmarkPreflight {
             $_.item.status -eq "completed" -and $_.item.exit_code -eq 0 -and
             [string] $_.item.command -match '(?i)\brg(?:\.exe)?\s+--version\b'
         })
-    $answer = if (Test-Path -LiteralPath $answerPath -PathType Leaf) { Get-Content -Raw -LiteralPath $answerPath } else { "" }
+    $preflightOutput = ($completedCommands | ForEach-Object { [string] $_.item.aggregated_output }) -join [Environment]::NewLine
     if ($exitCode -ne 0 -or $completedCommands.Count -ne 1 -or $failedCommands.Count -gt 0 -or $successfulRoslynKitCommands.Count -ne 1 -or
-        $successfulRipgrepCommands.Count -ne 1 -or $answer -notmatch "(?im)^ripgrep\s+\d" -or $answer -notmatch "(?i)roslynkit version") {
+        $successfulRipgrepCommands.Count -ne 1 -or $preflightOutput -notmatch "(?im)^(?:ripgrep|rg)\s+\d" -or $preflightOutput -notmatch "(?i)roslynkit version") {
         throw "Benchmark preflight failed before measured sessions. Inspect '$preflightRoot'."
     }
     Write-Host "Benchmark preflight passed: $preflightRoot"
