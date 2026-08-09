@@ -11,7 +11,7 @@ internal static class CommandDocsProgram
     {
         if (args.Length != 1 || args[0] is not "--write" and not "--check")
         {
-            Console.Error.WriteLine("Usage: dotnet run --file .\\tools\\RoslynKit.CommandDocs.cs -- [--write|--check]");
+            Console.Error.WriteLine("Usage: dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- [--write|--check]");
             return 2;
         }
 
@@ -29,14 +29,14 @@ internal static class CommandDocsProgram
 
         if (!File.Exists(outputPath))
         {
-            Console.Error.WriteLine($"{CommandReferenceMarkdown.RelativePath} is missing. Run `dotnet run --file .\\tools\\RoslynKit.CommandDocs.cs -- --write`.");
+            Console.Error.WriteLine($"{CommandReferenceMarkdown.RelativePath} is missing. Run `dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --write`.");
             return 1;
         }
 
         var actual = File.ReadAllText(outputPath);
         if (!string.Equals(NormalizeNewlines(actual), NormalizeNewlines(generated), StringComparison.Ordinal))
         {
-            Console.Error.WriteLine($"{CommandReferenceMarkdown.RelativePath} is stale. Run `dotnet run --file .\\tools\\RoslynKit.CommandDocs.cs -- --write`.");
+            Console.Error.WriteLine($"{CommandReferenceMarkdown.RelativePath} is stale. Run `dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --write`.");
             return 1;
         }
 

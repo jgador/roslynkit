@@ -10,11 +10,12 @@ Resident architecture context for first-pass navigation. Atlas stores durable ro
 - Test utility: `tests/RoslynKit.WorkspaceGraphDump/`
 - Fixture input: `tests/FixtureWorkspace/App/`
 - Docs and packaging: [README.md](../../README.md), [docs/](../../docs/), [docs/daemon.md](../../docs/daemon.md), [docs/agents/](../../docs/agents/), `scripts/`
+- Continuous integration: [.github/workflows/ci.yml](../../.github/workflows/ci.yml) validates Ubuntu and Windows builds, tests, and PowerShell portability checks.
 - Agent assets: [AGENTS.md](../../AGENTS.md), [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/), [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md), [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md), [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md), [.agents/skills/benchmark/SKILL.md](../../.agents/skills/benchmark/SKILL.md), [.agents/skills/grill-me/SKILL.md](../../.agents/skills/grill-me/SKILL.md), `.agents/skills/commit-context/`, `.agents/skills/git-commit-push/`, [.codex/atlas/repo-map.md](repo-map.md)
 
 ## Runtime Flow
 
-- `Program.Main` routes the exact hidden daemon token through `DaemonServerRunner` before public parsing; `Program.CreateCliApplication` creates the ordinary `CliApplication` with separate stdout and stderr writers and injects `DaemonFallbackWorkspaceCommandRouter` for workspace commands.
+- `Program.Main` converts console cancellation plus Unix `SIGINT`, `SIGTERM`, and `SIGHUP` into a process-lifetime cancellation token, then routes the exact hidden daemon token through `DaemonServerRunner` before public parsing; `Program.CreateCliApplication` creates the ordinary `CliApplication` with separate stdout and stderr writers and injects `DaemonFallbackWorkspaceCommandRouter` for workspace commands.
 - `CliApplication.ExecuteAsync` parses args and returns an exact buffered `CliProcessResult`; `RunAsync` writes that result to the configured process streams.
 - Help, version, and init execute entirely locally. Daemon lifecycle controls parse locally and use a non-starting client exchange; workspace-backed commands cross the injected `DaemonFallbackWorkspaceCommandRouter` boundary.
 - `DaemonFallbackWorkspaceCommandRouter` delegates workspace commands to `DaemonClient`, falls back only on its typed daemon infrastructure failure, prefixes buffered stderr with one exact warning, and invokes `WorkspaceCommandRouter` once. `WorkspaceCommandRouter` supplies the standalone function, calls `RoslynCommandExecutor.ExecuteAsync`, and renders through `MarkdownProjection` without writing directly to process streams.
@@ -27,7 +28,7 @@ Resident architecture context for first-pass navigation. Atlas stores durable ro
 - `GitWorktreeFingerprintService` performs the request-time stable `HEAD` / raw porcelain / per-file `hash-object --no-filters` capture, coalesces concurrent callers, and returns deterministic structural fingerprints or typed cache-reuse failures.
 - `WorkspaceDaemonSession` owns disposable workspace generations, reconciles fingerprints before leasing an immutable snapshot, drains active readers before full reload, admits at most three clean readers, gives pending reloads priority, and performs the single quiet-period retry. The hidden server owns it through `WorkspaceDaemonHost`; public workspace commands reach it through `DaemonClient`.
 - `WorkspaceDaemonHost` is the transport-independent lifecycle owner around one session. `WorkspaceDaemonServer` adds the bounded concurrent named-pipe accept loop, required handshake, single-operation dispatch, target revalidation, and prompt disconnect cancellation. `DaemonServerRunner` resolves the hidden process identity, holds the per-endpoint lifetime lease, and constructs the server.
-- `DaemonPipeClient` owns connect, handshake, single-operation exchange, and response correlation. `DaemonClient` resolves endpoints, normalizes command-path infrastructure and protocol failures into the typed fallback signal, sends directly to running servers, or uses the distinct `DaemonBootstrapLease` to serialize recheck, `DaemonProcessStarter` self-launch, and handshake readiness. The Windows starter mirrors Roslyn's compiler-server `CreateProcess` boundary with no window, no inherited handles, and invalid standard handles; other platforms use non-waiting `Process.Start` with redirected streams. `DaemonFallbackWorkspaceCommandRouter` owns the strict typed fallback boundary, buffered-stderr warning, and one standalone retry. Public lifecycle commands reuse the exchange without startup and never use fallback.
+- `DaemonPipeClient` owns connect, handshake, single-operation exchange, and response correlation. `DaemonClient` resolves endpoints, normalizes command-path infrastructure and protocol failures, including an overlong Unix named-pipe path, into the typed fallback signal, sends directly to running servers, or uses the distinct `DaemonBootstrapLease` to serialize recheck, `DaemonProcessStarter` self-launch, and handshake readiness. The Windows starter mirrors Roslyn's compiler-server `CreateProcess` boundary with no window, no inherited handles, and invalid standard handles; other platforms use non-waiting `Process.Start` with redirected streams and remain in the initiating Unix session and process group. `DaemonFallbackWorkspaceCommandRouter` owns the strict typed fallback boundary, buffered-stderr warning, and one standalone retry. Public lifecycle commands reuse the exchange without startup and never use fallback.
 - `ProcessCommandRunner` is the argument-list-only, buffered child-process boundary used by workspace identity and fingerprint probes; its byte-output path preserves NUL-delimited Git status records without invoking a shell.
 - `RoslynCommandExecutor.ExecuteAsync(command, cancellationToken)` owns standalone workspace loading and delegates to the caller-owned workspace overload; the overload resolves documents or symbols, invokes Roslyn APIs, and returns result models without disposing the workspace.
 - `SearchCommandService` coordinates the `index` and `search` commands around an explicit repository-local SQLite index path. The database stores separate target partitions, repository-relative target identities, project paths, and declaration source paths, full-text search with internal Best Matching 25 ranking, and write-ahead logging; public target and declaration locations are reconstructed as absolute paths from the resolved repository root. It is independent of daemon endpoint identity. `search` validates and incrementally refreshes a target automatically; `index` is the strict explicit refresh boundary and `--rebuild` forces that target's full rebuild. A prior coherent partition may answer concurrent searches as `stale` while a refresh runs.
@@ -130,14 +131,15 @@ flowchart TD
 - Symbol search and document-symbol behavior -> `tests/RoslynKit.Tests/SymbolsCommandTests.cs`
 - External daemon startup, lifecycle, reload, fallback, and packaged-tool behavior -> [DaemonProcessIntegrationTests.cs](../../tests/RoslynKit.Tests/DaemonProcessIntegrationTests.cs), [DaemonFallbackProcessIntegrationTests.cs](../../tests/RoslynKit.Tests/DaemonFallbackProcessIntegrationTests.cs), and [PackagedToolProcessIntegrationTests.cs](../../tests/RoslynKit.Tests/PackagedToolProcessIntegrationTests.cs), using [DaemonProcessTestArea.cs](../../tests/RoslynKit.Tests/DaemonProcessTestArea.cs)
 - Repo and fixture path helpers -> `tests/RoslynKit.Tests/TestPaths.cs`
+- PowerShell benchmark and packaging portability -> [PortabilityRegressionTests.ps1](../../tests/PowerShell/PortabilityRegressionTests.ps1)
 
 ## Commands
 
-- Build: `dotnet build .\RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"`
-- Test: `dotnet test .\RoslynKit.slnx`
-- Run: `dotnet run --project .\src\RoslynKit -- help`
-- Pack: `dotnet pack .\src\RoslynKit\RoslynKit.csproj`
-- Workspace graph: `dotnet run --project .\tests\RoslynKit.WorkspaceGraphDump -- .\RoslynKit.slnx`
+- Build: `dotnet build ./RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"`
+- Test: `dotnet test ./RoslynKit.slnx`
+- Run: `dotnet run --project ./src/RoslynKit -- help`
+- Pack: `dotnet pack ./src/RoslynKit/RoslynKit.csproj`
+- Workspace graph: `dotnet run --project ./tests/RoslynKit.WorkspaceGraphDump -- ./RoslynKit.slnx`
 
 ## Navigation Rules
 

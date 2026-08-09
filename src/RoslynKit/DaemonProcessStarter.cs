@@ -57,10 +57,7 @@ internal static class DaemonProcessStarter
             RedirectStandardError = true,
         };
 
-        if (string.Equals(
-            Path.GetFileNameWithoutExtension(processPath),
-            "dotnet",
-            StringComparison.OrdinalIgnoreCase))
+        if (IsDotNetHost(processPath))
         {
             startInfo.ArgumentList.Add(entryAssemblyPath);
         }
@@ -81,6 +78,20 @@ internal static class DaemonProcessStarter
         }
 
         return commandLine.ToString();
+    }
+
+    private static bool IsDotNetHost(string processPath)
+    {
+        var separatorIndex = Math.Max(
+            processPath.LastIndexOf('/'),
+            processPath.LastIndexOf('\\'));
+        var fileName = separatorIndex >= 0
+            ? processPath[(separatorIndex + 1)..]
+            : processPath;
+        return string.Equals(
+            Path.GetFileNameWithoutExtension(fileName),
+            "dotnet",
+            StringComparison.OrdinalIgnoreCase);
     }
 
     [SupportedOSPlatform("windows")]

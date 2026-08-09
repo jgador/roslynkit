@@ -8,9 +8,14 @@ internal static class Program
     /// <summary>
     /// Runs either the hidden daemon host or the ordinary command-line application.
     /// </summary>
-    public static Task<int> Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
-        return RunAsync(args, DaemonServerRunner.RunAsync, RunCliAsync, CancellationToken.None);
+        using var lifetimeCancellation = new ProcessLifetimeCancellation();
+        return await RunAsync(
+            args,
+            DaemonServerRunner.RunAsync,
+            RunCliAsync,
+            lifetimeCancellation.Token).ConfigureAwait(false);
     }
 
     internal static Task<int> RunAsync(

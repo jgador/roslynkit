@@ -46,7 +46,7 @@ public sealed class CommandReferenceMarkdownTests
         var expected = NormalizeNewlines(CommandReferenceMarkdown.Render());
         var path = TestPaths.RepoFile(".agents", "skills", "roslynkit", "references", "commands.md");
 
-        Assert.True(File.Exists(path), "Run `dotnet run --file .\\tools\\RoslynKit.CommandDocs.cs -- --write` to create the generated command reference.");
+        Assert.True(File.Exists(path), "Run `dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --write` to create the generated command reference.");
 
         var actual = NormalizeNewlines(File.ReadAllText(path));
         Assert.Equal(expected, actual);

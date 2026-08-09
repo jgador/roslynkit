@@ -73,8 +73,8 @@ Start with repository setup, then confirm RoslynKit can load a solution or proje
 ```powershell
 cd C:\repo\MyApp
 roslynkit init
-roslynkit workspace --target .\MySolution.slnx
-roslynkit diagnostics --target .\MySolution.slnx
+roslynkit workspace --target ./MySolution.slnx
+roslynkit diagnostics --target ./MySolution.slnx
 ```
 
 Run `roslynkit init` from the repository root. The command checks the current directory for `.git` and fails from a parent folder or nested source folder that does not contain `.git`.
@@ -82,16 +82,16 @@ Run `roslynkit init` from the repository root. The command checks the current di
 Find a declaration by name, then reuse the returned symbol ID for more precise navigation:
 
 ```powershell
-roslynkit symbols --target .\MySolution.slnx --query MyService --exact --kind class
-roslynkit definition --target .\MySolution.slnx --symbol "T:MyApp.MyService"
-roslynkit references --target .\MySolution.slnx --symbol "M:MyApp.MyService.Execute(System.String)" --max-results 20
-roslynkit symbol-source --target .\MySolution.slnx --symbol "M:MyApp.MyService.Execute(System.String)"
+roslynkit symbols --target ./MySolution.slnx --query MyService --exact --kind class
+roslynkit definition --target ./MySolution.slnx --symbol "T:MyApp.MyService"
+roslynkit references --target ./MySolution.slnx --symbol "M:MyApp.MyService.Execute(System.String)" --max-results 20
+roslynkit symbol-source --target ./MySolution.slnx --symbol "M:MyApp.MyService.Execute(System.String)"
 ```
 
 Read a small source window from the workspace Roslyn loaded:
 
 ```powershell
-roslynkit document-lines --target .\MySolution.slnx --file .\src\MyApp\Service.cs --start-line 40 --end-line 52
+roslynkit document-lines --target ./MySolution.slnx --file ./src/MyApp/Service.cs --start-line 40 --end-line 52
 ```
 
 Targets can be `.slnx`, `.sln`, or `.csproj` files. Source positions are one-based, matching editor line and column numbers.
@@ -103,8 +103,8 @@ Use `search` when the relevant declaration is not known by name but an English-o
 Both `index` and `search` require an explicit target and index path. Keep one database in a Git-ignored, repository-local location. The following path is a concise convention:
 
 ```powershell
-roslynkit index --target .\MySolution.slnx --index-path .\artifacts\roslynkit.db
-roslynkit search --target .\MySolution.slnx --index-path .\artifacts\roslynkit.db --query "how does workspace daemon reload after source changes"
+roslynkit index --target ./MySolution.slnx --index-path ./artifacts/roslynkit.db
+roslynkit search --target ./MySolution.slnx --index-path ./artifacts/roslynkit.db --query "how does workspace daemon reload after source changes"
 ```
 
 Add the database to the repository's `.gitignore`. SQLite enables write-ahead logging (WAL), so an active database can also have adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files. The path must be inside the repository; RoslynKit rejects a path that is not Git-ignored and never modifies `.gitignore`. The database persists target identities, project paths, and declaration source paths relative to the repository, then reconstructs absolute target and declaration locations from the resolved repository root for public output.
@@ -158,8 +158,8 @@ Use `document-lines` when you only need a small source range. Use `document-text
 `definition`, `references`, and `implementations` accept either a cursor-style selector or a symbol selector:
 
 ```powershell
-roslynkit definition --target .\MySolution.slnx --file .\src\MyApp\Service.cs --line 42 --column 18
-roslynkit definition --target .\MySolution.slnx --symbol "M:MyApp.MyService.Execute(System.String)"
+roslynkit definition --target ./MySolution.slnx --file ./src/MyApp/Service.cs --line 42 --column 18
+roslynkit definition --target ./MySolution.slnx --symbol "M:MyApp.MyService.Execute(System.String)"
 ```
 
 The `--symbol` selector can be a Roslyn documentation-comment ID emitted as `id:` in command output, such as `T:MyApp.MyService` or `M:MyApp.MyService.Execute(System.String)`, or a qualified symbol name such as `MyApp.MyService.Execute`. Prefix meanings are defined in [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md).

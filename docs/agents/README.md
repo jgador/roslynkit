@@ -28,6 +28,6 @@ Do not duplicate shared runtime or workflow facts in hand-written agent docs. Li
 When command metadata changes, regenerate [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md) with:
 
 ```powershell
-dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --write
-dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --check
+dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --write
+dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --check
 ```

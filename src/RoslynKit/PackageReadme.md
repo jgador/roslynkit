@@ -76,8 +76,8 @@ Existing generated files are preserved when content is identical and rejected wh
 Confirm RoslynKit can load the repository solution or project:
 
 ```powershell
-roslynkit workspace --target .\MySolution.slnx
-roslynkit diagnostics --target .\MySolution.slnx
+roslynkit workspace --target ./MySolution.slnx
+roslynkit diagnostics --target ./MySolution.slnx
 ```
 
 Targets can be `.slnx`, `.sln`, or `.csproj` files.
@@ -89,8 +89,8 @@ Targets can be `.slnx`, `.sln`, or `.csproj` files.
 Both commands require `--target` and `--index-path`. Keep the database inside the Git repository and ignore it, for example:
 
 ```powershell
-roslynkit index --target .\MySolution.slnx --index-path .\artifacts\roslynkit.db
-roslynkit search --target .\MySolution.slnx --index-path .\artifacts\roslynkit.db --query "where is request validation"
+roslynkit index --target ./MySolution.slnx --index-path ./artifacts/roslynkit.db
+roslynkit search --target ./MySolution.slnx --index-path ./artifacts/roslynkit.db --query "where is request validation"
 ```
 
 The database has one partition per target. It persists target identities, project paths, and declaration source paths relative to the repository, then reconstructs absolute target and declaration locations from the resolved repository root for public output. `search` refreshes stale records automatically; `index --rebuild` forces a selected target rebuild. SQLite write-ahead logging (WAL) can create adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files while the database is active. The index supports projects with one target framework and requires every indexed project and non-generated source document to have an existing physical path inside the target's Git worktree. It rejects missing project or non-generated source paths, external projects, and external linked non-generated source files. Generated source documents are skipped, including source-generated documents, generated paths below `bin` or `obj`, and sources with standard generated-code markers injected from extracted NuGet packages outside the worktree.

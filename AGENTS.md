@@ -6,7 +6,7 @@ Use one source of truth per topic:
 
 - [README.md](README.md): user-facing overview, output format, packaging, and quick-start commands.
 - [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md): canonical stable RoslynKit skill bundle source and `roslynkit init` scaffold input.
-- [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md): generated runtime command reference from `BuiltinCommandRegistry`; regenerate with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --write`.
+- [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md): generated runtime command reference from `BuiltinCommandRegistry`; regenerate with `dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --write`.
 - [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md): shared command output contract for humans, scripts, tests, and agents.
 - [docs/daemon.md](docs/daemon.md): canonical lifecycle, consistency, IPC, fallback, and supported-workspace contract for the optional workspace daemon.
 - [docs/dev-install.md](docs/dev-install.md): semi-manual side-by-side prerelease installation for RoslynKit development.
@@ -26,12 +26,12 @@ RoslynKit is a .NET 10 command-line tool. Production code lives under `src/Rosly
 
 ## Build, Test, and Development Commands
 
-- `dotnet restore .\RoslynKit.slnx` restores packages for the solution.
-- `dotnet build .\RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"` builds the CLI and tests with concise output.
-- `dotnet test .\RoslynKit.slnx` runs the xUnit test suite through Microsoft Testing Platform.
-- `dotnet run --project .\src\RoslynKit -- help` runs the CLI locally.
-- `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --check` verifies the generated command reference is in sync with runtime command metadata.
-- `dotnet pack .\src\RoslynKit\RoslynKit.csproj` creates the .NET tool package.
+- `dotnet restore ./RoslynKit.slnx` restores packages for the solution.
+- `dotnet build ./RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"` builds the CLI and tests with concise output.
+- `dotnet test ./RoslynKit.slnx` runs the xUnit test suite through Microsoft Testing Platform.
+- `dotnet run --project ./src/RoslynKit -- help` runs the CLI locally.
+- `dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --check` verifies the generated command reference is in sync with runtime command metadata.
+- `dotnet pack ./src/RoslynKit/RoslynKit.csproj` creates the .NET tool package.
 
 ## Agent Workflow
 
@@ -82,7 +82,7 @@ For literal search, prose inspection, non-C# files, or RoslynKit workspace-load 
 
 ### Intent-Based C# Search
 
-When an English-oriented question describes a C# responsibility but no declaration name is known, follow the intent-based symbol discovery workflow in [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). For this repository, always pass `--target .\RoslynKit.slnx` and `--index-path .\artifacts\roslynkit.db`; `artifacts/` is Git-ignored, so the repository-local SQLite database and its write-ahead logging (WAL) sidecars remain local. `search` creates, validates, and refreshes the index automatically. Use `index` only to prepare it deliberately, and use `--rebuild` only when the selected target partition must be recreated. See [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md) for exact runtime syntax and options.
+When an English-oriented question describes a C# responsibility but no declaration name is known, follow the intent-based symbol discovery workflow in [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). For this repository, always pass `--target ./RoslynKit.slnx` and `--index-path ./artifacts/roslynkit.db`; `artifacts/` is Git-ignored, so the repository-local SQLite database and its write-ahead logging (WAL) sidecars remain local. `search` creates, validates, and refreshes the index automatically. Use `index` only to prepare it deliberately, and use `--rebuild` only when the selected target partition must be recreated. See [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md) for exact runtime syntax and options.
 
 ### No-Primer C# Tool Gate
 
@@ -171,14 +171,14 @@ Navigation comments should help RoslynKit documentation-enabled navigation outpu
 - Keep command execution separate from argument parsing.
 - Keep the markdown output contract ([.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md)) stable, deterministic, and covered by parser/renderer tests when changed.
 - Pass `CancellationToken` through async Roslyn operations when available.
-- If a public CLI option, command, output shape, package surface, or documented workflow changes, update [README.md](README.md) or the relevant docs in the same change. When command metadata changes, regenerate [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md) and verify it with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --check`.
+- If a public CLI option, command, output shape, package surface, or documented workflow changes, update [README.md](README.md) or the relevant docs in the same change. When command metadata changes, regenerate [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md) and verify it with `dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --check`.
 
 ## Post-Change Formatting
 
 After C# coding work, run these commands before final build/test verification:
 
-- `dotnet format whitespace .\RoslynKit.slnx --no-restore --verbosity minimal`
-- `dotnet format style .\RoslynKit.slnx --no-restore --severity warn --verbosity minimal`
+- `dotnet format whitespace ./RoslynKit.slnx --no-restore --verbosity minimal`
+- `dotnet format style ./RoslynKit.slnx --no-restore --severity warn --verbosity minimal`
 
 ## End-of-Session Commit Context
 
@@ -188,7 +188,7 @@ Run this like the post-change formatting step: do it near the end of the session
 
 ## Testing Guidelines
 
-Tests use xUnit through Microsoft Testing Platform in `tests/RoslynKit.Tests`. Name test methods as behavior statements, for example `Parse_RejectsDuplicateOption`. Add parser/renderer tests for CLI contract changes and focused Roslyn execution tests when command behavior changes. Run `dotnet test .\RoslynKit.slnx` before publishing changes.
+Tests use xUnit through Microsoft Testing Platform in `tests/RoslynKit.Tests`. Name test methods as behavior statements, for example `Parse_RejectsDuplicateOption`. Add parser/renderer tests for CLI contract changes and focused Roslyn execution tests when command behavior changes. Run `dotnet test ./RoslynKit.slnx` before publishing changes.
 
 ## Commit & Pull Request Guidelines
 

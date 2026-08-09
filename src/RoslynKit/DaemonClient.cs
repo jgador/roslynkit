@@ -124,7 +124,8 @@ internal sealed class DaemonClient
             TimeoutException or
             UnauthorizedAccessException or
             PlatformNotSupportedException or
-            InvalidOperationException)
+            InvalidOperationException or
+            ArgumentOutOfRangeException)
         {
             throw new DaemonClientInfrastructureException(CommandInfrastructureFailureMessage, exception);
         }

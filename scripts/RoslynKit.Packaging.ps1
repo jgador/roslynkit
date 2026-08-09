@@ -132,17 +132,41 @@ function Assert-PathUnderRoot
         [string]$Label
     )
 
-    $normalizedRoot = [System.IO.Path]::GetFullPath($RootPath).TrimEnd("\", "/")
+    $pathComparison = if ($IsWindows) { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
+    $directorySeparators = [char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    $normalizedRoot = [System.IO.Path]::GetFullPath($RootPath)
     $normalizedPath = [System.IO.Path]::GetFullPath($Path)
 
-    if (-not $normalizedPath.StartsWith($normalizedRoot, [System.StringComparison]::OrdinalIgnoreCase))
+    $rootVolume = [System.IO.Path]::GetPathRoot($normalizedRoot)
+    if ($normalizedRoot.Length -gt $rootVolume.Length)
     {
-        throw "$Label must stay under $normalizedRoot, but resolved to $normalizedPath."
+        $normalizedRoot = $normalizedRoot.TrimEnd($directorySeparators)
     }
 
-    if ($normalizedPath.Equals($normalizedRoot, [System.StringComparison]::OrdinalIgnoreCase))
+    $pathVolume = [System.IO.Path]::GetPathRoot($normalizedPath)
+    if ($normalizedPath.Length -gt $pathVolume.Length)
+    {
+        $normalizedPath = $normalizedPath.TrimEnd($directorySeparators)
+    }
+
+    if ($normalizedPath.Equals($normalizedRoot, $pathComparison))
     {
         throw "$Label cannot target the protected root path $normalizedRoot."
+    }
+
+    $rootBoundary = if ($normalizedRoot.EndsWith([System.IO.Path]::DirectorySeparatorChar.ToString(), [System.StringComparison]::Ordinal) -or
+        $normalizedRoot.EndsWith([System.IO.Path]::AltDirectorySeparatorChar.ToString(), [System.StringComparison]::Ordinal))
+    {
+        $normalizedRoot
+    }
+    else
+    {
+        $normalizedRoot + [System.IO.Path]::DirectorySeparatorChar
+    }
+
+    if (-not $normalizedPath.StartsWith($rootBoundary, $pathComparison))
+    {
+        throw "$Label must stay under $normalizedRoot, but resolved to $normalizedPath."
     }
 }
 
@@ -318,7 +342,7 @@ function Show-RoslynKitDogfoodCommands
         "$($Context.PackageVersion)-dev.1"
     }
 
-    Write-Host "pwsh .\scripts\install-roslynkit-dev.ps1 -Version $devVersionExample"
+    Write-Host "pwsh ./scripts/install-roslynkit-dev.ps1 -Version $devVersionExample"
     Write-Host "The dev installer builds, packs, and installs the requested prerelease from the current checkout."
     Write-Host "& `"$($Context.DevToolCommandPath)`" version"
     Write-Host "& `"$($Context.DevToolCommandPath)`" help"

@@ -29,13 +29,13 @@ Do not default to `Get-Content`, `Select-String`, or grep-style file reads for q
 Use `search` when an English-oriented question describes a C# responsibility but no declared symbol name is known. The command requires both `--target` and `--index-path`; use a Git-ignored repository-local database such as `./artifacts/roslynkit.db`.
 
 ```powershell
-roslynkit search --target .\SomeSolution.slnx --index-path .\artifacts\roslynkit.db --query "how does workspace daemon reload after source changes"
+roslynkit search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit.db --query "how does workspace daemon reload after source changes"
 ```
 
 `search` validates and refreshes the index automatically. Use `index` to prepare the index deliberately, and add `--rebuild` only when the selected target partition must be recreated.
 
 ```powershell
-roslynkit index --target .\SomeSolution.slnx --index-path .\artifacts\roslynkit.db
+roslynkit index --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit.db
 ```
 
 Search ranking is heuristic. Inspect several top results and compare excerpts, symbol kinds, identities, and locations before selecting a navigation target; do not assume rank 1 is correct. Follow up through existing commands with a returned `id:` or `loc:` value. RoslynKit has no standard-input pipeline for search hits; the coding agent selects the appropriate next command.
@@ -92,7 +92,7 @@ Run `workspace` first when any of these are true:
 Example:
 
 ```powershell
-roslynkit workspace --target .\SomeSolution.slnx --include-generated --include-additional --include-analyzer-config
+roslynkit workspace --target ./SomeSolution.slnx --include-generated --include-additional --include-analyzer-config
 ```
 
 If a document command reports multiple document contexts for the same path, retry with the concrete context from the error hint. Use `--project <path>` for linked files, `--tfm <framework>` for multi-targeted projects, and `--document-kind <source|sourceGenerated|additional|analyzerConfig>` only when the same path still maps to multiple document kinds.
@@ -151,92 +151,92 @@ When the task is a semantic C# question, prefer this order and stop once enough 
 ### Follow the active call
 
 ```powershell
-roslynkit definition --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
-roslynkit quick-info --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
+roslynkit definition --target ./SomeSolution.slnx --file ./src/SomeProject/SomeFile.cs --line 18 --column 27
+roslynkit quick-info --target ./SomeSolution.slnx --file ./src/SomeProject/SomeFile.cs --line 18 --column 27
 ```
 
 ### Find a named type
 
 ```powershell
-roslynkit symbols --target .\SomeSolution.slnx --query SomeType --exact --kind class
+roslynkit symbols --target ./SomeSolution.slnx --query SomeType --exact --kind class
 ```
 
 ### Inspect type context
 
 ```powershell
-roslynkit quick-info --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 11 --column 21
+roslynkit quick-info --target ./SomeSolution.slnx --file ./src/SomeProject/SomeFile.cs --line 11 --column 21
 ```
 
 ### List file members
 
 ```powershell
-roslynkit document-symbols --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs
+roslynkit document-symbols --target ./SomeSolution.slnx --file ./src/SomeProject/SomeFile.cs
 ```
 
 ### Read a resolved document
 
 ```powershell
-roslynkit document-text --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs
+roslynkit document-text --target ./SomeSolution.slnx --file ./src/SomeProject/SomeFile.cs
 ```
 
 ### Read resolved source lines
 
 ```powershell
-roslynkit document-lines --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --start-line 40 --end-line 52
+roslynkit document-lines --target ./SomeSolution.slnx --file ./src/SomeProject/SomeFile.cs --start-line 40 --end-line 52
 ```
 
 ### Jump to a definition
 
 ```powershell
-roslynkit definition --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
+roslynkit definition --target ./SomeSolution.slnx --file ./src/SomeProject/SomeFile.cs --line 18 --column 27
 ```
 
 ### Find references by declared name
 
 ```powershell
-roslynkit references --target .\SomeSolution.slnx --symbol SomeNamespace.SomeType.SomeMethod --max-results 3
+roslynkit references --target ./SomeSolution.slnx --symbol SomeNamespace.SomeType.SomeMethod --max-results 3
 ```
 
 ### Find references from a usage site
 
 ```powershell
-roslynkit references --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 32 --column 17 --max-results 3
+roslynkit references --target ./SomeSolution.slnx --file ./src/SomeProject/SomeFile.cs --line 32 --column 17 --max-results 3
 ```
 
 ### Find implementations by declared name
 
 ```powershell
-roslynkit implementations --target .\SomeSolution.slnx --symbol SomeNamespace.ISomeService --max-results 20
+roslynkit implementations --target ./SomeSolution.slnx --symbol SomeNamespace.ISomeService --max-results 20
 ```
 
 ### Find implementations from a usage site
 
 ```powershell
-roslynkit implementations --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 12 --column 9 --max-results 20
+roslynkit implementations --target ./SomeSolution.slnx --file ./src/SomeProject/SomeFile.cs --line 12 --column 9 --max-results 20
 ```
 
 ### Read a declaration body
 
 ```powershell
-roslynkit symbol-source --target .\SomeSolution.slnx --symbol "M:SomeNamespace.SomeType.SomeMethod(System.String)"
+roslynkit symbol-source --target ./SomeSolution.slnx --symbol "M:SomeNamespace.SomeType.SomeMethod(System.String)"
 ```
 
 ### Read quick info
 
 ```powershell
-roslynkit quick-info --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
+roslynkit quick-info --target ./SomeSolution.slnx --file ./src/SomeProject/SomeFile.cs --line 18 --column 27
 ```
 
 ### Jump to a type definition
 
 ```powershell
-roslynkit type-definition --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 13
+roslynkit type-definition --target ./SomeSolution.slnx --file ./src/SomeProject/SomeFile.cs --line 18 --column 13
 ```
 
 ### Inspect call-site signature help
 
 ```powershell
-roslynkit signature-help --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 24 --column 17
+roslynkit signature-help --target ./SomeSolution.slnx --file ./src/SomeProject/SomeFile.cs --line 24 --column 17
 ```
 
 ### Generated-document reads
@@ -248,7 +248,7 @@ Use the generated path surfaced by `workspace --include-generated`.
 3. Read it with `document-text --file`; add `--document-kind sourceGenerated` if the same path is ambiguous.
 
 ```powershell
-roslynkit document-text --target .\SomeProject.csproj --file .\obj\Debug\net10.0\Generated.g.cs --document-kind sourceGenerated
+roslynkit document-text --target ./SomeProject.csproj --file ./obj/Debug/net10.0/Generated.g.cs --document-kind sourceGenerated
 ```
 
 ## Fallbacks

@@ -73,7 +73,7 @@ function New-ConditionPrompt {
     else {
         $rules += "Then read .agents/skills/roslynkit/SKILL.md, .agents/skills/roslynkit/references/commands.md, and .agents/skills/roslynkit/references/output.md with Get-Content -Raw before invoking RoslynKit."
         $rules += "Invoke the global RoslynKit from PATH as 'roslynkit' for code investigation."
-        $rules += "Pass --target .\RoslynKit.slnx to RoslynKit. The prepared repository-local search index is .\artifacts\roslynkit.db; pass --index-path .\artifacts\roslynkit.db to search."
+        $rules += "Pass --target ./RoslynKit.slnx to RoslynKit. The prepared repository-local search index is ./artifacts/roslynkit.db; pass --index-path ./artifacts/roslynkit.db to search."
         $rules += "Set timeout_ms to $RoslynKitShellTimeoutMilliseconds on every shell tool call that invokes RoslynKit; the shell tool's default deadline is too short for a cold workspace command."
         $rules += "Run only one RoslynKit command at a time and wait for it to finish before starting another. Do not use concurrent tool calls, background jobs, or parallel pipelines for RoslynKit."
         $rules += "Start intent discovery with one narrow roslynkit search query and --max-results 5. Refine serially only when the first result set is insufficient, and prefer bounded source slices over whole-file output."
@@ -119,8 +119,8 @@ function Initialize-RoslynKitIndex {
     param([string] $RepoRoot, [string] $ResolvedRoslynKitPath)
     Push-Location $RepoRoot
     try {
-        New-Item -ItemType Directory -Force -Path ".\artifacts" | Out-Null
-        & $ResolvedRoslynKitPath index --target ".\RoslynKit.slnx" --index-path ".\artifacts\roslynkit.db"
+        New-Item -ItemType Directory -Force -Path "./artifacts" | Out-Null
+        & $ResolvedRoslynKitPath index --target "./RoslynKit.slnx" --index-path "./artifacts/roslynkit.db"
         if ($LASTEXITCODE -ne 0) {
             throw "RoslynKit index preparation failed before measured runs."
         }
@@ -136,7 +136,7 @@ function Stop-RoslynKitDaemon {
     }
     Push-Location $RepoRoot
     try {
-        $stopOutput = @(& $ResolvedRoslynKitPath daemon stop --target ".\RoslynKit.slnx" 2>&1)
+        $stopOutput = @(& $ResolvedRoslynKitPath daemon stop --target "./RoslynKit.slnx" 2>&1)
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "RoslynKit daemon cleanup failed for '$RepoRoot': $($stopOutput -join ' ')"
             return
@@ -145,7 +145,7 @@ function Stop-RoslynKitDaemon {
             return
         }
         foreach ($attempt in 1..20) {
-            $statusOutput = @(& $ResolvedRoslynKitPath daemon status --target ".\RoslynKit.slnx" 2>&1)
+            $statusOutput = @(& $ResolvedRoslynKitPath daemon status --target "./RoslynKit.slnx" 2>&1)
             if ($LASTEXITCODE -eq 0 -and ($statusOutput -join "`n") -match "state: not-running") {
                 return
             }
@@ -160,12 +160,19 @@ function Stop-RoslynKitDaemon {
         Pop-Location
     }
 }
+function Get-DefaultCodexHome {
+    $userProfile = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
+    if ([string]::IsNullOrWhiteSpace($userProfile)) {
+        throw "Could not resolve a user-profile directory for the default CODEX_HOME. Set CODEX_HOME explicitly."
+    }
+    return Join-Path $userProfile ".codex"
+}
 function Set-WorkstationCodexHome {
     $codexHome = if (-not [string]::IsNullOrWhiteSpace($env:CODEX_HOME)) {
         $env:CODEX_HOME
     }
     else {
-        Join-Path $env:USERPROFILE ".codex"
+        Get-DefaultCodexHome
     }
     if (-not (Test-Path -LiteralPath $codexHome -PathType Container)) {
         throw "The active workstation CODEX_HOME directory was not found: '$codexHome'."
@@ -230,13 +237,13 @@ function Get-Commands {
 function Test-RoslynKitInvocation {
     param([string] $Command, [string] $ResolvedRoslynKitPath, [int] $Depth = 0)
     if ([string]::IsNullOrWhiteSpace($Command) -or $Depth -gt 4) { return $false }
-    $Command = $Command.Replace("\\", "\")
     $trimmedCommand = $Command.Trim()
     $parseInput = if ($trimmedCommand -match '^["'']') { "& $trimmedCommand" } else { $trimmedCommand }
     $tokens = $null
     $parseErrors = $null
     $ast = [System.Management.Automation.Language.Parser]::ParseInput($parseInput, [ref] $tokens, [ref] $parseErrors)
-    $resolvedPath = $ResolvedRoslynKitPath.Replace("/", "\")
+    $pathComparison = if ($IsWindows) { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
+    $resolvedPath = $ResolvedRoslynKitPath.Trim('"', "'")
     try {
         $resolvedFile = [IO.Path]::GetFileName($resolvedPath)
     }
@@ -251,15 +258,15 @@ function Test-RoslynKitInvocation {
     foreach ($commandAst in $commandAsts) {
         $commandName = $commandAst.GetCommandName()
         if ([string]::IsNullOrWhiteSpace($commandName)) { continue }
-        $normalizedName = $commandName.Trim('"', "'").Replace("/", "\")
+        $normalizedName = $commandName.Trim('"', "'")
         try {
             $commandFile = [IO.Path]::GetFileName($normalizedName)
         }
         catch {
             $commandFile = ""
         }
-        if ([StringComparer]::OrdinalIgnoreCase.Equals($normalizedName, $resolvedPath) -or
-            @($knownFiles | Where-Object { [StringComparer]::OrdinalIgnoreCase.Equals($_, $commandFile) }).Count -gt 0) {
+        if ([string]::Equals($normalizedName, $resolvedPath, $pathComparison) -or
+            @($knownFiles | Where-Object { [string]::Equals($_, $commandFile, $pathComparison) }).Count -gt 0) {
             return $true
         }
         if ($commandFile -in @("pwsh", "pwsh.exe", "powershell", "powershell.exe")) {
@@ -683,6 +690,9 @@ function Write-Reports {
     }
     $review | Set-Content -LiteralPath (Join-Path $RunRoot "review.md") -Encoding UTF8
 }
+if ($MyInvocation.InvocationName -eq ".") {
+    return
+}
 $repoRoot = Resolve-RepoRoot
 $resolvedRoslynKitPath = Resolve-GlobalRoslynKitPath
 $resolvedRipgrepPath = Resolve-GlobalRipgrepPath
@@ -694,7 +704,7 @@ if ($DryRun) {
     Write-Host "Active Codex config: $activeCodexConfigPath"
     Write-Host "Environment: the workstation CODEX_HOME is used directly; benchmark-specific command-line overrides remain in effect."
     Write-Host "Execution: child sessions bypass approvals and sandboxing, inherit the full workstation environment, and use the repository root as the --cd working root."
-    Write-Host "RoslynKit condition: the global 'roslynkit' command is resolved from the inherited workstation PATH; the prepared search index is .\artifacts\roslynkit.db relative to the repository root."
+    Write-Host "RoslynKit condition: the global 'roslynkit' command is resolved from the inherited workstation PATH; the prepared search index is ./artifacts/roslynkit.db relative to the repository root."
     Write-Host "Preflight: one unmeasured command must run global 'rg --version' and 'roslynkit --version' successfully before any measured session starts."
     Write-Host "Validity: an invalid measured session is recorded and excluded from comparison, then the remaining scheduled sessions continue without retry. Preparation, preflight, and nonignored repository content changes stop the controller."
     Write-Host "Repository integrity: a content manifest is captured after preparation and validated after preflight and every measured session; ignored artifacts do not affect it."

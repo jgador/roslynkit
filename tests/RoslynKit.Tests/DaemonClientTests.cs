@@ -236,6 +236,24 @@ public sealed class DaemonClientTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_NormalizesUnixNamedPipePathFailureToInfrastructureException()
+    {
+        var client = CreateClient(
+            sendAsync: (_, _, _, _) => throw new ArgumentOutOfRangeException(
+                "endpointName",
+                "The Unix named-pipe path is too long."),
+            probeAsync: (_, _, _) => throw new InvalidOperationException("Readiness was not expected."),
+            tryAcquireBootstrapLease: _ => throw new InvalidOperationException("Bootstrap was not expected."),
+            startDaemon: _ => throw new InvalidOperationException("Launch was not expected."));
+
+        var exception = await Assert.ThrowsAsync<DaemonClientInfrastructureException>(() => client.ExecuteAsync(
+            CreateWorkspaceCommand(),
+            TestContext.Current.CancellationToken));
+
+        Assert.IsType<ArgumentOutOfRangeException>(exception.InnerException);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_PropagatesCallerCancellationWithoutInfrastructureNormalization()
     {
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(

@@ -88,12 +88,15 @@ public sealed class DaemonProtocolMessageTests
     public void CommandRequest_CreateCanonicalizesPathOptionsAndRevalidatesOnServer()
     {
         var repositoryRoot = TestPaths.RepositoryRoot();
+        var solutionPath = Path.Combine(".", "RoslynKit.slnx");
+        var projectPath = Path.Combine(".", "src", "RoslynKit", "RoslynKit.csproj");
+        var filePath = Path.Combine(".", "src", "RoslynKit", "CliApplication.cs");
         var parsed = CliParser.Parse(
         [
             "document-lines",
-            "--target", ".\\RoslynKit.slnx",
-            "--project", ".\\src\\RoslynKit\\RoslynKit.csproj",
-            "--file", ".\\src\\RoslynKit\\CliApplication.cs",
+            "--target", solutionPath,
+            "--project", projectPath,
+            "--file", filePath,
             "--start-line", "1",
             "--end-line", "10",
         ]);
