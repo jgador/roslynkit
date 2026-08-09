@@ -28,8 +28,17 @@ function Assert-Throws {
 }
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "../..")).Path
-. (Join-Path $repoRoot "scripts/RoslynKit.Packaging.ps1")
-. (Join-Path $repoRoot "scripts/benchmark-codex.ps1")
+$originalCodexThreadId = [Environment]::GetEnvironmentVariable("CODEX_THREAD_ID", [EnvironmentVariableTarget]::Process)
+$dotSourceThreadId = "roslynkit-portability-regression"
+try {
+    [Environment]::SetEnvironmentVariable("CODEX_THREAD_ID", $dotSourceThreadId, [EnvironmentVariableTarget]::Process)
+    . (Join-Path $repoRoot "scripts/RoslynKit.Packaging.ps1")
+    . (Join-Path $repoRoot "scripts/benchmark-codex.ps1")
+    Assert-True -Condition ([string]::Equals([Environment]::GetEnvironmentVariable("CODEX_THREAD_ID", [EnvironmentVariableTarget]::Process), $dotSourceThreadId, [System.StringComparison]::Ordinal)) -Message "Dot-sourcing the benchmark script cleared CODEX_THREAD_ID."
+}
+finally {
+    [Environment]::SetEnvironmentVariable("CODEX_THREAD_ID", $originalCodexThreadId, [EnvironmentVariableTarget]::Process)
+}
 
 $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) "roslynkit-portability-regression"
 $childPath = Join-Path $testRoot "packages"
@@ -47,6 +56,45 @@ if ($IsWindows) {
 }
 else {
     Assert-Throws -Action { Assert-PathUnderRoot -Path $caseVariantChild -RootPath $caseSensitiveRoot -Label "Case-variant child" } -Message "A differently cased path was accepted on a case-sensitive platform."
+}
+
+$reparseRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("roslynkit-reparse-root-" + [Guid]::NewGuid())
+$outsideRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("roslynkit-reparse-outside-" + [Guid]::NewGuid())
+$outsideSentinel = Join-Path $outsideRoot "sentinel.txt"
+$reparsePath = Join-Path $reparseRoot "package-link"
+$missingFeedPath = Join-Path $reparsePath "not-yet-created"
+try {
+    New-Item -ItemType Directory -Path $reparseRoot | Out-Null
+    New-Item -ItemType Directory -Path $outsideRoot | Out-Null
+    Set-Content -LiteralPath $outsideSentinel -Value "outside sentinel" -NoNewline
+    try {
+        New-Item -ItemType SymbolicLink -Path $reparsePath -Target $outsideRoot | Out-Null
+    }
+    catch {
+        if (-not $IsWindows) {
+            throw
+        }
+
+        New-Item -ItemType Junction -Path $reparsePath -Target $outsideRoot | Out-Null
+    }
+
+    Assert-False -Condition (Test-Path -LiteralPath $missingFeedPath) -Message "The reparse-point feed target unexpectedly existed before the reset."
+    Assert-Throws -Action { Reset-Directory -Path $missingFeedPath -RootPath $reparseRoot -Label "Reparse-point feed" } -Message "A package-feed path through an external reparse point was accepted."
+    Assert-True -Condition (Test-Path -LiteralPath $outsideSentinel -PathType Leaf) -Message "The external sentinel was removed through the reparse point."
+    Assert-False -Condition (Test-Path -LiteralPath $missingFeedPath) -Message "The missing feed path was created through the reparse point."
+}
+finally {
+    if (Test-Path -LiteralPath $reparsePath) {
+        [System.IO.Directory]::Delete($reparsePath)
+    }
+
+    if (Test-Path -LiteralPath $reparseRoot) {
+        [System.IO.Directory]::Delete($reparseRoot)
+    }
+
+    if (Test-Path -LiteralPath $outsideRoot) {
+        Remove-Item -LiteralPath $outsideRoot -Recurse -Force
+    }
 }
 
 $defaultCodexHome = Get-DefaultCodexHome

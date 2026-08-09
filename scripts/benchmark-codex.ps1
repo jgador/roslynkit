@@ -10,7 +10,6 @@ param(
     [switch] $DryRun
 )
 $ErrorActionPreference = "Stop"
-[Environment]::SetEnvironmentVariable("CODEX_THREAD_ID", $null, "Process")
 $RoslynKitShellTimeoutMilliseconds = 120000
 function Resolve-RepoRoot {
     $root = & git rev-parse --show-toplevel
@@ -693,6 +692,7 @@ function Write-Reports {
 if ($MyInvocation.InvocationName -eq ".") {
     return
 }
+[Environment]::SetEnvironmentVariable("CODEX_THREAD_ID", $null, "Process")
 $repoRoot = Resolve-RepoRoot
 $resolvedRoslynKitPath = Resolve-GlobalRoslynKitPath
 $resolvedRipgrepPath = Resolve-GlobalRipgrepPath

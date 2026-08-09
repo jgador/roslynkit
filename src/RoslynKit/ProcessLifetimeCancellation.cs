@@ -9,8 +9,8 @@ internal sealed class ProcessLifetimeCancellation : IDisposable
 {
     private readonly CancellationTokenSource _cancellationSource = new();
     private readonly PosixSignalRegistration? _hangupRegistration;
-    private readonly PosixSignalRegistration? _interruptRegistration;
     private readonly PosixSignalRegistration? _terminateRegistration;
+    private int _cancellationRequested;
     private int _disposed;
 
     public ProcessLifetimeCancellation()
@@ -20,9 +20,6 @@ internal sealed class ProcessLifetimeCancellation : IDisposable
         {
             _hangupRegistration = PosixSignalRegistration.Create(
                 PosixSignal.SIGHUP,
-                HandlePosixSignal);
-            _interruptRegistration = PosixSignalRegistration.Create(
-                PosixSignal.SIGINT,
                 HandlePosixSignal);
             _terminateRegistration = PosixSignalRegistration.Create(
                 PosixSignal.SIGTERM,
@@ -41,36 +38,42 @@ internal sealed class ProcessLifetimeCancellation : IDisposable
 
         Console.CancelKeyPress -= HandleConsoleCancelKeyPress;
         _hangupRegistration?.Dispose();
-        _interruptRegistration?.Dispose();
         _terminateRegistration?.Dispose();
         _cancellationSource.Dispose();
     }
 
     private void HandleConsoleCancelKeyPress(object? sender, ConsoleCancelEventArgs eventArgs)
     {
-        eventArgs.Cancel = true;
-        RequestCancellation();
+        if (RequestCancellation())
+        {
+            eventArgs.Cancel = true;
+        }
     }
 
     private void HandlePosixSignal(PosixSignalContext context)
     {
-        context.Cancel = true;
-        RequestCancellation();
+        if (RequestCancellation())
+        {
+            context.Cancel = true;
+        }
     }
 
-    private void RequestCancellation()
+    private bool RequestCancellation()
     {
-        if (Volatile.Read(ref _disposed) != 0)
+        if (Volatile.Read(ref _disposed) != 0
+            || Interlocked.Exchange(ref _cancellationRequested, 1) != 0)
         {
-            return;
+            return false;
         }
 
         try
         {
             _cancellationSource.Cancel();
+            return true;
         }
         catch (ObjectDisposedException) when (Volatile.Read(ref _disposed) != 0)
         {
+            return false;
         }
     }
 }

@@ -168,6 +168,52 @@ function Assert-PathUnderRoot
     {
         throw "$Label must stay under $normalizedRoot, but resolved to $normalizedPath."
     }
+
+    $relativePath = $normalizedPath.Substring($rootBoundary.Length)
+    $currentPath = $normalizedRoot
+    foreach ($pathSegment in ($relativePath -split '[\\/]'))
+    {
+        if ([string]::IsNullOrEmpty($pathSegment))
+        {
+            continue
+        }
+
+        $currentPath = Join-Path $currentPath $pathSegment
+        try
+        {
+            $pathItem = Get-Item -LiteralPath $currentPath -Force -ErrorAction Stop
+        }
+        catch [System.Management.Automation.ItemNotFoundException]
+        {
+            break
+        }
+
+        if (($pathItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -eq 0)
+        {
+            continue
+        }
+
+        try
+        {
+            $resolvedTarget = $pathItem.ResolveLinkTarget($true)
+        }
+        catch
+        {
+            throw "$Label cannot traverse reparse point '$currentPath' under the protected root $normalizedRoot."
+        }
+
+        if ($null -eq $resolvedTarget)
+        {
+            throw "$Label cannot traverse reparse point '$currentPath' under the protected root $normalizedRoot."
+        }
+
+        $resolvedTargetPath = [System.IO.Path]::GetFullPath($resolvedTarget.FullName)
+        if (-not $resolvedTargetPath.Equals($normalizedRoot, $pathComparison) -and
+            -not $resolvedTargetPath.StartsWith($rootBoundary, $pathComparison))
+        {
+            throw "$Label must stay under $normalizedRoot, but reparse point '$currentPath' resolves to $resolvedTargetPath."
+        }
+    }
 }
 
 function Reset-Directory

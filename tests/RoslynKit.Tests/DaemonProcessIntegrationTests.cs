@@ -118,6 +118,7 @@ public sealed class DaemonProcessIntegrationTests
 
     [Theory]
     [InlineData(SigHup)]
+    [InlineData(SigInt)]
     [InlineData(SigTerm)]
     public async Task PosixSignal_GracefullyStopsRunningDaemonOnLinux(int signal)
     {
@@ -200,6 +201,7 @@ public sealed class DaemonProcessIntegrationTests
     private static extern int Kill(int processId, int signal);
 
     private const int SigHup = 1;
+    private const int SigInt = 2;
     private const int SigTerm = 15;
 }
 

@@ -119,13 +119,18 @@ internal sealed class DaemonClient
         {
             throw new DaemonClientInfrastructureException(CommandInfrastructureFailureMessage, exception);
         }
+        catch (ArgumentOutOfRangeException exception) when (
+            !OperatingSystem.IsWindows()
+            && string.Equals(exception.ParamName, "path", StringComparison.Ordinal))
+        {
+            throw new DaemonClientInfrastructureException(CommandInfrastructureFailureMessage, exception);
+        }
         catch (Exception exception) when (exception is
             IOException or
             TimeoutException or
             UnauthorizedAccessException or
             PlatformNotSupportedException or
-            InvalidOperationException or
-            ArgumentOutOfRangeException)
+            InvalidOperationException)
         {
             throw new DaemonClientInfrastructureException(CommandInfrastructureFailureMessage, exception);
         }

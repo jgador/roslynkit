@@ -238,9 +238,14 @@ public sealed class DaemonClientTests
     [Fact]
     public async Task ExecuteAsync_NormalizesUnixNamedPipePathFailureToInfrastructureException()
     {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
         var client = CreateClient(
             sendAsync: (_, _, _, _) => throw new ArgumentOutOfRangeException(
-                "endpointName",
+                "path",
                 "The Unix named-pipe path is too long."),
             probeAsync: (_, _, _) => throw new InvalidOperationException("Readiness was not expected."),
             tryAcquireBootstrapLease: _ => throw new InvalidOperationException("Bootstrap was not expected."),
@@ -251,6 +256,24 @@ public sealed class DaemonClientTests
             TestContext.Current.CancellationToken));
 
         Assert.IsType<ArgumentOutOfRangeException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DoesNotNormalizeUnrelatedArgumentOutOfRangeException()
+    {
+        var client = CreateClient(
+            sendAsync: (_, _, _, _) => throw new ArgumentOutOfRangeException(
+                "timeout",
+                "Unexpected invalid state."),
+            probeAsync: (_, _, _) => throw new InvalidOperationException("Readiness was not expected."),
+            tryAcquireBootstrapLease: _ => throw new InvalidOperationException("Bootstrap was not expected."),
+            startDaemon: _ => throw new InvalidOperationException("Launch was not expected."));
+
+        var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.ExecuteAsync(
+            CreateWorkspaceCommand(),
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal("timeout", exception.ParamName);
     }
 
     [Fact]
