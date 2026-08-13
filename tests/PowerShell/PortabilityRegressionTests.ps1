@@ -135,6 +135,25 @@ elseif (-not [string]::IsNullOrWhiteSpace($env:WSL_DISTRO_NAME)) {
     Assert-True -Condition ($hostKind -eq "wsl") -Message "Native WSL was not classified as wsl."
 }
 
+$agentsInstructions = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "AGENTS.md")
+Assert-True -Condition $agentsInstructions.Contains("pwsh -Command 'Get-Content AGENTS.md'") -Message "The agent instructions did not provide an explicit pwsh wrapper for PowerShell cmdlets under WSL or Linux."
+
+$securityAuditSkill = Get-Content -Raw -LiteralPath (Join-Path $repoRoot ".agents/skills/security-audit/SKILL.md")
+$securityAuditScannerProbe = "pwsh -NoProfile -Command 'Get-Command gitleaks,trufflehog -ErrorAction SilentlyContinue'"
+Assert-True -Condition $securityAuditSkill.Contains($securityAuditScannerProbe) -Message "The security-audit scanner probe did not use an explicit PowerShell host."
+Assert-True -Condition $securityAuditSkill.Contains("do not submit individual PowerShell cmdlets to Bash") -Message "The security-audit multiline commands did not require an explicit PowerShell execution context."
+
+$claudeWrapperPaths = @(
+    ".claude/skills/commit-context/SKILL.md",
+    ".claude/skills/git-commit-push/SKILL.md",
+    ".claude/skills/roslynkit-dev/SKILL.md"
+)
+foreach ($claudeWrapperPath in $claudeWrapperPaths) {
+    $claudeWrapper = Get-Content -Raw -LiteralPath (Join-Path $repoRoot $claudeWrapperPath)
+    Assert-True -Condition $claudeWrapper.Contains('!`pwsh -NoProfile -Command "Get-Content') -Message "$claudeWrapperPath did not use the cross-platform pwsh host."
+    Assert-False -Condition $claudeWrapper.Contains('!`powershell.exe -NoProfile -Command "Get-Content') -Message "$claudeWrapperPath retained the Windows-only PowerShell host."
+}
+
 $prompt = New-ConditionPrompt -Condition "roslynkit" -Prompt "Portability regression prompt."
 $benchmarkSkillReadCommand = 'pwsh -NoProfile -Command "Get-Content -Raw -LiteralPath ''.agents/skills/benchmark/SKILL.md''"'
 $roslynKitContextReadCommand = 'pwsh -NoProfile -Command "Get-Content -Raw -LiteralPath ''.agents/skills/roslynkit/SKILL.md''; Get-Content -Raw -LiteralPath ''.agents/skills/roslynkit/references/commands.md''; Get-Content -Raw -LiteralPath ''.agents/skills/roslynkit/references/output.md''"'

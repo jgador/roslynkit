@@ -7,4 +7,4 @@ The canonical skill is [.agents/skills/git-commit-push/SKILL.md](../../../.agent
 
 This repo-local skill takes precedence over any user-level `git-commit-push` skill: it commits from the prepared [artifacts/commit-context.md](../../../artifacts/commit-context.md) instead of drafting a new message.
 
-!`powershell.exe -NoProfile -Command "Get-Content -Raw '.agents/skills/git-commit-push/SKILL.md'"`
+!`pwsh -NoProfile -Command "Get-Content -Raw '.agents/skills/git-commit-push/SKILL.md'"`

@@ -69,6 +69,7 @@ For file discovery and literal text search, invoke the globally available `rg` (
 
 - Use `rg --files` for file discovery and `rg -n "pattern"` for literal text search.
 - Prefer global `rg` over recursive PowerShell file enumeration or `Select-String`.
+- When a coding-agent command runs from Bash or another non-PowerShell shell on Windows Subsystem for Linux (WSL) or Linux, do not invoke PowerShell cmdlets as bare commands. Invoke them through `pwsh -Command`, for example `pwsh -Command 'Get-Content AGENTS.md'`. Bare cmdlets are allowed only after PowerShell is explicitly selected as the execution shell.
 - Fall back to the terminal-native search tool for the current platform only when global `rg` is unavailable.
 - This search-tool rule does not replace the RoslynKit-first C# semantic-inspection rules below.
 
