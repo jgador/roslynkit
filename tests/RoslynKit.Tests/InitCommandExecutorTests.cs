@@ -19,7 +19,12 @@ public sealed class InitCommandExecutorTests
             Assert.True(File.Exists(Path.Combine(root, ".agents", "skills", "roslynkit", "SKILL.md")));
             Assert.True(File.Exists(Path.Combine(root, ".agents", "skills", "roslynkit", "references", "commands.md")));
             Assert.True(File.Exists(Path.Combine(root, ".agents", "skills", "roslynkit", "references", "output.md")));
-            Assert.Contains("name: roslynkit", File.ReadAllText(Path.Combine(root, ".agents", "skills", "roslynkit", "SKILL.md")), StringComparison.Ordinal);
+            var skill = File.ReadAllText(Path.Combine(root, ".agents", "skills", "roslynkit", "SKILL.md"));
+            Assert.Contains("name: roslynkit", skill, StringComparison.Ordinal);
+            Assert.Contains("Never request more than 80 inclusive lines", skill, StringComparison.Ordinal);
+            Assert.Contains("at most 8 RoslynKit invocations total", skill, StringComparison.Ordinal);
+            Assert.Contains("do not read C# source with `rg`", skill, StringComparison.Ordinal);
+            Assert.Contains("## Bounded evidence workflow", skill, StringComparison.Ordinal);
         }
         finally
         {

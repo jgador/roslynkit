@@ -46,12 +46,12 @@ Search requires projects with one target framework and repository-local physical
 
 `definition`, `references`, and `implementations` accept either `--symbol <selector>` or a position (`--file` plus `--line --column`), never both. Pick by the evidence already available:
 
-- Known declared name (type, method, property, field, event): use `--symbol` directly. Do not run `symbols` first just to obtain line and column numbers.
+- Known exact documentation-comment ID or fully qualified, unambiguous name: use `--symbol` directly. When only a simple or display name is known, resolve it with `search` or `symbols` first; do not guess a selector.
 - Known position from prior RoslynKit output (a reference location, a declaration location, a diagnostic) or from the user's cursor: use the position selector for the next hop at that spot.
 - The target has no global name (local variable, parameter, lambda parameter): position mode is the only way to address it.
 - `signature-help` and mid-expression `quick-info` are always position-based: they answer questions about a spot in the code, not about a declaration.
 
-`--symbol` takes a documentation-comment ID from RoslynKit `id:` output or a qualified name such as `SomeNamespace.SomeType.SomeMethod`. Prefix meanings for documentation-comment IDs are defined in [.agents/skills/roslynkit/references/output.md](../roslynkit/references/output.md). An ambiguous qualified name (for example method overloads) fails with the candidate documentation-comment IDs; retry with the exact ID. Constructors need the emitted `M:...#ctor(...)` ID form.
+`--symbol` takes a documentation-comment ID from RoslynKit `id:` output or a qualified name such as `SomeNamespace.SomeType.SomeMethod`. Prefix meanings for documentation-comment IDs are defined in [.agents/skills/roslynkit/references/output.md](../roslynkit/references/output.md). When output provides an `id:`, pass that exact value to the next command; never shorten it or replace it with the adjacent display name. An ambiguous qualified name (for example method overloads) fails with the candidate documentation-comment IDs; retry with the exact ID. Constructors need the emitted `M:...#ctor(...)` ID form.
 
 Hard rule: coordinates must come from tool output, a diagnostic, or the user. If reading or searching a file would be required to find a line number, use `--symbol` instead.
 
@@ -120,7 +120,9 @@ When a line contains more than one semantic target, choose the cursor deliberate
 
 When the task is a semantic C# question, prefer this order and stop once enough evidence is available:
 
-1. If the declaration name is known, run `definition`, `references`, or `implementations` with `--symbol`, or `symbol-source` for the declaration body, in one command.
+Before the first command, turn the requested behaviors into a short evidence checklist. Each clause must be supported by an emitted implementation or focused-test location before the investigation stops; a documentation summary or a neighboring helper is only a routing hint.
+
+1. If an exact documentation-comment ID or fully qualified, unambiguous declaration name is known, run `definition`, `references`, or `implementations` with `--symbol`, or `symbol-source` for the declaration body, in one command. When only a simple or display name is known, resolve it first instead of guessing a selector.
 2. If the current `.cs` file and cursor are already known, pick the most flow-bearing symbol on the current line and start with a position-based `definition`, `references`, `implementations`, or `quick-info` on that location. For chained invocations, start with the rightmost invoked method or property, not the constructor or enclosing type, unless construction is the question.
 3. Use `symbols` only for discovery: fuzzy name search, kind-filtered listing, or checking whether a declaration exists. Do not use it to convert a known name into coordinates.
 4. Use `quick-info` at the resolved position or location before reading source text when signature, type, or documentation context is needed.

@@ -564,6 +564,50 @@ public sealed class SqliteSearchIndexTests
     }
 
     [Fact]
+    public async Task SearchAsync_PrioritizesNavigableMembersBeforeNamespaces()
+    {
+        await using var area = SearchIndexTestArea.Create();
+        var index = new SqliteSearchIndex(area.DatabasePath);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await index.ReplaceTargetAsync(
+            new SqliteSearchIndexTarget(RelativePath("target"), "fingerprint"),
+            [
+                CreateSymbol("namespace", "RoslynKit", "workspace daemon reload", kind: "Namespace"),
+                CreateSymbol("method", "ReloadAsync", "reload", kind: "Method"),
+            ],
+            cancellationToken);
+
+        var results = await index.SearchAsync(
+            new SqliteSearchIndexQuery(RelativePath("target"), ["workspace", "daemon", "reload"], MaxResults: 2),
+            cancellationToken);
+
+        Assert.Equal(["ReloadAsync", "RoslynKit"], results.Matches.Select(static match => match.Name));
+    }
+
+    [Fact]
+    public async Task SearchAsync_PrioritizesProductionMembersBeforeTestMembers()
+    {
+        await using var area = SearchIndexTestArea.Create();
+        var index = new SqliteSearchIndex(area.DatabasePath);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await index.ReplaceTargetAsync(
+            new SqliteSearchIndexTarget(RelativePath("target"), "fingerprint"),
+            [
+                CreateSymbol("test", "ReloadAsync", "workspace daemon reload", path: "tests/RoslynKit.Tests/WorkspaceDaemonSessionTests.cs"),
+                CreateSymbol("production", "ReloadAsync", "workspace daemon reload", path: "src/RoslynKit/WorkspaceDaemonSession.cs"),
+            ],
+            cancellationToken);
+
+        var results = await index.SearchAsync(
+            new SqliteSearchIndexQuery(RelativePath("target"), ["workspace", "daemon", "reload"], MaxResults: 2),
+            cancellationToken);
+
+        Assert.Equal(
+            ["src/RoslynKit/WorkspaceDaemonSession.cs", "tests/RoslynKit.Tests/WorkspaceDaemonSessionTests.cs"],
+            results.Matches.Select(static match => match.Path.Value));
+    }
+
+    [Fact]
     public async Task SearchAsync_DoesNotUseSubstringOnlyDocumentationForExcerpt()
     {
         await using var area = SearchIndexTestArea.Create();

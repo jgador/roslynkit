@@ -976,7 +976,23 @@ internal sealed class SqliteSearchIndex
             FROM search_index_fts
             INNER JOIN search_index_symbols AS symbols ON symbols.id = search_index_fts.rowid
             WHERE {BuildSearchFilters(query, parameters)}
-            ORDER BY query_term_coverage DESC,
+            ORDER BY CASE lower(symbols.kind)
+                         WHEN 'method' THEN 0
+                         WHEN 'property' THEN 1
+                         WHEN 'field' THEN 2
+                         WHEN 'event' THEN 3
+                         WHEN 'class' THEN 4
+                         WHEN 'interface' THEN 4
+                         WHEN 'struct' THEN 4
+                         WHEN 'enum' THEN 4
+                         WHEN 'delegate' THEN 4
+                         WHEN 'namespace' THEN 5
+                         ELSE 6
+                     END ASC,
+                     CASE WHEN lower(symbols.path) LIKE 'tests/%'
+                                OR lower(symbols.path) LIKE '%/tests/%'
+                          THEN 1 ELSE 0 END ASC,
+                     query_term_coverage DESC,
                      bm25_score ASC,
                      symbols.display_name COLLATE BINARY ASC,
                      symbols.path COLLATE BINARY ASC,

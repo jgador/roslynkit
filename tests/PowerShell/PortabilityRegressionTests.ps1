@@ -27,6 +27,11 @@ function Assert-Throws {
     throw $Message
 }
 
+function Assert-Near {
+    param([double] $Actual, [double] $Expected, [double] $Tolerance, [string] $Message)
+    Assert-True -Condition ([Math]::Abs($Actual - $Expected) -le $Tolerance) -Message "$Message Expected $Expected but found $Actual."
+}
+
 function New-BenchmarkCommandEvent {
     param(
         [string] $Type,
@@ -163,6 +168,22 @@ Assert-True -Condition $prompt.Contains("Never issue a bare PowerShell cmdlet") 
 Assert-False -Condition $prompt.Contains("with Get-Content -Raw before investigating code") -Message "The measured prompt retained the ambiguous bare Get-Content instruction."
 Assert-True -Condition $prompt.Contains("--target ./RoslynKit.slnx") -Message "The RoslynKit target path is not portable."
 Assert-True -Condition $prompt.Contains("--index-path ./artifacts/roslynkit.db") -Message "The RoslynKit index path is not portable."
+Assert-True -Condition $prompt.Contains("turn every requested behavior, numeric limit, timing rule, and failure or reuse branch into an evidence checklist") -Message "The measured prompt did not require clause-by-clause evidence."
+Assert-True -Condition $prompt.Contains("For definition, references, implementations, and symbol-source, use an exact N:, T:, M:, P:, F:, or E: id") -Message "The measured prompt did not require exact emitted identifiers for symbol selectors."
+Assert-True -Condition $prompt.Contains("Use at most 8 RoslynKit invocations total") -Message "The measured prompt did not state the RoslynKit invocation ceiling."
+$customIndexPath = Resolve-BenchmarkIndexPath -RepoRoot $repoRoot -Path "artifacts/benchmark-test.db"
+Assert-True -Condition ($customIndexPath -eq "./artifacts/benchmark-test.db") -Message "A valid custom benchmark index path was not normalized."
+$customIndexPrompt = New-ConditionPrompt -Condition "roslynkit" -Prompt "Portability regression prompt." -IndexPath $customIndexPath
+Assert-True -Condition $customIndexPrompt.Contains("--index-path ./artifacts/benchmark-test.db") -Message "The measured prompt did not use the selected custom index path."
+Assert-Throws -Action { Resolve-BenchmarkIndexPath -RepoRoot $repoRoot -Path "../outside.db" } -Message "An index path outside artifacts was accepted."
+$benchmarkCases = @(Get-CaseData -RepoRoot $repoRoot)
+$daemonCase = @($benchmarkCases | Where-Object { $_.id -eq "daemon-disconnect" })[0]
+$workspaceCase = @($benchmarkCases | Where-Object { $_.id -eq "workspace-generation" })[0]
+$staleCase = @($benchmarkCases | Where-Object { $_.id -eq "stale-search-index" })[0]
+Assert-True -Condition $daemonCase.prompt.Contains("completed command failures") -Message "The daemon task prompt did not expose its completed-failure correctness requirement."
+Assert-True -Condition $workspaceCase.prompt.Contains("maximum clean-reader capacity") -Message "The workspace task prompt did not expose its reader-capacity correctness requirement."
+Assert-True -Condition $workspaceCase.prompt.Contains("exact quiet-period retry timing") -Message "The workspace task prompt did not expose its retry-timing correctness requirement."
+Assert-True -Condition $staleCase.prompt.Contains("state recapture") -Message "The search task prompt did not expose its state-recapture correctness requirement."
 Assert-True -Condition $prompt.Contains("Do not run repository-root recursive searches") -Message "The common prompt did not prohibit repository-root recursive searches."
 Assert-True -Condition (Test-RoslynKitInvocation -Command "/opt/tools/roslynkit version" -ResolvedRoslynKitPath "roslynkit") -Message "An absolute native RoslynKit path was not recognized."
 Assert-False -Condition (Test-RoslynKitInvocation -Command "/opt/tools/not-roslynkit version" -ResolvedRoslynKitPath "roslynkit") -Message "An unrelated absolute path was misclassified as RoslynKit."
@@ -303,6 +324,12 @@ for ($commandIndex = 0; $commandIndex -lt $roslynKitCommands.Count; $commandInde
 }
 $roslynKitIssues = @(Get-ComplianceIssues -Condition "roslynkit" -Commands $roslynKitCommands -Events $roslynKitEvents -RepositoryChanges @() -ResolvedRoslynKitPath "roslynkit")
 Assert-True -Condition ($roslynKitIssues.Count -eq 0) -Message "The previously invalid Remote-WSL RoslynKit sequence still failed compliance: $($roslynKitIssues -join '; ')"
+$atLimitCommands = @($remoteRawSkillRead, $remoteRoslynContextRead) + @(1..8 | ForEach-Object { $remoteRoslynSearch })
+$atLimitIssues = @(Get-ComplianceIssues -Condition "roslynkit" -Commands $atLimitCommands -Events @() -RepositoryChanges @() -ResolvedRoslynKitPath "roslynkit")
+Assert-False -Condition (($atLimitIssues -join "; ") -match "maximum is 8") -Message "Eight RoslynKit invocations exceeded the hard ceiling."
+$overLimitCommands = $atLimitCommands + @($remoteRoslynSource)
+$overLimitIssues = @(Get-ComplianceIssues -Condition "roslynkit" -Commands $overLimitCommands -Events @() -RepositoryChanges @() -ResolvedRoslynKitPath "roslynkit")
+Assert-True -Condition (($overLimitIssues -join "; ") -match "used 9 invocations; maximum is 8") -Message "Nine RoslynKit invocations did not fail compliance."
 
 $testApplicationPath = (Get-Command pwsh -CommandType Application | Select-Object -First 1).Path
 $validProbe = [pscustomobject]@{
@@ -366,6 +393,114 @@ try {
 finally {
     if (Test-Path -LiteralPath $probeTestRoot) {
         Remove-Item -LiteralPath $probeTestRoot -Recurse -Force
+    }
+}
+
+$usageEvent = [pscustomobject]@{
+    type = "turn.completed"
+    usage = [pscustomobject]@{
+        input_tokens = 348872
+        cached_input_tokens = 293385
+        cache_write_input_tokens = 55454
+        output_tokens = 3783
+        reasoning_output_tokens = 2183
+    }
+}
+$accounting = Get-TokenAccounting -Events @($usageEvent)
+Assert-True -Condition ($accounting.issues.Count -eq 0) -Message "Valid terminal token accounting was rejected: $($accounting.issues -join '; ')"
+Assert-True -Condition ($accounting.usage.uncached_input_tokens -eq 55487) -Message "Non-cached input was not derived from total minus cached input."
+Assert-True -Condition ($accounting.usage.regular_uncached_input_tokens -eq 33) -Message "Regular uncached input did not exclude cache-write tokens."
+Assert-False -Condition $accounting.request_usage_available -Message "Completed-turn aggregate usage was mistaken for per-request usage."
+Assert-True -Condition ($null -eq $accounting.max_request_input_tokens -and $null -eq $accounting.requests_over_long_context_threshold) -Message "Unavailable long-context request metrics were fabricated."
+
+$apiNamedCacheWriteEvent = [pscustomobject]@{
+    type = "turn.completed"
+    usage = [pscustomobject]@{
+        input_tokens = 100
+        cached_input_tokens = 40
+        cache_write_tokens = 50
+        output_tokens = 10
+        reasoning_output_tokens = 4
+    }
+}
+$apiNamedAccounting = Get-TokenAccounting -Events @($apiNamedCacheWriteEvent)
+Assert-True -Condition ($apiNamedAccounting.usage.cache_write_input_tokens -eq 50 -and $apiNamedAccounting.usage.regular_uncached_input_tokens -eq 10) -Message "The API cache_write_tokens alias was not normalized."
+$ambiguousAccounting = Get-TokenAccounting -Events @($usageEvent, $usageEvent)
+Assert-True -Condition (($ambiguousAccounting.issues -join "; ") -match "2 terminal usage events") -Message "Multiple terminal usage events were accepted as one ephemeral turn."
+
+$terraShortCost = Get-Gpt56CostProjection -Usage $accounting.usage -Model "gpt-5.6-terra" -ContextClass short
+$terraLongCost = Get-Gpt56CostProjection -Usage $accounting.usage -Model "gpt-5.6-terra" -ContextClass long
+Assert-Near -Actual $terraShortCost.total_cost_usd -Expected 0.242774 -Tolerance 0.000000001 -Message "Terra short-context projection was incorrect."
+Assert-Near -Actual $terraLongCost.total_cost_usd -Expected 0.46285 -Tolerance 0.000000001 -Message "Terra all-long-context projection was incorrect."
+Assert-True -Condition ($terraShortCost.status -eq "complete") -Message "Known cache-write accounting was marked incomplete."
+
+$accountingTestRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("roslynkit-benchmark-accounting-" + [Guid]::NewGuid())
+try {
+    New-Item -ItemType Directory -Path $accountingTestRoot | Out-Null
+    $malformedEventPath = Join-Path $accountingTestRoot "events.jsonl"
+    @('{"type":"turn.started"}', '{') | Set-Content -LiteralPath $malformedEventPath -Encoding UTF8
+    $malformedLog = Read-EventLog -Path $malformedEventPath
+    Assert-True -Condition ($malformedLog.events.Count -eq 1) -Message "The valid JSONL event next to a malformed event was lost."
+    Assert-True -Condition (($malformedLog.issues -join "; ") -match "line 2") -Message "Malformed JSONL did not retain its line number."
+
+    $reportRoot = Join-Path $accountingTestRoot "report"
+    New-Item -ItemType Directory -Path $reportRoot | Out-Null
+    $reportCase = [pscustomobject]@{ id = "cost-case"; manualReviewCriteria = @("Answer is correct.") }
+    $rawSol = Get-Gpt56CostProjection -Usage $accounting.usage -Model "gpt-5.6-sol"
+    $rawLuna = Get-Gpt56CostProjection -Usage $accounting.usage -Model "gpt-5.6-luna"
+    $rawRow = [pscustomobject]@{
+        run_id = "cost-case-raw-codex-trial1"; case_id = "cost-case"; condition = "raw-codex"; trial = 1
+        model = "gpt-5.6-terra"; valid = $true; exit_code = 0; duration_seconds = 10
+        input_tokens = 348872; cached_input_tokens = 293385; cache_write_input_tokens = 55454
+        regular_uncached_input_tokens = 33; output_tokens = 3783; reasoning_output_tokens = 2183
+        cache_hit_rate_pct = 84.0996; model_turn_count = 1; tool_call_count = 5; roslynkit_invocation_count = 0
+        selected_model_short_context_cost_usd = $terraShortCost.total_cost_usd
+        selected_model_all_long_context_cost_usd = $terraLongCost.total_cost_usd
+        sol_short_context_cost_usd = $rawSol.total_cost_usd; terra_short_context_cost_usd = $terraShortCost.total_cost_usd; luna_short_context_cost_usd = $rawLuna.total_cost_usd
+        sol_regular_uncached_input_cost_usd = $rawSol.regular_uncached_input_cost_usd; sol_cached_input_cost_usd = $rawSol.cached_input_cost_usd
+        sol_cache_write_cost_usd = $rawSol.cache_write_cost_usd; sol_output_cost_usd = $rawSol.output_cost_usd
+        issues = ""; answer_path = "raw.md"
+    }
+    $roslynUsage = [pscustomobject]@{
+        input_tokens = 176512; cached_input_tokens = 150782; cache_write_input_tokens = 25703
+        uncached_input_tokens = 25730; regular_uncached_input_tokens = 27; output_tokens = 2000; reasoning_output_tokens = 1000
+    }
+    $roslynTerraShort = Get-Gpt56CostProjection -Usage $roslynUsage -Model "gpt-5.6-terra"
+    $roslynTerraLong = Get-Gpt56CostProjection -Usage $roslynUsage -Model "gpt-5.6-terra" -ContextClass long
+    $roslynSol = Get-Gpt56CostProjection -Usage $roslynUsage -Model "gpt-5.6-sol"
+    $roslynLuna = Get-Gpt56CostProjection -Usage $roslynUsage -Model "gpt-5.6-luna"
+    $roslynRow = [pscustomobject]@{
+        run_id = "cost-case-roslynkit-trial1"; case_id = "cost-case"; condition = "roslynkit"; trial = 1
+        model = "gpt-5.6-terra"; valid = $true; exit_code = 0; duration_seconds = 12
+        input_tokens = 176512; cached_input_tokens = 150782; cache_write_input_tokens = 25703
+        regular_uncached_input_tokens = 27; output_tokens = 2000; reasoning_output_tokens = 1000
+        cache_hit_rate_pct = 85.422; model_turn_count = 1; tool_call_count = 3; roslynkit_invocation_count = 3
+        selected_model_short_context_cost_usd = $roslynTerraShort.total_cost_usd
+        selected_model_all_long_context_cost_usd = $roslynTerraLong.total_cost_usd
+        sol_short_context_cost_usd = $roslynSol.total_cost_usd; terra_short_context_cost_usd = $roslynTerraShort.total_cost_usd; luna_short_context_cost_usd = $roslynLuna.total_cost_usd
+        sol_regular_uncached_input_cost_usd = $roslynSol.regular_uncached_input_cost_usd; sol_cached_input_cost_usd = $roslynSol.cached_input_cost_usd
+        sol_cache_write_cost_usd = $roslynSol.cache_write_cost_usd; sol_output_cost_usd = $roslynSol.output_cost_usd
+        issues = ""; answer_path = "roslynkit.md"
+    }
+    Write-Reports -RunRoot $reportRoot -Rows @($rawRow, $roslynRow) -Cases @($reportCase)
+    $pendingSummary = Get-Content -Raw -LiteralPath (Join-Path $reportRoot "summary.md")
+    Assert-True -Condition $pendingSummary.Contains("Only operationally valid runs marked ``pass``") -Message "The report did not state its correctness gate."
+    $reviewPath = Join-Path $reportRoot "review-results.json"
+    $reviewDocument = Get-Content -Raw -LiteralPath $reviewPath | ConvertFrom-Json
+    foreach ($runReview in $reviewDocument.runs) {
+        $runReview.overall_status = "pass"
+        foreach ($criterion in $runReview.criteria) { $criterion.status = "pass" }
+    }
+    $reviewDocument | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $reviewPath -Encoding UTF8
+    Write-Reports -RunRoot $reportRoot -Rows @($rawRow, $roslynRow) -Cases @($reportCase)
+    $reviewedSummary = Get-Content -Raw -LiteralPath (Join-Path $reportRoot "summary.md")
+    Assert-True -Condition $reviewedSummary.Contains('$0.242774') -Message "The reviewed-correct Terra cost was not reported."
+    Assert-True -Condition $reviewedSummary.Contains("GPT-5.6 Standard Cost Projections For Correct Runs") -Message "Cross-tier cost projections were not reported."
+    Assert-True -Condition $reviewedSummary.Contains("| RoslynKit calls |") -Message "The report did not separate RoslynKit invocations from all tool calls."
+}
+finally {
+    if (Test-Path -LiteralPath $accountingTestRoot) {
+        Remove-Item -LiteralPath $accountingTestRoot -Recurse -Force
     }
 }
 
