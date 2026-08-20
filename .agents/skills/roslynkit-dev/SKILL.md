@@ -13,6 +13,7 @@ These override every other section when they conflict. They exist because readin
 - Never read the same file twice. Capture needed context the first time.
 - Resolve positions with RoslynKit instead of falling back to `Read`/grep on `.cs` source once the file is loaded.
 - Prefer single-target commands (`definition`, `quick-info`, `type-definition`) over `symbols`; `symbols` returns verbose arrays. When `symbols` or `references` are required, always cap output with the smallest useful `--max-results` (often `--max-results 1` to confirm one known declaration).
+- Run no more than three `search` commands. Start with 10 results, keep one refined query at 10, then use one final 20-result fallback; raise only that final cap to 50 when earlier rankings show many plausible near-ties, and never run a fourth search.
 - Stop once enough evidence is available. Do not gather extra members, siblings, or confirmation reads.
 
 Use this skill for ordinary C# semantic inspection when the side-by-side prerelease RoslynKit dev tool is already installed with `--tool-path`.
@@ -29,10 +30,12 @@ Do not default to `Get-Content`, `Select-String`, or grep-style file reads for q
 Use `search` when an English-oriented question describes a C# responsibility but no declared symbol name is known. The command requires both `--target` and `--index-path`; use a Git-ignored repository-local database such as `./artifacts/roslynkit.db`.
 
 ```powershell
-& $roslynkitDev search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit.db --query "how does workspace daemon reload after source changes"
+& $roslynkitDev search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit.db --query "how does workspace daemon reload after source changes" --max-results 10
 ```
 
 `search` validates and refreshes the index automatically. Use `index` to prepare the index deliberately, and add `--rebuild` only when the selected target partition must be recreated.
+
+Treat the first 10-result search as the normal discovery pass. If it returns no useful method or location, refine the query and/or add `--kind method` while retaining `--max-results 10`. If the refined ranking still has no reliable jump target, run one third and final search with `--max-results 20`, or `--max-results 50` only when the first two rankings show many plausible near-ties that a 20-result window may truncate.
 
 ```powershell
 & $roslynkitDev index --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit.db

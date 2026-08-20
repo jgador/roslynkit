@@ -148,6 +148,17 @@ $securityAuditScannerProbe = "pwsh -NoProfile -Command 'Get-Command gitleaks,tru
 Assert-True -Condition $securityAuditSkill.Contains($securityAuditScannerProbe) -Message "The security-audit scanner probe did not use an explicit PowerShell host."
 Assert-True -Condition $securityAuditSkill.Contains("do not submit individual PowerShell cmdlets to Bash") -Message "The security-audit multiline commands did not require an explicit PowerShell execution context."
 
+$roslynKitDevSkill = Get-Content -Raw -LiteralPath (Join-Path $repoRoot ".agents/skills/roslynkit-dev/SKILL.md")
+Assert-True -Condition $roslynKitDevSkill.Contains("--max-results 10") -Message "The development skill did not begin search discovery with 10 results."
+Assert-True -Condition $roslynKitDevSkill.Contains('one third and final search with `--max-results 20`') -Message "The development skill did not cap ordinary fallback expansion at 20 results."
+Assert-True -Condition $roslynKitDevSkill.Contains('`--max-results 50` only when the first two rankings show many plausible near-ties') -Message "The development skill did not reserve 50 results for demonstrated ranking ambiguity."
+
+$benchmarkSkill = Get-Content -Raw -LiteralPath (Join-Path $repoRoot ".agents/skills/benchmark/SKILL.md")
+Assert-True -Condition $benchmarkSkill.Contains('bounded search using `--max-results 10`') -Message "The benchmark skill did not begin search discovery with 10 results."
+Assert-True -Condition $benchmarkSkill.Contains("one third and final search at 20 results") -Message "The benchmark skill did not cap ordinary fallback expansion at 20 results."
+Assert-True -Condition $benchmarkSkill.Contains("or 50 when the earlier rankings show many plausible near-ties") -Message "The benchmark skill did not reserve 50 results for demonstrated ranking ambiguity."
+Assert-True -Condition $benchmarkSkill.Contains("Never run a fourth search") -Message "The benchmark skill did not bound adaptive search expansion."
+
 $claudeWrapperPaths = @(
     ".claude/skills/commit-context/SKILL.md",
     ".claude/skills/git-commit-push/SKILL.md",
@@ -171,6 +182,10 @@ Assert-True -Condition $prompt.Contains("--index-path ./artifacts/roslynkit.db")
 Assert-True -Condition $prompt.Contains("turn every requested behavior, numeric limit, timing rule, and failure or reuse branch into an evidence checklist") -Message "The measured prompt did not require clause-by-clause evidence."
 Assert-True -Condition $prompt.Contains("For definition, references, implementations, and symbol-source, use an exact N:, T:, M:, P:, F:, or E: id") -Message "The measured prompt did not require exact emitted identifiers for symbol selectors."
 Assert-True -Condition $prompt.Contains("Use at most 8 RoslynKit invocations total") -Message "The measured prompt did not state the RoslynKit invocation ceiling."
+Assert-True -Condition $prompt.Contains("one narrow roslynkit search query and --max-results 10") -Message "The measured prompt did not begin search discovery with 10 results."
+Assert-True -Condition $prompt.Contains("one third and final search with --max-results 20") -Message "The measured prompt did not cap ordinary fallback expansion at 20 results."
+Assert-True -Condition $prompt.Contains("use --max-results 50 instead only when the earlier rankings show many plausible near-ties") -Message "The measured prompt did not reserve 50 results for demonstrated ranking ambiguity."
+Assert-True -Condition $prompt.Contains("Never run a fourth search") -Message "The measured prompt did not bound adaptive search expansion."
 $customIndexPath = Resolve-BenchmarkIndexPath -RepoRoot $repoRoot -Path "artifacts/benchmark-test.db"
 Assert-True -Condition ($customIndexPath -eq "./artifacts/benchmark-test.db") -Message "A valid custom benchmark index path was not normalized."
 $customIndexPrompt = New-ConditionPrompt -Condition "roslynkit" -Prompt "Portability regression prompt." -IndexPath $customIndexPath
@@ -207,7 +222,7 @@ $remoteRoslynContextRead = @'
 '@
 $remoteRoslynContextRead = $remoteRoslynContextRead.Trim()
 $remoteRoslynSearch = @'
-/bin/bash -lc 'timeout 120s roslynkit search --target ./RoslynKit.slnx --index-path ./artifacts/roslynkit.db --query "tracked files change reload workspace" --max-results 5'
+/bin/bash -lc 'timeout 120s roslynkit search --target ./RoslynKit.slnx --index-path ./artifacts/roslynkit.db --query "tracked files change reload workspace" --max-results 10'
 '@
 $remoteRoslynSearch = $remoteRoslynSearch.Trim()
 $remoteRoslynSource = @'

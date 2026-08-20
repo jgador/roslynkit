@@ -25,6 +25,10 @@ public sealed class InitCommandExecutorTests
             Assert.Contains("at most 8 RoslynKit invocations total", skill, StringComparison.Ordinal);
             Assert.Contains("do not read C# source with `rg`", skill, StringComparison.Ordinal);
             Assert.Contains("## Bounded evidence workflow", skill, StringComparison.Ordinal);
+            Assert.Contains("--max-results 10", skill, StringComparison.Ordinal);
+            Assert.Contains("third and final search with `--max-results 20`", skill, StringComparison.Ordinal);
+            Assert.Contains("use `--max-results 50` instead only", skill, StringComparison.Ordinal);
+            Assert.Contains("never run a fourth search", skill, StringComparison.Ordinal);
         }
         finally
         {

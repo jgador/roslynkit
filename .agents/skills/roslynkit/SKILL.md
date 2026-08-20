@@ -17,7 +17,7 @@ RoslynKit is a compact, read-only semantic navigator for C# declarations, source
 - Never use `document-symbols` merely to turn a known declaration identity into coordinates. Use its fully qualified, unambiguous name or emitted `id:` directly.
 - When output provides an `id:`, pass that exact documentation-comment ID to the next `--symbol` command. Never shorten it or replace it with the adjacent display name.
 - Once the RoslynKit route starts, do not read C# source with `rg`, `grep`, `sed`, `cat`, or another shell text command. Use one bounded RoslynKit source or line-window command per implementation/test file instead.
-- Run no more than two `search` commands and no symbol-enumeration command after a useful method or location has been returned. Spend remaining calls on the returned production and test windows, never on a third search.
+- Run no more than three `search` commands and no symbol-enumeration command after a useful method or location has been returned. Follow the bounded `10` -> refined `10` -> final `20`/`50` workflow below; never run a fourth search.
 - Stop after the source and focused-test evidence answers the question. A normal investigation needs one discovery search and at most a handful of follow-up reads.
 
 ## Bounded evidence workflow
@@ -26,7 +26,7 @@ For an English-oriented C# question with no declaration name:
 
 Before the first command, turn the requested behaviors into a short evidence checklist. Each clause must be supported by an emitted implementation or focused-test location before the investigation stops; a documentation summary or a neighboring helper is only a routing hint.
 
-1. Run one `search` with `--target`, `--index-path`, a focused natural-language query containing the central type or behavior nouns, and `--max-results 5`. This is normally the only search; use one narrower second search only when the first result set has no relevant implementation or test method. When the first result is a test method, include its containing production type in that narrower query instead of switching to broad symbol enumeration.
+1. Run one `search` with `--target`, `--index-path`, a focused natural-language query containing the central type or behavior nouns, and `--max-results 10`. This is normally the only search. If it has no useful method or location, refine the query and/or add `--kind method` while keeping `--max-results 10`. If that refinement still leaves no reliable jump target, run one third and final search with `--max-results 20`; use `--max-results 50` instead only when the first two rankings show many plausible near-ties that a 20-result window may truncate. When the first result is a test method, include its containing production type in the refined query instead of switching to broad symbol enumeration.
 2. Prefer returned method or test-method hits over namespace, type, and field hits. Copy every returned `id:` or `loc:` verbatim.
 3. Read only the method bodies that carry the requested control-flow branches. Prefer `document-lines` around returned locations (at most 80 lines); use `symbol-source` only when a method body cannot be captured by that window. For reload/generation questions, cover both the reader/reload hand-off and the retry/mismatch branch rather than reading only the final installation helper. If the first search returns only a type, use one narrower search for its behavior in place of one source read.
 4. Read at most two focused test methods, using test method IDs already returned whenever possible. Do not enumerate an entire test file or spend a command finding every related test.
@@ -40,7 +40,7 @@ When a declaration identity is already known, skip discovery and call `definitio
 Use the stable global command and always pass an explicit target:
 
 ```powershell
-roslynkit search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit.db --query "workspace daemon reload after source changes" --max-results 5
+roslynkit search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit.db --query "workspace daemon reload after source changes" --max-results 10
 ```
 
 `search` validates and refreshes the selected target automatically. The first request waits when no coherent partition exists; a coherent partition may answer `stale` while a writer refreshes. Use `index` for deliberate preparation and `--rebuild` only when a target partition must be recreated. The generated [references/commands.md](references/commands.md) file is authoritative for options and usage.
