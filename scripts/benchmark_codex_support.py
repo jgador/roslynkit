@@ -944,26 +944,33 @@ def get_benchmark_host_kind() -> str:
     return "unknown"
 
 
-def invoke_tool_version_probe(command_name: str) -> dict[str, Any]:
-    resolved_path = shutil.which(command_name)
+def invoke_tool_version_probe(command_name: str, executable_path: str | None = None) -> dict[str, Any]:
+    resolved_path = executable_path or shutil.which(command_name)
     if resolved_path is None:
         return {"resolved_path": None, "output": f"The '{command_name}' application was not found on PATH.", "exit_code": 127}
     try:
+        resolved_path = str(Path(resolved_path).resolve())
         completed = subprocess.run([resolved_path, "--version"], capture_output=True, text=True, check=False)
         output = "\n".join(part for part in [completed.stdout.strip(), completed.stderr.strip()] if part)
-        return {"resolved_path": str(Path(resolved_path).resolve()), "output": output, "exit_code": completed.returncode}
+        return {
+            "resolved_path": resolved_path,
+            "output": output,
+            "version_output": output,
+            "executable_sha256": hashlib.sha256(Path(resolved_path).read_bytes()).hexdigest(),
+            "exit_code": completed.returncode,
+        }
     except OSError as error:
         return {"resolved_path": str(Path(resolved_path).resolve()), "output": str(error), "exit_code": 126}
 
 
-def write_internal_tool_probe(output: Path) -> None:
+def write_internal_tool_probe(output: Path, roslynkit_path: str | None = None) -> None:
     output = output.resolve()
     if output.parent == output:
         raise BenchmarkError("The internal tool-probe path must have a parent directory.")
     output.parent.mkdir(parents=True, exist_ok=True)
     probe = {
         "schema_version": 1, "generated_at_utc": utc_now(), "host_kind": get_benchmark_host_kind(),
-        "ripgrep": invoke_tool_version_probe("rg"), "roslynkit": invoke_tool_version_probe("roslynkit"),
+        "ripgrep": invoke_tool_version_probe("rg"), "roslynkit": invoke_tool_version_probe("roslynkit", roslynkit_path),
     }
     output.write_text(json.dumps(probe, indent=2) + "\n", encoding="utf-8")
 
@@ -987,6 +994,8 @@ def get_tool_probe_validation_issues(probe: Any) -> list[str]:
             continue
         resolved_path = tool.get("resolved_path")
         output = tool.get("output")
+        version_output = tool.get("version_output")
+        executable_sha256 = tool.get("executable_sha256")
         exit_code = tool.get("exit_code")
         if not isinstance(resolved_path, str) or not Path(resolved_path).is_file():
             issues.append(f"{name} resolved path was missing" if not resolved_path else f"{name} resolved path was not a file")
@@ -994,6 +1003,10 @@ def get_tool_probe_validation_issues(probe: Any) -> list[str]:
             issues.append(f"{name} exit code was not zero")
         if not isinstance(output, str) or not re.search(pattern, output):
             issues.append(f"{name} version output was invalid")
+        if version_output != output:
+            issues.append(f"{name} version output record was missing or did not match")
+        if not isinstance(executable_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", executable_sha256):
+            issues.append(f"{name} executable SHA-256 was missing or invalid")
     return issues
 
 
@@ -1337,8 +1350,9 @@ def evaluate_benchmark_run(
 def internal_tool_probe_main(arguments: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="benchmark_codex_support.py internal-tool-probe")
     parser.add_argument("--output", required=True)
+    parser.add_argument("--roslynkit-path")
     options = parser.parse_args(arguments)
-    write_internal_tool_probe(Path(options.output))
+    write_internal_tool_probe(Path(options.output), options.roslynkit_path)
     return 0
 
 

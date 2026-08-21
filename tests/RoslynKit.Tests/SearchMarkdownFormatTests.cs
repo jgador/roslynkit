@@ -44,7 +44,10 @@ public sealed class SearchMarkdownFormatTests
                     "method",
                     new SourceRange(@"src\App\WorkspaceDaemonSession.cs", 18, 20, 18, 31),
                     "M:App.WorkspaceDaemonSession.ReloadAsync(System.Threading.CancellationToken)",
-                    "Reloads the workspace generation after source changes."),
+                    "Reloads the workspace generation after source changes.")
+                {
+                    ExcerptSource = SearchExcerptSource.Documentation,
+                },
                 new SearchHit(
                     "App.WorkspaceDaemonSession",
                     "class",
@@ -66,6 +69,7 @@ public sealed class SearchMarkdownFormatTests
             + "\n"
             + "- rank: 1 kind: method name: `App.WorkspaceDaemonSession.ReloadAsync` loc: `src\\App\\WorkspaceDaemonSession.cs:18:20-18:31` id: `M:App.WorkspaceDaemonSession.ReloadAsync(System.Threading.CancellationToken)`\n"
             + "  excerpt: `Reloads the workspace generation after source changes.`\n"
+            + "  excerpt-source: documentation\n"
             + "- rank: 2 kind: class name: `App.WorkspaceDaemonSession` loc: `src\\App\\WorkspaceDaemonSession.cs:5:21-5:43` id: `T:App.WorkspaceDaemonSession`";
         Assert.Equal(expected, rendered);
         Assert.DoesNotContain("score", rendered, StringComparison.OrdinalIgnoreCase);

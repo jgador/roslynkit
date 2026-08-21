@@ -25,6 +25,7 @@ Options:
   --case-id VALUE                   A benchmark case ID or all (default: all)
   --index-path PATH                 Repository-local artifacts database path
                                     (default: ./artifacts/roslynkit.db)
+  --roslynkit-path PATH             Isolated roslynkit executable to use instead of PATH
   --report-run-root PATH            Rebuild reports for an existing Bash-runner run
   --dry-run                         Print planned prompts and commands only
   --internal-tool-probe-path PATH   Internal preflight mode; not for normal use
@@ -75,11 +76,11 @@ normalize_path_options() {
         fi
 
         case "${argument}" in
-            --index-path|--report-run-root|--internal-tool-probe-path)
+            --index-path|--roslynkit-path|--report-run-root|--internal-tool-probe-path)
                 normalized_arguments+=("${argument}")
                 next_is_path=true
                 ;;
-            --index-path=*|--report-run-root=*|--internal-tool-probe-path=*)
+            --index-path=*|--roslynkit-path=*|--report-run-root=*|--internal-tool-probe-path=*)
                 normalized_arguments+=("${argument%%=*}=$(normalize_git_bash_path "${argument#*=}")")
                 ;;
             *)
@@ -105,6 +106,19 @@ run_support() {
     fi
 
     "${python_executable}" "${SUPPORT_SCRIPT}" "$@"
+}
+
+resolve_requested_roslynkit_path() {
+    resolved_requested_roslynkit_path=''
+    roslynkit_path_directory=''
+    [[ -n "${roslynkit_path_option}" ]] || return 0
+
+    [[ -x "${roslynkit_path_option}" ]] || fail "The --roslynkit-path executable was not found or was not executable: '${roslynkit_path_option}'."
+    local executable_name
+    executable_name="$(basename -- "${roslynkit_path_option}")"
+    [[ "${executable_name}" == 'roslynkit' || "${executable_name}" == 'roslynkit.exe' ]] || fail '--roslynkit-path must identify an executable named roslynkit or roslynkit.exe.'
+    roslynkit_path_directory="$(cd -- "$(dirname -- "${roslynkit_path_option}")" && pwd -P)"
+    resolved_requested_roslynkit_path="${roslynkit_path_directory}/${executable_name}"
 }
 
 resolve_repo_root() {
@@ -182,6 +196,10 @@ invoke_codex_cli() {
     local had_codex_home=false
     [[ -n "${CODEX_HOME+x}" ]] && had_codex_home=true
     export CODEX_HOME="${native_codex_home}"
+    local prior_path="${PATH}"
+    if [[ -n "${roslynkit_path_directory:-}" ]]; then
+        export PATH="${roslynkit_path_directory}:${PATH}"
+    fi
     local exit_code
     if codex "$@"; then
         exit_code=0
@@ -193,6 +211,7 @@ invoke_codex_cli() {
     else
         unset CODEX_HOME
     fi
+    export PATH="${prior_path}"
     return "${exit_code}"
 }
 
@@ -267,7 +286,11 @@ run_preflight() {
     mkdir -p -- "${preflight_root}"
     local probe_relative_path="./${probe_path#"${repo_root}/"}"
     local preflight_command
-    printf -v preflight_command 'bash ./scripts/benchmark-codex.sh --internal-tool-probe-path %q' "${probe_relative_path}"
+    if [[ -n "${resolved_requested_roslynkit_path}" ]]; then
+        printf -v preflight_command 'bash ./scripts/benchmark-codex.sh --internal-tool-probe-path %q --roslynkit-path %q' "${probe_relative_path}" "${resolved_requested_roslynkit_path}"
+    else
+        printf -v preflight_command 'bash ./scripts/benchmark-codex.sh --internal-tool-probe-path %q' "${probe_relative_path}"
+    fi
     local prompt="Run exactly this one shell command once and do not run any other command:
 
 ${preflight_command}
@@ -321,7 +344,11 @@ write_dry_run() {
     printf 'Active Codex config: %s\n' "${active_codex_config_path}"
     printf '%s\n' "Environment: the current host's CODEX_HOME is used directly; benchmark-specific command-line overrides remain in effect."
     printf '%s\n' 'Execution: child sessions bypass approvals and sandboxing, inherit the full host environment, disable unified_exec, and use the repository root as the --cd working root.'
-    printf "RoslynKit condition: the global 'roslynkit' command is resolved from the inherited host PATH; the prepared search index is %s relative to the repository root.\n" "${benchmark_index_path}"
+    if [[ -n "${resolved_requested_roslynkit_path}" ]]; then
+        printf "RoslynKit condition: the isolated executable '%s' is prepended to PATH for child sessions; the prepared search index is %s relative to the repository root.\n" "${resolved_requested_roslynkit_path}" "${benchmark_index_path}"
+    else
+        printf "RoslynKit condition: the global 'roslynkit' command is resolved from the inherited host PATH; the prepared search index is %s relative to the repository root.\n" "${benchmark_index_path}"
+    fi
     printf '%s\n' 'Preflight: one unmeasured child runs the controller hidden tool-probe mode through Bash and writes structured host, path, output, and exit-code evidence.'
     printf '%s\n' 'Comparison: compare raw Codex with RoslynKit only inside the same run and host; do not compare duration across hosts or with runs made before unified_exec was disabled.'
     printf '%s\n' 'Validity: an invalid measured session is recorded and excluded from comparison, then the remaining scheduled sessions continue without retry. Preparation, preflight, and nonignored repository content changes stop the controller.'
@@ -351,6 +378,7 @@ main() {
     trials=1
     case_id_option='all'
     index_path_option='./artifacts/roslynkit.db'
+    roslynkit_path_option=''
     report_run_root=''
     dry_run=false
     internal_tool_probe_path=''
@@ -366,7 +394,7 @@ main() {
             --dry-run)
                 dry_run=true
                 ;;
-            --model|--reasoning-effort|--trials|--case-id|--index-path|--report-run-root|--internal-tool-probe-path)
+            --model|--reasoning-effort|--trials|--case-id|--index-path|--roslynkit-path|--report-run-root|--internal-tool-probe-path)
                 ((index + 1 < ${#normalized_arguments[@]})) || fail "Option ${argument} requires a value."
                 index=$((index + 1))
                 [[ "${normalized_arguments[index]}" != -* ]] || fail "Option ${argument} requires a value."
@@ -376,11 +404,12 @@ main() {
                     --trials) trials="${normalized_arguments[index]}" ;;
                     --case-id) case_id_option="${normalized_arguments[index]}" ;;
                     --index-path) index_path_option="$(normalize_git_bash_path "${normalized_arguments[index]}")" || fail 'Could not normalize the --index-path value.' ;;
+                    --roslynkit-path) roslynkit_path_option="$(normalize_git_bash_path "${normalized_arguments[index]}")" || fail 'Could not normalize the --roslynkit-path value.' ;;
                     --report-run-root) report_run_root="$(normalize_git_bash_path "${normalized_arguments[index]}")" || fail 'Could not normalize the --report-run-root value.' ;;
                     --internal-tool-probe-path) internal_tool_probe_path="$(normalize_git_bash_path "${normalized_arguments[index]}")" || fail 'Could not normalize the --internal-tool-probe-path value.' ;;
                 esac
                 ;;
-            --model=*|--reasoning-effort=*|--trials=*|--case-id=*|--index-path=*|--report-run-root=*|--internal-tool-probe-path=*)
+            --model=*|--reasoning-effort=*|--trials=*|--case-id=*|--index-path=*|--roslynkit-path=*|--report-run-root=*|--internal-tool-probe-path=*)
                 local option_name="${argument%%=*}"
                 local option_value="${argument#*=}"
                 case "${option_name}" in
@@ -389,6 +418,7 @@ main() {
                     --trials) trials="${option_value}" ;;
                     --case-id) case_id_option="${option_value}" ;;
                     --index-path) index_path_option="$(normalize_git_bash_path "${option_value}")" || fail 'Could not normalize the --index-path value.' ;;
+                    --roslynkit-path) roslynkit_path_option="$(normalize_git_bash_path "${option_value}")" || fail 'Could not normalize the --roslynkit-path value.' ;;
                     --report-run-root) report_run_root="$(normalize_git_bash_path "${option_value}")" || fail 'Could not normalize the --report-run-root value.' ;;
                     --internal-tool-probe-path) internal_tool_probe_path="$(normalize_git_bash_path "${option_value}")" || fail 'Could not normalize the --internal-tool-probe-path value.' ;;
                 esac
@@ -405,11 +435,16 @@ main() {
     [[ -f "${SUPPORT_SCRIPT}" ]] || fail "Benchmark support module was not found: ${SUPPORT_SCRIPT}"
     python_executable="$(resolve_python)" || exit 1
     if [[ -n "${internal_tool_probe_path}" ]]; then
-        run_support internal-tool-probe --output "${internal_tool_probe_path}"
+        if [[ -n "${roslynkit_path_option}" ]]; then
+            run_support internal-tool-probe --output "${internal_tool_probe_path}" --roslynkit-path "${roslynkit_path_option}"
+        else
+            run_support internal-tool-probe --output "${internal_tool_probe_path}"
+        fi
         return 0
     fi
     resolve_repo_root
     cd -- "${repo_root}"
+    resolve_requested_roslynkit_path
     if [[ -n "${report_run_root}" ]]; then
         [[ "${dry_run}" == false ]] || fail '--report-run-root cannot be combined with --dry-run.'
         local refreshed_root

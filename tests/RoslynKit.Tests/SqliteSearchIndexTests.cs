@@ -206,6 +206,7 @@ public sealed class SqliteSearchIndexTests
 
         var match = Assert.Single(result.Matches);
         Assert.Equal("Refreshes the workspace before searching.", match.Excerpt);
+        Assert.Equal(SearchExcerptSource.Documentation, match.ExcerptSource);
         Assert.Equal(10, match.Line);
         Assert.Equal(5, match.Column);
         Assert.Equal(10, match.EndLine);
@@ -266,6 +267,40 @@ public sealed class SqliteSearchIndexTests
         var excerpt = Assert.IsType<string>(Assert.Single(result.Matches).Excerpt);
         Assert.Contains("workspace", excerpt, StringComparison.OrdinalIgnoreCase);
         Assert.True(excerpt.Length <= 320);
+    }
+
+    [Theory]
+    [InlineData(SearchExcerptSource.Documentation, "documentation needle")]
+    [InlineData(SearchExcerptSource.Comment, "comment needle")]
+    [InlineData(SearchExcerptSource.Signature, "void SearchTarget(needle value)")]
+    [InlineData(SearchExcerptSource.Body, "needle body")]
+    public async Task SearchAsync_ReportsExcerptSourceForEachIndexedField(
+        SearchExcerptSource expectedSource,
+        string expectedExcerpt)
+    {
+        await using var area = SearchIndexTestArea.Create();
+        var index = new SqliteSearchIndex(area.DatabasePath);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        const string matchToken = "needle";
+        await index.ReplaceTargetAsync(
+            new SqliteSearchIndexTarget(RelativePath("target"), "fingerprint"),
+            [CreateSymbol(
+                "match",
+                "SearchTarget",
+                matchToken,
+                documentation: expectedSource == SearchExcerptSource.Documentation ? expectedExcerpt : null,
+                comments: expectedSource == SearchExcerptSource.Comment ? expectedExcerpt : null,
+                signature: expectedSource == SearchExcerptSource.Signature ? expectedExcerpt : null,
+                body: expectedSource == SearchExcerptSource.Body ? expectedExcerpt : null)],
+            cancellationToken);
+
+        var result = await index.SearchAsync(
+            new SqliteSearchIndexQuery(RelativePath("target"), [matchToken], MaxResults: 20),
+            cancellationToken);
+
+        var match = Assert.Single(result.Matches);
+        Assert.Equal(expectedSource, match.ExcerptSource);
+        Assert.Equal(expectedExcerpt, match.Excerpt);
     }
 
     [Fact]
@@ -608,6 +643,44 @@ public sealed class SqliteSearchIndexTests
     }
 
     [Fact]
+    public async Task SearchAsync_PrioritizesMoreRelevantTestEvidenceBeforeLessRelevantProductionMembers()
+    {
+        await using var area = SearchIndexTestArea.Create();
+        var index = new SqliteSearchIndex(area.DatabasePath);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await index.ReplaceTargetAsync(
+            new SqliteSearchIndexTarget(RelativePath("target"), "fingerprint"),
+            [
+                CreateSymbol(
+                    "production",
+                    "RefreshConfiguration",
+                    "configuration refresh",
+                    path: "src/Product/RefreshConfiguration.cs"),
+                CreateSymbol(
+                    "test",
+                    "RefreshConfiguration_WhenSettingsChange",
+                    "configuration snapshot refresh settings change",
+                    path: "tests/Product.Tests/RefreshConfigurationTests.cs"),
+            ],
+            cancellationToken);
+
+        var results = await index.SearchAsync(
+            new SqliteSearchIndexQuery(
+                RelativePath("target"),
+                ["configuration", "snapshot", "refresh", "settings", "change"],
+                MaxResults: 2),
+            cancellationToken);
+
+        Assert.Equal(
+            [
+                "tests/Product.Tests/RefreshConfigurationTests.cs",
+                "src/Product/RefreshConfiguration.cs",
+            ],
+            results.Matches.Select(static match => match.Path.Value));
+        Assert.Equal([5, 2], results.Matches.Select(static match => match.QueryTermCoverage));
+    }
+
+    [Fact]
     public async Task SearchAsync_DoesNotUseSubstringOnlyDocumentationForExcerpt()
     {
         await using var area = SearchIndexTestArea.Create();
@@ -638,6 +711,7 @@ public sealed class SqliteSearchIndexTests
         string? path = null,
         string? documentation = null,
         string? comments = null,
+        string? signature = null,
         string? body = null,
         string projectPath = "App.csproj",
         string kind = "Method",
@@ -663,7 +737,7 @@ public sealed class SqliteSearchIndexTests
             10,
             20,
             documentation,
-            $"void {name}()",
+            signature ?? $"void {name}()",
             comments,
             body,
             name,

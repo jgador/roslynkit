@@ -70,6 +70,7 @@ internal sealed record DaemonCommandRequest(
         "references",
         "search",
         "signature-help",
+        "symbol-context",
         "symbol-source",
         "symbols",
         "type-definition",

@@ -55,6 +55,7 @@ bash -n "${runner_path}"
 help_output="$(bash "${runner_path}" --help)"
 assert_contains "${help_output}" '--model' 'The Bash runner did not document --model.'
 assert_contains "${help_output}" '--reasoning-effort' 'The Bash runner did not document --reasoning-effort.'
+assert_contains "${help_output}" '--roslynkit-path' 'The Bash runner did not document --roslynkit-path.'
 assert_contains "${help_output}" '--dry-run' 'The Bash runner did not document --dry-run.'
 
 zero_argument_byte_count="$(RUNNER_PATH="${runner_path}" bash -c '
@@ -81,9 +82,10 @@ path_normalization_output="$(RUNNER_PATH="${runner_path}" bash -c '
     cygpath() { printf "converted:%s\\n" "$3"; }
     while IFS= read -r -d "" value; do
         printf "<%s>\\n" "${value}"
-    done < <(normalize_path_options --index-path /c/roslynkit/index.db --report-run-root="C:\\reports\\run" --internal-tool-probe-path /c/roslynkit/probe.json)
+    done < <(normalize_path_options --index-path /c/roslynkit/index.db --roslynkit-path /c/roslynkit/bin/roslynkit --report-run-root="C:\\reports\\run" --internal-tool-probe-path /c/roslynkit/probe.json)
 ')"
 assert_contains "${path_normalization_output}" '<converted:/c/roslynkit/index.db>' 'Git-Bash index-path normalization did not use cygpath.'
+assert_contains "${path_normalization_output}" '<converted:/c/roslynkit/bin/roslynkit>' 'Git-Bash RoslynKit-path normalization did not use cygpath.'
 assert_contains "${path_normalization_output}" '<--report-run-root=converted:C:\reports\run>' 'Git-Bash equals-form report-path normalization did not use cygpath.'
 assert_contains "${path_normalization_output}" '<converted:/c/roslynkit/probe.json>' 'Git-Bash probe-path normalization did not use cygpath.'
 
@@ -154,7 +156,18 @@ probe_path="${temp_root}/tool-probe.json"
 bash "${runner_path}" --internal-tool-probe-path "${probe_path}"
 [[ -s "${probe_path}" ]] || fail 'The Bash runner did not write its hidden tool-probe artifact.'
 
-"${python_executable}" - "${repo_root}" "${temp_root}" "${probe_path}" "${report_cli_root}" "${legacy_report_cli_root}" <<'PY'
+mkdir -p "${temp_root}/isolated-tool"
+isolated_roslynkit_path="${temp_root}/isolated-tool/roslynkit"
+printf '%s\n' '#!/usr/bin/env bash' 'printf "roslynkit version isolated-test\\n"' > "${isolated_roslynkit_path}"
+chmod 755 "${isolated_roslynkit_path}"
+isolated_probe_path="${temp_root}/isolated-tool-probe.json"
+bash "${runner_path}" --internal-tool-probe-path "${isolated_probe_path}" --roslynkit-path "${isolated_roslynkit_path}"
+[[ -s "${isolated_probe_path}" ]] || fail 'The Bash runner did not write a RoslynKit-path tool-probe artifact.'
+isolated_dry_run_output="$(CODEX_HOME="${temp_root}/codex-home" bash "${runner_path}" --dry-run --trials 1 --case-id daemon-disconnect --roslynkit-path "${isolated_roslynkit_path}")"
+assert_contains "${isolated_dry_run_output}" "${isolated_roslynkit_path}" 'The dry run did not identify the isolated RoslynKit executable.'
+
+"${python_executable}" - "${repo_root}" "${temp_root}" "${probe_path}" "${isolated_probe_path}" "${isolated_roslynkit_path}" "${report_cli_root}" "${legacy_report_cli_root}" <<'PY'
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -162,8 +175,10 @@ from pathlib import Path
 repo_root = Path(sys.argv[1])
 temp_root = Path(sys.argv[2])
 probe_path = Path(sys.argv[3])
-report_cli_root = Path(sys.argv[4])
-legacy_report_cli_root = Path(sys.argv[5])
+isolated_probe_path = Path(sys.argv[4])
+isolated_roslynkit_path = Path(sys.argv[5])
+report_cli_root = Path(sys.argv[6])
+legacy_report_cli_root = Path(sys.argv[7])
 sys.path.insert(0, str(repo_root / "scripts"))
 
 import benchmark_codex_support as support
@@ -275,13 +290,19 @@ probe = json.loads(probe_path.read_text(encoding="utf-8"))
 check(probe.get("schema_version") == 1, "The hidden tool-probe artifact had an invalid schema version.")
 check(probe.get("host_kind") == support.get_benchmark_host_kind(), "The hidden tool-probe artifact had invalid host metadata.")
 for tool_name in ("ripgrep", "roslynkit"):
-    check({"resolved_path", "output", "exit_code"}.issubset(probe[tool_name]), f"The hidden {tool_name} probe omitted required fields.")
+    check({"resolved_path", "output", "version_output", "executable_sha256", "exit_code"}.issubset(probe[tool_name]), f"The hidden {tool_name} probe omitted required fields.")
+
+isolated_probe = json.loads(isolated_probe_path.read_text(encoding="utf-8"))
+isolated_tool = isolated_probe["roslynkit"]
+check(Path(isolated_tool["resolved_path"]) == isolated_roslynkit_path.resolve(), "The tool probe did not use the selected isolated RoslynKit executable.")
+check(isolated_tool["version_output"] == "roslynkit version isolated-test", "The tool probe did not record the selected RoslynKit version output.")
+check(isolated_tool["executable_sha256"] == hashlib.sha256(isolated_roslynkit_path.read_bytes()).hexdigest(), "The tool probe did not record the selected RoslynKit SHA-256.")
 
 valid_probe = {
     "schema_version": 1,
     "host_kind": support.get_benchmark_host_kind(),
-    "ripgrep": {"resolved_path": sys.executable, "output": "ripgrep 15.2.0", "exit_code": 0},
-    "roslynkit": {"resolved_path": sys.executable, "output": "roslynkit version 0.2.0", "exit_code": 0},
+    "ripgrep": {"resolved_path": sys.executable, "output": "ripgrep 15.2.0", "version_output": "ripgrep 15.2.0", "executable_sha256": hashlib.sha256(Path(sys.executable).read_bytes()).hexdigest(), "exit_code": 0},
+    "roslynkit": {"resolved_path": sys.executable, "output": "roslynkit version 0.2.0", "version_output": "roslynkit version 0.2.0", "executable_sha256": hashlib.sha256(Path(sys.executable).read_bytes()).hexdigest(), "exit_code": 0},
 }
 check(not support.get_tool_probe_validation_issues(valid_probe), "A valid structured tool probe was rejected.")
 missing_probe = dict(valid_probe, ripgrep=None)

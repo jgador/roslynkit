@@ -353,6 +353,7 @@ public static class CliParser
             case "definition":
             case "references":
             case "implementations":
+            case "symbol-context":
                 ValidateSymbolOrPositionSelector(commandName, options);
                 break;
         }

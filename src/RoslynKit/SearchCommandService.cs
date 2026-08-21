@@ -184,7 +184,10 @@ internal static class SearchCommandService
                     match.EndLine,
                     match.EndColumn),
                 match.SymbolId,
-                match.Excerpt))
+                match.Excerpt)
+            {
+                ExcerptSource = match.ExcerptSource,
+            })
             .ToArray();
 
         return new SearchResult(

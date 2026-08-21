@@ -72,6 +72,7 @@ internal sealed record SqliteSearchIndexMatch(
     string? Documentation,
     string? Signature,
     string? Excerpt,
+    SearchExcerptSource? ExcerptSource,
     int QueryTermCoverage,
     double RawBm25Score);
 

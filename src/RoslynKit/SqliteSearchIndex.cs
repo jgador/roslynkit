@@ -304,6 +304,12 @@ internal sealed class SqliteSearchIndex
             var projectPath = RepositoryRelativePath.FromStoredValue(row.ProjectPath, "Persisted project path");
             var sourcePath = RepositoryRelativePath.FromStoredValue(row.Path, "Persisted source path");
             ValidateSymbolKey(row.SymbolKey, query.TargetIdentity, projectPath, sourcePath);
+            var excerpt = SelectExcerpt(
+                row.Documentation,
+                row.Comments,
+                row.Signature,
+                row.Body,
+                query.Tokens);
             results.Add(new SqliteSearchIndexMatch(
                 row.SymbolKey,
                 projectPath,
@@ -319,12 +325,8 @@ internal sealed class SqliteSearchIndex
                 row.EndColumn,
                 row.Documentation,
                 row.Signature,
-                SelectExcerpt(
-                    row.Documentation,
-                    row.Comments,
-                    row.Signature,
-                    row.Body,
-                    query.Tokens),
+                excerpt?.Text,
+                excerpt?.Source,
                 row.QueryTermCoverage,
                 row.RawBm25Score));
         }
@@ -989,11 +991,11 @@ internal sealed class SqliteSearchIndex
                          WHEN 'namespace' THEN 5
                          ELSE 6
                      END ASC,
+                     query_term_coverage DESC,
+                     bm25_score ASC,
                      CASE WHEN lower(symbols.path) LIKE 'tests/%'
                                 OR lower(symbols.path) LIKE '%/tests/%'
                           THEN 1 ELSE 0 END ASC,
-                     query_term_coverage DESC,
-                     bm25_score ASC,
                      symbols.display_name COLLATE BINARY ASC,
                      symbols.path COLLATE BINARY ASC,
                      symbols.line ASC,
@@ -1141,7 +1143,7 @@ internal sealed class SqliteSearchIndex
             .ToArray();
     }
 
-    private static string? SelectExcerpt(
+    private static SearchExcerptSelection? SelectExcerpt(
         string? documentation,
         string? comments,
         string? signature,
@@ -1154,23 +1156,35 @@ internal sealed class SqliteSearchIndex
             return null;
         }
 
-        foreach (var candidate in new[] { documentation, comments, signature, body })
+        foreach (var candidate in new[]
+                 {
+                     new SearchExcerptCandidate(documentation, SearchExcerptSource.Documentation),
+                     new SearchExcerptCandidate(comments, SearchExcerptSource.Comment),
+                     new SearchExcerptCandidate(signature, SearchExcerptSource.Signature),
+                     new SearchExcerptCandidate(body, SearchExcerptSource.Body),
+                 })
         {
-            if (string.IsNullOrWhiteSpace(candidate))
+            if (string.IsNullOrWhiteSpace(candidate.Text))
             {
                 continue;
             }
 
-            var normalizedCandidate = NormalizeExcerptWhitespace(candidate);
+            var normalizedCandidate = NormalizeExcerptWhitespace(candidate.Text);
             var matchIndex = FindFirstMatchIndex(normalizedCandidate, normalizedTokens);
             if (matchIndex >= 0)
             {
-                return BoundExcerptAroundMatch(normalizedCandidate, matchIndex);
+                return new SearchExcerptSelection(
+                    BoundExcerptAroundMatch(normalizedCandidate, matchIndex),
+                    candidate.Source);
             }
         }
 
         return null;
     }
+
+    private sealed record SearchExcerptCandidate(string? Text, SearchExcerptSource Source);
+
+    private sealed record SearchExcerptSelection(string Text, SearchExcerptSource Source);
 
     private static int FindFirstMatchIndex(string value, IReadOnlyList<string> tokens)
     {

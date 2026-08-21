@@ -189,6 +189,25 @@ public static class BuiltinCommandRegistry
                 MaxResultsOption(),
             ]),
         new BuiltinCommand(
+            "symbol-context",
+            "Return the local syntax node, resolved symbol, ordinary comments, and bounded semantic context.",
+            [
+                "roslynkit symbol-context --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n> [--max-results <n>] [--max-comments <n>]",
+                "roslynkit symbol-context --target <target> --symbol <selector> [--max-results <n>] [--max-comments <n>]",
+            ],
+            [
+                TargetOption(),
+                FileOption(),
+                ProjectOption(),
+                TargetFrameworkOption(),
+                DocumentKindOption(),
+                LineOption(required: false),
+                ColumnOption(required: false),
+                SymbolOption(),
+                SymbolContextMaxResultsOption(),
+                MaxCommentsOption(),
+            ]),
+        new BuiltinCommand(
             "quick-info",
             "Return Roslyn quick info for the symbol at a one-based line and column.",
             ["roslynkit quick-info --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>"],
@@ -353,6 +372,16 @@ public static class BuiltinCommandRegistry
     private static OptionSpec MaxResultsOption()
     {
         return OptionSpec.Integer(null, "max-results", "n", "maximum results to return");
+    }
+
+    private static OptionSpec SymbolContextMaxResultsOption()
+    {
+        return OptionSpec.Integer(null, "max-results", "n", "maximum semantic descendants to return (default: 20)");
+    }
+
+    private static OptionSpec MaxCommentsOption()
+    {
+        return OptionSpec.Integer(null, "max-comments", "n", "maximum ordinary comments to return (default: 3)");
     }
 
     private static OptionSpec SymbolKindOption()

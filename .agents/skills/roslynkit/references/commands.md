@@ -20,6 +20,7 @@ This reference lists command names, usage strings, and options exposed by the in
 - `type-definition`: Resolve the type of the symbol at a one-based line and column to source definitions.
 - `references`: Find source references for a symbol selector or the symbol at a one-based line and column.
 - `implementations`: Find implementations for a symbol selector or the symbol at a one-based line and column.
+- `symbol-context`: Return the local syntax node, resolved symbol, ordinary comments, and bounded semantic context.
 - `quick-info`: Return Roslyn quick info for the symbol at a one-based line and column.
 - `signature-help`: Return Roslyn signature help for the position at a one-based line and column.
 - `symbol-source`: Return the full declaration source text for a symbol selector.
@@ -313,6 +314,30 @@ roslynkit implementations --target <target> --symbol <selector> [--max-results <
 - `--column` `<n>`: one-based source column
 - `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
 - `--max-results` `<n>`: maximum results to return
+
+## `symbol-context`
+
+Return the local syntax node, resolved symbol, ordinary comments, and bounded semantic context.
+
+### Usage
+
+```powershell
+roslynkit symbol-context --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n> [--max-results <n>] [--max-comments <n>]
+roslynkit symbol-context --target <target> --symbol <selector> [--max-results <n>] [--max-comments <n>]
+```
+
+### Options
+
+- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--file` / `-f` `<path>`: document file path in the loaded target
+- `--project` `<path>`: owning project file path when a document path is ambiguous
+- `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
+- `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
+- `--line` `<n>`: one-based source line
+- `--column` `<n>`: one-based source column
+- `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
+- `--max-results` `<n>`: maximum semantic descendants to return (default: 20)
+- `--max-comments` `<n>`: maximum ordinary comments to return (default: 3)
 
 ## `quick-info`
 

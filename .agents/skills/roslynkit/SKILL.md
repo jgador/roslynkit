@@ -27,11 +27,12 @@ For an English-oriented C# question with no declaration name:
 Before the first command, turn the requested behaviors into a short evidence checklist. Each clause must be supported by an emitted implementation or focused-test location before the investigation stops; a documentation summary or a neighboring helper is only a routing hint.
 
 1. Run one `search` with `--target`, `--index-path`, a focused natural-language query containing the central type or behavior nouns, and `--max-results 10`. This is normally the only search. If it has no useful method or location, refine the query and/or add `--kind method` while keeping `--max-results 10`. If that refinement still leaves no reliable jump target, run one third and final search with `--max-results 20`; use `--max-results 50` instead only when the first two rankings show many plausible near-ties that a 20-result window may truncate. When the first result is a test method, include its containing production type in the refined query instead of switching to broad symbol enumeration.
-2. Prefer returned method or test-method hits over namespace, type, and field hits. Copy every returned `id:` or `loc:` verbatim.
-3. Read only the method bodies that carry the requested control-flow branches. Prefer `document-lines` around returned locations (at most 80 lines); use `symbol-source` only when a method body cannot be captured by that window. For reload/generation questions, cover both the reader/reload hand-off and the retry/mismatch branch rather than reading only the final installation helper. If the first search returns only a type, use one narrower search for its behavior in place of one source read.
-4. Read at most two focused test methods, using test method IDs already returned whenever possible. Do not enumerate an entire test file or spend a command finding every related test.
-5. Compare the returned evidence with the checklist. Use the final optional invocation only for one uncovered clause through a small line window or one exact test method. Use `document-symbols` only when no useful method identity is available.
-6. Before stopping, account for every clause in the question, including numeric limits, wait/retry timing, precedence, and failure/reuse state when those are requested. Cite the implementation and test paths/locations already emitted, then stop. Extra searches, sibling members, and whole-file confirmation reads spend tokens without adding proof.
+2. Prefer returned method or test-method hits over namespace, type, and field hits. Compare `excerpt-source:` values with excerpts, kinds, identities, and locations; copy every returned `id:` or `loc:` verbatim.
+3. Run `symbol-context` for the most promising returned `id:` or `loc:` before reading source when syntax structure, declaration comments, or the next semantic relation is still unclear. Use its selected symbol, ancestors, descendants, and `target-id:` values to choose one focused hop.
+4. Read only the method bodies that carry the requested control-flow branches. Prefer `document-lines` around returned locations (at most 80 lines); use `symbol-source` only when a method body cannot be captured by that window. For reload/generation questions, cover both the reader/reload hand-off and the retry/mismatch branch rather than reading only the final installation helper. If the first search returns only a type, use one narrower search for its behavior in place of one source read.
+5. Read at most two focused test methods, using test method IDs already returned whenever possible. Do not enumerate an entire test file or spend a command finding every related test.
+6. Compare the returned evidence with the checklist. Use the final optional invocation only for one uncovered clause through a small line window or one exact test method. Use `document-symbols` only when no useful method identity is available.
+7. Before stopping, account for every clause in the question, including numeric limits, wait/retry timing, precedence, and failure/reuse state when those are requested. Cite the implementation and test paths/locations already emitted, then stop. Extra searches, sibling members, and whole-file confirmation reads spend tokens without adding proof.
 
 When a declaration identity is already known, skip discovery and call `definition`, `references`, `implementations`, or `symbol-source` with an exact emitted `id:` or a fully qualified, unambiguous name. Never substitute a shortened display name for an emitted ID. When only a simple or display name is known, resolve it with `search` or `symbols` first. For a known source location, use the position form directly. `signature-help` and mid-expression `quick-info` always require a position.
 
@@ -47,9 +48,25 @@ roslynkit search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit
 
 Search supports repository-local physical C# projects and non-generated source documents with one target framework. It skips source-generated documents, `bin`/`obj` paths, standard generated-code markers, external projects, and external linked non-generated files. Narrow with `--project`, `--kind`, or `--max-results` only when needed.
 
+`excerpt-source:` follows `excerpt:` when an excerpt is available. Its value is `documentation`, `comment`, `signature`, or `body`. An excerpt and its provenance help rank navigation candidates, but neither proves that a candidate satisfies the requested intent.
+
+## Symbol context and metadata
+
+A syntax node is source structure, such as an `InvocationExpression` or `MethodDeclaration`; a symbol is the compiler-resolved identity connected to that structure. `symbol-context` bridges those views from exactly one selector: `--symbol <selector>`, or `--file` with `--line --column`. Use the same emitted `id:` and `loc:` values from a search result rather than reconstructing a selector.
+
+```powershell
+roslynkit symbol-context --target ./SomeSolution.slnx --symbol "M:SomeNamespace.SomeType.Execute(System.String)"
+```
+
+The output identifies the selected node and symbol, alternate declarations, nearest-first syntax ancestors, and bounded descendants for declarations, invocations, constructions, and member references. Selected-node and ancestor entries carry syntax kind, location, and available `name:` or `id:` values. Descendants carry relationship, depth, syntax kind, location, and available `target-id:` values. It also returns XML documentation separately from structured declaration comments: each ordinary comment has placement (`leading`, `body`, or `trailing`), style (`line` or `block`), source location, and normalized text.
+
+`--max-results` bounds descendants and defaults to `20`; `--max-comments` bounds ordinary comments and defaults to `3`. Each bounded collection reports its count and truncation state. Comments and XML documentation are routing hints, not proof. Use an emitted identity to select `definition`, `references`, `implementations`, `symbol-source`, or a narrow `document-lines` read for source-backed evidence.
+
+The coding agent maintains the intent and chooses each next relationship: `search` -> `symbol-context` -> semantic navigation -> source or focused-test evidence -> decision. Track visited IDs and locations to prevent cycles, and stop when focused evidence meets the intent. RoslynKit does not embed an LLM planner or infer that a comment establishes behavior.
+
 ## Selectors and source ranges
 
-`definition`, `references`, and `implementations` accept either `--symbol <selector>` or `--file` with `--line --column`, never both. A documentation-comment ID from output is opaque: preserve its complete prefix, containing name, and signature. Prefixes are `N:` namespace, `T:` type, `M:` method-like member (including `#ctor`), `P:` property/indexer, `F:` field, and `E:` event.
+`definition`, `references`, `implementations`, and `symbol-context` accept either `--symbol <selector>` or `--file` with `--line --column`, never both. A documentation-comment ID from output is opaque: preserve its complete prefix, containing name, and signature. Prefixes are `N:` namespace, `T:` type, `M:` method-like member (including `#ctor`), `P:` property/indexer, `F:` field, and `E:` event.
 
 Coordinates must come from RoslynKit output, a diagnostic, or the user. If a command reports a range hint, select a fresh valid coordinate with a bounded `document-lines` call; do not retry the invalid coordinate. After source edits, line positions can be stale but symbol IDs remain the preferred chain.
 
@@ -63,7 +80,7 @@ roslynkit document-lines --target ./SomeSolution.slnx --file ./src/App/Service.c
 
 ## Cheap semantic commands
 
-Use `definition`, `type-definition`, `references`, `implementations`, `quick-info`, and `signature-help` for position-based navigation. Use `symbols` only for discovery when a declaration name is unknown; cap it with the smallest useful `--max-results` and prefer `--exact`/`--kind`. Use `symbol-source` for one known declaration body, never a whole class. Use `document-text` only when a complete document is genuinely required after narrower evidence failed.
+Use `symbol-context`, `definition`, `type-definition`, `references`, `implementations`, `quick-info`, and `signature-help` for position-based navigation. Use `symbols` only for discovery when a declaration name is unknown; cap it with the smallest useful `--max-results` and prefer `--exact`/`--kind`. Use `symbol-source` for one known declaration body, never a whole class. Use `document-text` only when a complete document is genuinely required after narrower evidence failed.
 
 Every command returns deterministic markdown. Read [references/output.md](references/output.md) for location formatting, failure shape, documentation IDs, and the shared output contract. A successful command exits `0`; failures use `error:` and `message:` lines with exit code `2`, `130`, or `1` as specified there.
 
