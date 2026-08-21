@@ -43,7 +43,8 @@ public sealed record SearchResult(
     int ReturnedCount,
     bool Truncated,
     IReadOnlyList<SearchHit> Hits,
-    IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics);
+    IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics,
+    bool Compact = false);
 
 /// <summary>
 /// Represents one ranked C# symbol hit returned by a full-text search query.

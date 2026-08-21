@@ -90,6 +90,11 @@ public static partial class RoslynCommandExecutor
                 _ = command.Required("query");
                 _ = command.OptionalInt("max-results", 20, 1);
                 _ = GetSymbolFilter(command.Name, command.Optional("kind"));
+                if (command.Flag("text-only") && command.Optional("project") is not null)
+                {
+                    throw new CliUsageException(command.Name, "Option '--project' is not supported with '--text-only'.");
+                }
+
                 break;
             case "document-lines":
                 var startLine = command.OptionalInt("start-line", 1, 1);

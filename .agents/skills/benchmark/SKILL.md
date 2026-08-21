@@ -9,7 +9,7 @@ Use this skill as the generic benchmark entry point. Keep benchmark-specific mec
 
 ## Roles
 
-The outer controller prepares and evaluates a benchmark. A measured Codex session investigates one supplied case. The two roles have different allowed context and must not be combined.
+The outer controller prepares and evaluates a benchmark. A measured Codex session investigates one supplied case. The two roles have different allowed context and must not be combined. The focused search-text benchmark is different: its measured LLM turns only judge controller-supplied retrieval text and do not read this skill or use tools.
 
 Measured sessions must follow only [Measured-session behavior](#measured-session-behavior). In particular, a measured session must not launch this skill's runner, inspect the controller-only links below, or recursively start a benchmark.
 
@@ -20,8 +20,28 @@ Measured sessions must follow only [Measured-session behavior](#measured-session
 3. Confirm that every behavior dimension scored by the private rubric is explicitly requested by the case prompt. The rubric may retain expected facts, files, and tests, but it must not introduce a hidden task requirement.
 4. Confirm that the dry run uses the repository worktree directly, preserves the requested condition difference, and leaves paid measurement disabled.
 5. Run a measured benchmark only when the user explicitly requests execution. A request to design, review, or add cases does not authorize a paid Codex run.
-6. Inspect operational validity, complete the structured correctness review, and rebuild the report before comparing cost, tokens, or timing.
+6. Inspect operational validity, apply the focused runner's correctness gate, and rebuild the report before comparing cost, tokens, or timing.
 7. Treat estimated GPT-5.6 Sol cost per correct answer as the primary comparison. Report token-category changes, the exact command, artifact directory, content-manifest status, invalid runs, and request-level accounting limitations.
+
+## Search-Text Token Benchmark: controller only
+
+Read [docs/benchmark-search-text.md](../../../docs/benchmark-search-text.md), then run [scripts/benchmark-search-text.sh](../../../scripts/benchmark-search-text.sh). Cases and required production/test evidence groups live in [benchmarks/search-text-cases.json](../../../benchmarks/search-text-cases.json).
+
+Dry-run without starting a measured model turn:
+
+```bash
+bash ./scripts/benchmark-search-text.sh --dry-run --trials 1 --case-id daemon-disconnect
+```
+
+For acceptance, pass the model and reasoning effort explicitly and use at least three trials across all cases:
+
+```bash
+bash ./scripts/benchmark-search-text.sh --model gpt-5.6-sol --reasoning-effort high --trials 3 --case-id all
+```
+
+The controller must invoke RoslynKit itself through one direct `dotnet run --project ./src/RoslynKit --no-build -- search` command with `--text-only --compact --balanced`. It supplies that output, or the bounded plain-text baseline, to a judge-only LLM turn. Any LLM tool call, missing terminal token accounting, empty answer, missing evidence group, or nonzero exit makes the run non-comparable. The benchmark passes only when every scheduled pair is comparable and saves at least 20% input tokens; a median above the threshold is insufficient.
+
+If an outer execution channel is interrupted, use `--resume-run-root` with the original artifact root so completed sessions are retained and only missing case/condition/trial tuples run. Use `--report-run-root` to rebuild reports without starting model turns. Evidence belongs below `artifacts/search-text-benchmark/` and remains Git-ignored.
 
 ## Codex Search Benchmark: controller only
 

@@ -1,0 +1,42 @@
+{
+  "cases": [
+    {
+      "id": "daemon-disconnect",
+      "intent": "Find the production declarations and focused tests that explain how a daemon transport disconnect avoids partial stdout or stderr, when standalone retry occurs, and which failures do not retry.",
+      "query": "daemon client transport disconnect complete buffered response partial stdout stderr standalone retry infrastructure cancellation exception",
+      "requiredEvidenceGroups": [
+        ["src/RoslynKit/DaemonFallbackWorkspaceCommandRouter.cs"],
+        ["src/RoslynKit/DaemonClient.cs", "src/RoslynKit/DaemonPipeClient.cs", "src/RoslynKit/DaemonProtocolMessages.cs"],
+        ["tests/RoslynKit.Tests/DaemonFallbackProcessIntegrationTests.cs", "tests/RoslynKit.Tests/DaemonFallbackWorkspaceCommandRouterTests.cs"]
+      ]
+    },
+    {
+      "id": "workspace-generation",
+      "intent": "Find the production declarations and focused tests for consistent compiler views while tracked files change, including clean-reader capacity, pending reload priority, quiet-period retry, and a second mismatch.",
+      "query": "consistent compiler view tracked files change clean readers pending reload quiet period retry second mismatch",
+      "requiredEvidenceGroups": [
+        ["src/RoslynKit/WorkspaceDaemonSession.cs"],
+        ["tests/RoslynKit.Tests/WorkspaceDaemonSessionTests.cs"]
+      ]
+    },
+    {
+      "id": "stale-search-index",
+      "intent": "Find the production declarations and focused tests for serving a coherent stale search partition during refresh while preventing partial index updates from becoming visible.",
+      "query": "SearchCommandService SearchAsync RefreshAsync stale partition writer lease coherent transaction committed visibility",
+      "requiredEvidenceGroups": [
+        ["src/RoslynKit/SearchCommandService.cs", "src/RoslynKit/RoslynCommandExecutor.cs"],
+        ["src/RoslynKit/SqliteSearchIndex.cs", "src/RoslynKit/SqliteSearchIndexWriterLease.cs"],
+        ["tests/RoslynKit.Tests/SearchCommandTests.cs", "tests/RoslynKit.Tests/SqliteSearchIndexTests.cs"]
+      ]
+    },
+    {
+      "id": "symbol-comments",
+      "intent": "Find the production declarations and focused tests that collect ordinary C# declaration comments and classify them as leading, body, or trailing with nested-declaration ownership and bounded descendants.",
+      "query": "ordinary C# declaration comments leading body trailing nested ownership descendants truncation",
+      "requiredEvidenceGroups": [
+        ["src/RoslynKit/RoslynCommandExecutor.SymbolContext.cs"],
+        ["tests/RoslynKit.Tests/CommandExecution/SymbolContextCommandExecutionTests.cs", "tests/RoslynKit.Tests/MarkdownFormatTests.cs"]
+      ]
+    }
+  ]
+}

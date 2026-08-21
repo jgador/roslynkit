@@ -31,6 +31,11 @@ internal static class DaemonFallbackWorkspaceCommandRouter
         ArgumentNullException.ThrowIfNull(executeDaemonCommand);
         ArgumentNullException.ThrowIfNull(executeStandaloneCommand);
 
+        if (command.Name is "index" or "search" && command.Flag("text-only"))
+        {
+            return await executeStandaloneCommand(command, cancellationToken).ConfigureAwait(false);
+        }
+
         try
         {
             return await executeDaemonCommand(command, cancellationToken).ConfigureAwait(false);

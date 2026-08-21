@@ -112,6 +112,13 @@ Add the database to the repository's `.gitignore`. SQLite enables write-ahead lo
 
 One database belongs to one repository and stores separate partitions for its targets. `search` validates the selected target before reading and automatically refreshes changed records. `index` is the strict preparation command; use `--rebuild` to discard and recreate the selected target partition. A search waits for its first index, while concurrent searches may receive the last complete data set with `index-state: stale` while another request refreshes it.
 
+For a search-only workflow on a host that cannot create daemon or MSBuild build-host sockets, add `--text-only` to both `index` and `search`. This mode scans repository C# files into a separate in-process partition and bypasses the daemon. Add `--compact` when an LLM should judge the ranked evidence without navigation metadata, and `--balanced` to reserve half of a bounded result set for focused tests when both production and test declarations match. `--text-only` cannot be combined with `--project`; use normal search when exact project evaluation or a follow-up `id:` is required.
+
+```powershell
+roslynkit index --target ./MySolution.slnx --index-path ./artifacts/roslynkit-text.db --text-only
+roslynkit search --target ./MySolution.slnx --index-path ./artifacts/roslynkit-text.db --query "daemon disconnect buffered response fallback" --max-results 10 --text-only --compact --balanced
+```
+
 The search index accepts only projects with one target framework. It rejects multi-targeted projects instead of selecting a framework implicitly. Every indexed project and non-generated source document must have an existing physical path inside the target's Git worktree; missing project or non-generated source paths, external projects, and external linked non-generated source files are rejected. Generated source documents are skipped, including source-generated documents, generated paths below `bin` or `obj`, and sources with standard generated-code markers injected from extracted NuGet packages outside the worktree. By default a target search covers every project; use `--project` to narrow it, `--kind` to select symbol kinds, and `--max-results` to change the default limit of 20.
 
 Search results are not command pipelines. They contain ranked symbols, locations, and, when available, `id:` values. An agent evaluates several results and follows a promising `id:` with `symbol-context`, `definition`, `references`, or `symbol-source`; a `loc:` value can guide a position-based command or narrow source read. RoslynKit does not accept search hits through standard input. When an `excerpt:` is present, `excerpt-source:` identifies whether its text came from documentation, an ordinary comment, a signature, or a body.
@@ -217,6 +224,7 @@ Exit codes are `0` for success, `2` for usage errors, `130` for cancellation, an
 - [docs/dotnet-tool-release.md](docs/dotnet-tool-release.md): maintainer packaging and release workflow.
 - [docs/roslyn-lsp-commands.md](docs/roslyn-lsp-commands.md): Roslyn language-server inventory and RoslynKit planning coverage.
 - [docs/benchmark-codex.md](docs/benchmark-codex.md): opt-in direct-worktree Codex token-efficiency benchmark procedure.
+- [docs/benchmark-search-text.md](docs/benchmark-search-text.md): direct-dotnet, judge-only search-text token benchmark for constrained hosts.
 - [docs/agents/README.md](docs/agents/README.md): operational docs for people maintaining RoslynKit skill files and AI-tool guidance.
 
 ## Non-Goals

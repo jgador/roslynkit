@@ -132,6 +132,11 @@ public static class MarkdownProjection
 
     private static string RenderSearch(SearchResult result)
     {
+        if (result.Compact)
+        {
+            return RenderCompactSearch(result);
+        }
+
         var builder = new StringBuilder();
         builder.Append("command: search");
         builder.Append("\ntarget: ").Append(CodeSpan(result.TargetPath));
@@ -166,6 +171,26 @@ public static class MarkdownProjection
         }
 
         AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
+        return builder.ToString();
+    }
+
+    private static string RenderCompactSearch(SearchResult result)
+    {
+        var builder = new StringBuilder();
+        builder.Append("results: ").Append(result.ReturnedCount).Append('/').Append(result.TotalCount);
+        for (var index = 0; index < result.Hits.Count; index++)
+        {
+            var hit = result.Hits[index];
+            builder.Append("\n- ").Append(index + 1)
+                .Append(' ').Append(hit.Kind)
+                .Append(' ').Append(CodeSpan(hit.DisplayName))
+                .Append(' ').Append(CodeSpan(Location(hit.Location)));
+            if (hit.Excerpt is { Length: > 0 } excerpt)
+            {
+                builder.Append("\n  ").Append(CodeSpan(excerpt));
+            }
+        }
+
         return builder.ToString();
     }
 

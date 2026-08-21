@@ -48,6 +48,12 @@ roslynkit search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit
 
 Search supports repository-local physical C# projects and non-generated source documents with one target framework. It skips source-generated documents, `bin`/`obj` paths, standard generated-code markers, external projects, and external linked non-generated files. Narrow with `--project`, `--kind`, or `--max-results` only when needed.
 
+For a search-only judgment on a host where daemon or MSBuild build-host sockets are unavailable, add `--text-only --compact --balanced`. `--text-only` bypasses the daemon and MSBuild, scans repository C# files into a separate synthetic partition, and cannot be combined with `--project`. `--compact` keeps only ranked declarations, repository-relative locations, and excerpts; it omits `id:` and `excerpt-source:`, so do not use it when the next step must chain into semantic navigation. `--balanced` reserves half of the bounded result set for focused tests when both production and test paths match.
+
+```powershell
+roslynkit search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit-text.db --query "daemon disconnect buffered response fallback" --max-results 10 --text-only --compact --balanced
+```
+
 `excerpt-source:` follows `excerpt:` when an excerpt is available. Its value is `documentation`, `comment`, `signature`, or `body`. An excerpt and its provenance help rank navigation candidates, but neither proves that a candidate satisfies the requested intent.
 
 ## Symbol context and metadata
@@ -88,4 +94,4 @@ Every command returns deterministic markdown. Read [references/output.md](refere
 
 `workspace` lists loaded projects/documents and is not a substitute for a focused source read. Add `--include-generated`, `--include-additional`, or `--include-analyzer-config` only for the requested document kind. RoslynKit is C#-only by default.
 
-For literal search, comments/prose, non-C# files, or RoslynKit workspace-load failures, state that RoslynKit is not the right route for that step and let the terminal-native tool perform the bounded inspection. Do not shell out to editors, language servers, or a web service.
+For literal search, comments/prose, or non-C# files, state that RoslynKit is not the right route for that step and let the terminal-native tool perform the bounded inspection. For a normal Roslyn workspace-load failure, use the text-only search workflow only when ranked declaration evidence is sufficient; otherwise use the terminal-native fallback. Do not shell out to editors, language servers, or a web service.

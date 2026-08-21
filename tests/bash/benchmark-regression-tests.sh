@@ -8,6 +8,7 @@ export PYTHONDONTWRITEBYTECODE=1
 readonly test_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly repo_root="$(cd -- "${test_dir}/../.." && pwd)"
 readonly runner_path="${repo_root}/scripts/benchmark-codex.sh"
+readonly search_text_runner_path="${repo_root}/scripts/benchmark-search-text.sh"
 readonly support_path="${repo_root}/scripts/benchmark_codex_support.py"
 
 fail() {
@@ -49,14 +50,28 @@ cleanup() {
 trap cleanup EXIT
 
 [[ -f "${runner_path}" ]] || fail "Benchmark runner was not found: ${runner_path}"
+[[ -f "${search_text_runner_path}" ]] || fail "Search-text benchmark runner was not found: ${search_text_runner_path}"
 [[ -f "${support_path}" ]] || fail "Benchmark support module was not found: ${support_path}"
 bash -n "${runner_path}"
+bash -n "${search_text_runner_path}"
 
 help_output="$(bash "${runner_path}" --help)"
 assert_contains "${help_output}" '--model' 'The Bash runner did not document --model.'
 assert_contains "${help_output}" '--reasoning-effort' 'The Bash runner did not document --reasoning-effort.'
 assert_contains "${help_output}" '--roslynkit-path' 'The Bash runner did not document --roslynkit-path.'
 assert_contains "${help_output}" '--dry-run' 'The Bash runner did not document --dry-run.'
+
+search_text_help_output="$(bash "${search_text_runner_path}" --help)"
+assert_contains "${search_text_help_output}" '--resume-run-root' 'The search-text runner did not document resumable runs.'
+assert_contains "${search_text_help_output}" '--max-results' 'The search-text runner did not document its bounded result count.'
+
+search_text_dry_run_output="$(bash "${search_text_runner_path}" --dry-run --trials 1 --case-id daemon-disconnect)"
+assert_contains "${search_text_dry_run_output}" 'Search-retrieval benchmark condition: raw-text.' 'The search-text dry run omitted the raw condition.'
+assert_contains "${search_text_dry_run_output}" 'Search-retrieval benchmark condition: roslynkit-search.' 'The search-text dry run omitted the RoslynKit condition.'
+assert_contains "${search_text_dry_run_output}" '<output of dotnet run --project ./src/RoslynKit --no-build -- search' 'The search-text dry run did not use direct dotnet retrieval.'
+assert_contains "${search_text_dry_run_output}" '--text-only --compact --balanced' 'The search-text dry run omitted the compact balanced text-only workflow.'
+assert_contains "${search_text_dry_run_output}" 'Do not use tools or outside knowledge.' 'The search-text dry run did not constrain the LLM to judgment only.'
+[[ "${search_text_dry_run_output}" != *'.agents/skills/'* ]] || fail 'The search-text judge prompt loaded agent skill context.'
 
 zero_argument_byte_count="$(RUNNER_PATH="${runner_path}" bash -c '
     source "${RUNNER_PATH}"

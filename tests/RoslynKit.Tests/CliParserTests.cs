@@ -122,6 +122,25 @@ public sealed class CliParserTests
     }
 
     [Fact]
+    public void Parse_AcceptsTextOnlyCompactSearchOptions()
+    {
+        var command = CliParser.Parse(
+            [
+                "search",
+                "--target", "repo.slnx",
+                "--index-path", "artifacts/roslynkit.db",
+                "--query", "workspace reload",
+                "--text-only",
+                "--compact",
+                "--balanced",
+            ]);
+
+        Assert.True(command.Flag("text-only"));
+        Assert.True(command.Flag("compact"));
+        Assert.True(command.Flag("balanced"));
+    }
+
+    [Fact]
     public void Parse_RejectsDocumentKeySelector()
     {
         var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([

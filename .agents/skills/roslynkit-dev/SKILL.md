@@ -37,6 +37,12 @@ Use `search` when an English-oriented question describes a C# responsibility but
 
 Treat the first 10-result search as the normal discovery pass. If it returns no useful method or location, refine the query and/or add `--kind method` while retaining `--max-results 10`. If the refined ranking still has no reliable jump target, run one third and final search with `--max-results 20`, or `--max-results 50` only when the first two rankings show many plausible near-ties that a 20-result window may truncate.
 
+For a search-only LLM judgment on a constrained host, add `--text-only --compact --balanced`. This bypasses daemon and MSBuild loading, uses a separate repository-C# partition, returns repository-relative compact evidence, and reserves half of the bounded result set for tests when available. It cannot be combined with `--project`, and compact hits omit navigation IDs, so return to normal search when semantic follow-up is required.
+
+```powershell
+& $roslynkitDev search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit-text.db --query "daemon disconnect buffered response fallback" --max-results 10 --text-only --compact --balanced
+```
+
 ```powershell
 & $roslynkitDev index --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit.db
 ```

@@ -57,16 +57,17 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "index",
             "Build or refresh a repository-local full-text search index for the loaded target.",
-            ["roslynkit index --target <target> --index-path <path> [--rebuild]"],
+            ["roslynkit index --target <target> --index-path <path> [--rebuild] [--text-only]"],
             [
                 TargetOption(),
                 IndexPathOption(),
                 OptionSpec.Flag(null, "rebuild", "discard the selected target's existing index records before indexing"),
+                OptionSpec.Flag(null, "text-only", "index repository C# source in-process without loading MSBuild or using the daemon"),
             ]),
         new BuiltinCommand(
             "search",
             "Search indexed C# symbols using English-oriented text matching and ranking.",
-            ["roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>]"],
+            ["roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>] [--text-only] [--compact] [--balanced]"],
             [
                 TargetOption(),
                 IndexPathOption(),
@@ -74,6 +75,9 @@ public static class BuiltinCommandRegistry
                 SearchProjectOption(),
                 SymbolKindOption(),
                 SearchMaxResultsOption(),
+                OptionSpec.Flag(null, "text-only", "search repository C# source in-process without loading MSBuild or using the daemon"),
+                OptionSpec.Flag(null, "compact", "emit concise ranked evidence with repository-relative locations"),
+                OptionSpec.Flag(null, "balanced", "reserve half of bounded results for focused test declarations when both source and tests match"),
             ]),
         new BuiltinCommand(
             "symbols",

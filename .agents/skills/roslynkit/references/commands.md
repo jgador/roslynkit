@@ -124,7 +124,7 @@ Build or refresh a repository-local full-text search index for the loaded target
 ### Usage
 
 ```powershell
-roslynkit index --target <target> --index-path <path> [--rebuild]
+roslynkit index --target <target> --index-path <path> [--rebuild] [--text-only]
 ```
 
 ### Options
@@ -132,6 +132,7 @@ roslynkit index --target <target> --index-path <path> [--rebuild]
 - `--target` / `-t` `<target>` (required): solution or project file to load
 - `--index-path` `<path>` (required): Git-ignored repository-local SQLite database file path
 - `--rebuild`: discard the selected target's existing index records before indexing
+- `--text-only`: index repository C# source in-process without loading MSBuild or using the daemon
 
 ## `search`
 
@@ -140,7 +141,7 @@ Search indexed C# symbols using English-oriented text matching and ranking.
 ### Usage
 
 ```powershell
-roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>]
+roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>] [--text-only] [--compact] [--balanced]
 ```
 
 ### Options
@@ -151,6 +152,9 @@ roslynkit search --target <target> --index-path <path> --query <text> [--project
 - `--project` `<path>`: limit search to one project file within the loaded target
 - `--kind` `<kind>`: filter symbols by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate
 - `--max-results` `<n>`: maximum results to return (default: 20)
+- `--text-only`: search repository C# source in-process without loading MSBuild or using the daemon
+- `--compact`: emit concise ranked evidence with repository-relative locations
+- `--balanced`: reserve half of bounded results for focused test declarations when both source and tests match
 
 ## `symbols`
 

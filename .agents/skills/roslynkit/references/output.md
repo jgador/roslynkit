@@ -242,6 +242,17 @@ truncated: false
 
 Results are ordered by the internal Best Matching 25 (BM25) ranking but do not expose raw scores. `rank:` starts at one. `excerpt:` is optional and is a bounded source-derived excerpt with normalized whitespace; it is never generated or paraphrased. Whenever `excerpt:` is present, `excerpt-source:` immediately follows it and is one of `documentation`, `comment`, `signature`, or `body`. `id:` and `loc:` are navigation inputs for an agent-selected follow-up command, not a standard-input pipeline. Rank and excerpt provenance are routing metadata, so agents compare several excerpts, kinds, identities, and locations before choosing a next navigation target and verify the selected route with source evidence.
 
+With `--compact`, search emits a judgment-only shape with repository-relative locations:
+
+```markdown
+results: 2/17
+- 1 method `MyApp.WorkspaceDaemonSession.ReloadAsync` `src/MyApp/WorkspaceDaemonSession.cs:398:43-398:54`
+  `Reloads the workspace generation after repository source changes.`
+- 2 method `MyApp.Tests.WorkspaceDaemonSessionTests.ReloadsAfterChange` `tests/MyApp.Tests/WorkspaceDaemonSessionTests.cs:75:23-75:41`
+```
+
+Compact output omits the command header, target and index metadata, stale/fresh state, truncation flag, symbol IDs, and excerpt provenance. Use it when an LLM will judge bounded search evidence directly, not when the next command must chain through `id:`. `--balanced` changes only bounded selection: when both source and test paths match, half of the result capacity is reserved for tests and unused capacity is filled from the original ranking.
+
 ### `symbol-context`
 
 `symbol-context` resolves one selector into a local syntax node and its semantic symbol. It accepts exactly one of an emitted documentation-comment ID or qualified symbol selector, or a source position. The header begins with `command:` and `selector:`, followed by the selected-node record and resolved symbol record. A syntax node is source structure, such as `InvocationExpression` or `MethodDeclaration`; a symbol is its compiler-resolved identity. The command re-resolves syntax from the selector for every invocation and does not expose persistent syntax-node IDs.

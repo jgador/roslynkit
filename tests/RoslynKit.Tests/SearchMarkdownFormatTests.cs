@@ -130,4 +130,38 @@ public sealed class SearchMarkdownFormatTests
         Assert.Contains("query: `` `worker` ``", rendered, StringComparison.Ordinal);
         Assert.Contains("excerpt: ``Returns `worker` state.``", rendered, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Render_CompactSearchEmitsOnlyRankedRepositoryRelativeEvidence()
+    {
+        var result = new SearchResult(
+            "app.slnx",
+            "artifacts/roslynkit.db",
+            "workspace reload",
+            SearchIndexState.Fresh,
+            TotalCount: 9,
+            ReturnedCount: 1,
+            Truncated: true,
+            [
+                new SearchHit(
+                    "App.WorkspaceSession.ReloadAsync",
+                    "method",
+                    new SourceRange("src/App/WorkspaceSession.cs", 18, 20, 18, 31),
+                    "M:App.WorkspaceSession.ReloadAsync",
+                    "Reloads the workspace after tracked files change."),
+            ],
+            [],
+            Compact: true);
+
+        var rendered = MarkdownProjection.Render(result);
+
+        Assert.Equal(
+            "results: 1/9\n"
+            + "- 1 method `App.WorkspaceSession.ReloadAsync` `src/App/WorkspaceSession.cs:18:20-18:31`\n"
+            + "  `Reloads the workspace after tracked files change.`",
+            rendered);
+        Assert.DoesNotContain("target:", rendered, StringComparison.Ordinal);
+        Assert.DoesNotContain("id:", rendered, StringComparison.Ordinal);
+        Assert.DoesNotContain("excerpt-source:", rendered, StringComparison.Ordinal);
+    }
 }

@@ -24,7 +24,9 @@ internal static class SearchCommandService
         for (var attempt = 0; attempt < 2; attempt++)
         {
             var before = await CaptureFingerprintAsync(command.Name, context, cancellationToken).ConfigureAwait(false);
-            var loaded = await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
+            var loaded = command.Flag("text-only")
+                ? await RoslynWorkspaceLoader.LoadTextOnlyAsync(command.Required("target"), cancellationToken).ConfigureAwait(false)
+                : await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
             var after = await CaptureFingerprintAsync(command.Name, context, cancellationToken).ConfigureAwait(false);
             if (string.Equals(before.Value, after.Value, StringComparison.Ordinal))
             {
@@ -117,6 +119,8 @@ internal static class SearchCommandService
         var query = command.Required("query");
         var queryTokens = SearchQueryTokenizer.TokenizeQuery(query);
         var maxResults = command.OptionalInt("max-results", 20, 1);
+        var compact = command.Flag("compact");
+        var balanced = command.Flag("balanced");
         var projectPaths = ResolveProjectFilter(command, context.Path.RepositoryRoot, loaded.Solution);
         var kinds = ResolveKindFilter(command.Name, command.Optional("kind"));
         var fingerprint = await CaptureFingerprintAsync(command.Name, context, cancellationToken).ConfigureAwait(false);
@@ -156,13 +160,16 @@ internal static class SearchCommandService
             }
         }
 
+        var searchLimit = balanced
+            ? (int)Math.Min((long)maxResults * 4, int.MaxValue)
+            : maxResults;
         var searchSnapshot = await context.Index.ReadSearchSnapshotAsync(
             new SqliteSearchIndexQuery(
                 context.TargetIdentity,
                 queryTokens,
                 projectPaths,
                 kinds,
-                maxResults),
+                searchLimit),
             cancellationToken).ConfigureAwait(false);
         var snapshotFingerprint = StoredFingerprint.TryParse(searchSnapshot.Metadata?.Fingerprint);
         var snapshotIsCompatible = snapshotFingerprint is not null;
@@ -173,12 +180,15 @@ internal static class SearchCommandService
         var search = snapshotIsCompatible
             ? searchSnapshot.SearchResult
             : new SqliteSearchIndexSearchResult(0, []);
-        var hits = search.Matches
+        var selectedMatches = balanced
+            ? SelectBalancedMatches(search.Matches, maxResults)
+            : search.Matches;
+        var hits = selectedMatches
             .Select(match => new SearchHit(
                 match.DisplayName,
                 match.Kind,
                 new SourceRange(
-                    match.Path.Resolve(context.Path.RepositoryRoot),
+                    compact ? match.Path.Value : match.Path.Resolve(context.Path.RepositoryRoot),
                     match.Line,
                     match.Column,
                     match.EndLine,
@@ -199,7 +209,50 @@ internal static class SearchCommandService
             hits.Length,
             search.TotalMatchCount > hits.Length,
             hits,
-            loaded.WorkspaceDiagnostics);
+            loaded.WorkspaceDiagnostics,
+            compact);
+    }
+
+    private static IReadOnlyList<SqliteSearchIndexMatch> SelectBalancedMatches(
+        IReadOnlyList<SqliteSearchIndexMatch> matches,
+        int maxResults)
+    {
+        if (matches.Count <= maxResults)
+        {
+            return matches;
+        }
+
+        var testQuota = Math.Max(1, maxResults / 2);
+        var productionQuota = maxResults - testQuota;
+        var selectedKeys = matches
+            .Where(match => !IsTestPath(match.Path.Value))
+            .Take(productionQuota)
+            .Concat(matches.Where(match => IsTestPath(match.Path.Value)).Take(testQuota))
+            .Select(match => match.SymbolKey)
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (selectedKeys.Count < maxResults)
+        {
+            foreach (var match in matches)
+            {
+                selectedKeys.Add(match.SymbolKey);
+                if (selectedKeys.Count == maxResults)
+                {
+                    break;
+                }
+            }
+        }
+
+        return matches
+            .Where(match => selectedKeys.Contains(match.SymbolKey))
+            .Take(maxResults)
+            .ToArray();
+    }
+
+    private static bool IsTestPath(string path)
+    {
+        return path.StartsWith("tests/", StringComparison.OrdinalIgnoreCase)
+            || path.Contains("/tests/", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<SearchCommandContext> ResolveContextAsync(
@@ -220,6 +273,12 @@ internal static class SearchCommandService
             path.RepositoryRoot,
             path.TargetPath,
             "Search target");
+        if (command.Flag("text-only"))
+        {
+            targetIdentity = RepositoryRelativePath.FromStoredValue(
+                $"__text__/{targetIdentity.Value}",
+                "Text-only search target");
+        }
         return new SearchCommandContext(
             path,
             targetIdentity,
