@@ -29,6 +29,17 @@
         "Explains state recapture, atomic partition visibility, and fresh versus stale fingerprint reporting so partial updates never become visible.",
         "Cites search command or SQLite index tests that cover stale, refresh, or replacement behavior."
       ]
+    },
+    {
+      "id": "symbol-context-search",
+      "prompt": "Starting only from this intent, find the RoslynKit code that extracts ordinary C# comments associated with a C# declaration and classifies each comment as leading, body, or trailing. Use actual repository search and navigation; do not assume declaration names or source files in advance. Trace the evidence path from ranked search results through a navigable symbol identity into bounded symbol context, then follow relevant connected syntax nodes or helpers to definitive source evidence. Explain search-result identity and excerpt provenance, trivia collection, supported comment kinds, nested-declaration ownership, normalization, location de-duplication, placement classification, descendant bounds, truncation, and focused test coverage. Cite precise production source and tests. Do not change files or Git state, build, restore, run tests, optimize code, or propose implementation changes. Do not merely summarize documentation.",
+      "manualReviewCriteria": [
+        "Starts with intent-oriented search results and traces their opaque symbol identity and excerpt provenance into symbol-context.",
+        "Traces comment collection, supported line and block trivia, nearest-declaration ownership, normalization, and location de-duplication.",
+        "Explains the exact leading, trailing, and body placement rules using definitive source evidence.",
+        "Explains bounded descendants and truncation and follows a related helper or syntax node to focused evidence.",
+        "Cites production source and focused tests covering navigable search identities, comment metadata, placement, and truncation."
+      ]
     }
   ]
 }

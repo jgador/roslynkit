@@ -206,11 +206,14 @@ def command_event(event_type, event_id, command, status="completed", exit_code=0
 
 cases = support.get_case_data(repo_root)
 case_by_id = {case["id"]: case for case in cases}
-check(set(case_by_id) == {"daemon-disconnect", "workspace-generation", "stale-search-index"}, "Benchmark cases changed unexpectedly.")
+check(set(case_by_id) == {"daemon-disconnect", "workspace-generation", "stale-search-index", "symbol-context-search"}, "Benchmark cases changed unexpectedly.")
 check("completed command failures" in case_by_id["daemon-disconnect"]["prompt"], "The daemon task omitted completed-failure correctness.")
 check("maximum clean-reader capacity" in case_by_id["workspace-generation"]["prompt"], "The workspace task omitted reader-capacity correctness.")
 check("exact quiet-period retry timing" in case_by_id["workspace-generation"]["prompt"], "The workspace task omitted retry-timing correctness.")
 check("state recapture" in case_by_id["stale-search-index"]["prompt"], "The search task omitted state recapture correctness.")
+check("ranked search results" in case_by_id["symbol-context-search"]["prompt"], "The symbol-context task omitted intent-search navigation.")
+check("nested-declaration ownership" in case_by_id["symbol-context-search"]["prompt"], "The symbol-context task omitted comment ownership.")
+check("descendant bounds" in case_by_id["symbol-context-search"]["prompt"], "The symbol-context task omitted bounded-navigation correctness.")
 
 check(support.resolve_benchmark_index_path(repo_root, "artifacts/benchmark-test.db") == "./artifacts/benchmark-test.db", "A valid custom benchmark index path was not normalized.")
 try:

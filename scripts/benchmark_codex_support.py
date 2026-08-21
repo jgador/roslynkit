@@ -78,10 +78,13 @@ def get_case_data(repo_root: Path) -> list[dict[str, Any]]:
         raise BenchmarkError(f"Benchmark cases were not valid JSON: '{path}'.") from error
     if (
         not isinstance(cases, list)
-        or len(cases) != 3
+        or not cases
         or any(not isinstance(case, dict) or not case.get("id") or not case.get("prompt") for case in cases)
     ):
-        raise BenchmarkError("Benchmark case data must contain the three named prompts.")
+        raise BenchmarkError("Benchmark case data must contain one or more named prompts.")
+    case_ids = [case["id"] for case in cases]
+    if len(case_ids) != len(set(case_ids)):
+        raise BenchmarkError("Benchmark case IDs must be unique.")
     return cases
 
 

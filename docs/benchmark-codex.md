@@ -30,6 +30,12 @@ Find out how the repo keeps code-navigation requests on a consistent compiler vi
 Why can an English-oriented code search return older results instead of waiting for an index update? Contrast an absent or unusable partition with a coherent stale partition, then trace nonblocking writer acquisition, state recapture, fresh-versus-stale fingerprint reporting, and transaction visibility so it is clear whether partial updates can become visible. Show the implementation and focused tests. Don't change files.
 ```
 
+### `symbol-context-search`
+
+```text
+Starting only from this intent, find the RoslynKit code that extracts ordinary C# comments associated with a C# declaration and classifies each comment as leading, body, or trailing. Use actual repository search and navigation; do not assume declaration names or source files in advance. Trace the evidence path from ranked search results through a navigable symbol identity into bounded symbol context, then follow relevant connected syntax nodes or helpers to definitive source evidence. Explain search-result identity and excerpt provenance, trivia collection, supported comment kinds, nested-declaration ownership, normalization, location de-duplication, placement classification, descendant bounds, truncation, and focused test coverage. Cite precise production source and tests. Do not change files or Git state, build, restore, run tests, optimize code, or propose implementation changes. Do not merely summarize documentation.
+```
+
 ## Run
 
 Use [scripts/benchmark-codex.sh](../scripts/benchmark-codex.sh) directly or invoke the explicit `$benchmark` skill. The parameters are:
@@ -55,7 +61,7 @@ Use complete GNU-style option names in benchmark commands. Omit `--dry-run` only
 
 The runner supports Git Bash on Windows, Windows Subsystem for Linux (WSL), VS Code Remote–WSL, Linux, and macOS. It requires Bash and Python 3.10 or later, resolves `rg` and, by default, global `roslynkit` applications from the current host's `PATH`, and does not use or accept the side-by-side `roslynkit-dev` installation. `--roslynkit-path` prepends an isolated executable's directory to the child `PATH`, so the same pinned executable supplies the preflight, index preparation, and measured RoslynKit condition without changing the global installation. Git Bash runs use Windows-local tools and configuration; WSL runs use WSL-local `PATH` and `CODEX_HOME`; Unix hosts use their local environment. The controller does not cross a host boundary to reuse another environment's installations.
 
-A one-trial run with `--case-id all` starts six measured Codex sessions: three cases across two conditions. Runtime therefore includes six independent investigations, one shared search-index preparation, and one short, unmeasured tool preflight.
+A one-trial run with `--case-id all` starts eight measured Codex sessions: four cases across two conditions. Runtime therefore includes eight independent investigations, one shared search-index preparation, and one short, unmeasured tool preflight.
 
 ## Direct-worktree contract
 
