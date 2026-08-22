@@ -7,6 +7,7 @@ permissions:
   contents: read
   issues: read
 engine: codex
+model: gpt-5.6-sol
 strict: true
 features:
   group-concurrency-queue: false
