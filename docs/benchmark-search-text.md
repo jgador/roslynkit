@@ -59,11 +59,13 @@ bash ./scripts/benchmark-search-text.sh \
   --case-id all
 ```
 
-The controller restores and builds only `src/RoslynKit/RoslynKit.csproj`, prepares one text-only index, and alternates condition order by trial. Every RoslynKit retrieval is exactly one direct `dotnet run ... search --text-only --compact --balanced` command executed by the controller. Judge turns receive the resulting text in their prompt and are told not to use tools.
+The current six-case catalog starts 12 judge turns per trial: one raw-text and one RoslynKit-search condition for each case. A three-trial acceptance run therefore starts 36 judge turns.
+
+The controller restores and builds only `src/RoslynKit/RoslynKit.csproj`, prepares one text-only index, and alternates condition order by trial. Every RoslynKit retrieval is exactly one direct `dotnet run ... search --text-only --compact --balanced` command executed by the controller. Pass `--roslynkit-path <apphost>` to invoke one built RoslynKit apphost directly for both index preparation and retrieval instead. In either mode, `--text-only` bypasses daemon routing. Judge turns receive the resulting text in their prompt and are told not to use tools.
 
 The plain-text condition ranks C# files independently in `src/RoslynKit` and `tests/RoslynKit.Tests` by distinct query-term coverage, selects at most eight files per scope, and includes at most eight high-signal matching-line anchors per file with three lines of context. This is deliberately bounded, auditable text retrieval rather than an unconstrained source-reading agent.
 
-The runner copies only the active Codex `auth.json` into a private temporary Codex home, ignores user configuration, disables optional features, and removes the temporary home at process exit. Model, reasoning effort, prompts, retrieval text, JSONL events, answers, stderr, token accounting, and paired reports are retained below:
+The runner uses the active host's `CODEX_HOME` directly, including its complete `config.toml`, selected model provider, and configured credential source. When `CODEX_HOME` is unset, Codex uses `.codex` below the current platform user-profile directory. Windows Subsystem for Linux (WSL) runs use WSL-local configuration and credentials; the runner does not cross a host boundary, copy or filter authentication, or require `auth.json`. Benchmark command-line arguments still override model, reasoning effort, optional features, and session persistence, and each child clears the parent thread identifier. Model, reasoning effort, prompts, retrieval text, JSONL events, answers, stderr, token accounting, and paired reports are retained below:
 
 ```text
 artifacts/search-text-benchmark/<timestamp>/
@@ -101,7 +103,7 @@ The acceptance rule is strict: every scheduled pair must be comparable and save 
 
 ## Verified result
 
-On 2026-08-22, GPT-5.6 Sol at high reasoning effort completed three trials across four cases:
+On 2026-08-22, before the two additional stress cases were added, GPT-5.6 Sol at high reasoning effort completed three trials across four cases:
 
 | Metric | Result |
 | --- | ---: |

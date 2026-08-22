@@ -197,6 +197,7 @@ legacy_report_cli_root = Path(sys.argv[7])
 sys.path.insert(0, str(repo_root / "scripts"))
 
 import benchmark_codex_support as support
+import benchmark_search_text as search_text
 
 
 def check(condition, message):
@@ -217,6 +218,65 @@ def command_event(event_type, event_id, command, status="completed", exit_code=0
         },
         "payload": None,
     }
+
+
+host_environment = {
+    "CODEX_HOME": "/wsl/codex-home-without-auth-json",
+    "CODEX_THREAD_ID": "parent-thread",
+    "MODEL_PROVIDER_TOKEN": "inherited-provider-token",
+}
+child_environment = search_text.build_child_environment(host_environment)
+check(child_environment["CODEX_HOME"] == host_environment["CODEX_HOME"], "The search-text runner replaced the active host CODEX_HOME.")
+check(child_environment["MODEL_PROVIDER_TOKEN"] == host_environment["MODEL_PROVIDER_TOKEN"], "The search-text runner filtered the host credential environment.")
+check("CODEX_THREAD_ID" not in child_environment, "The search-text runner retained the parent Codex thread ID.")
+check("CODEX_THREAD_ID" in host_environment, "The search-text runner mutated its source environment.")
+search_text_codex_command = search_text.build_codex_command(
+    "codex",
+    repo_root,
+    "gpt-5.6-terra",
+    "xhigh",
+    temp_root / "search-text-answer.md",
+    "Judge supplied evidence.",
+)
+check("--ignore-user-config" not in search_text_codex_command, "The search-text runner suppressed the active host Codex configuration.")
+search_text_apphost_command = search_text.search_command(
+    {"query": "daemon transport"},
+    "./artifacts/roslynkit-text.db",
+    10,
+    Path("/tmp/roslynkit-apphost"),
+)
+check(search_text_apphost_command[0] == "/tmp/roslynkit-apphost", "The search-text runner did not use the requested apphost.")
+check("--text-only" in search_text_apphost_command, "The search-text apphost command omitted text-only daemon bypass.")
+
+search_text_cases = search_text.load_cases(repo_root, "all")
+search_text_case_by_id = {case["id"]: case for case in search_text_cases}
+check(
+    set(search_text_case_by_id)
+    == {
+        "daemon-disconnect",
+        "workspace-generation",
+        "stale-search-index",
+        "symbol-comments",
+        "text-only-workspace-routing",
+        "search-ranking-pipeline",
+    },
+    "Search-text benchmark cases changed unexpectedly.",
+)
+check(
+    "bypass daemon routing" in search_text_case_by_id["text-only-workspace-routing"]["intent"],
+    "The text-only routing case omitted the daemon-bypass requirement.",
+)
+check(
+    "query-term coverage" in search_text_case_by_id["search-ranking-pipeline"]["intent"],
+    "The search-ranking case omitted the coverage-first ranking requirement.",
+)
+for search_text_case in search_text_cases:
+    for evidence_group in search_text_case["requiredEvidenceGroups"]:
+        check(evidence_group, f"Search-text case {search_text_case['id']} contains an empty evidence group.")
+        check(
+            all((repo_root / candidate).is_file() for candidate in evidence_group),
+            f"Search-text case {search_text_case['id']} references a missing evidence file.",
+        )
 
 
 cases = support.get_case_data(repo_root)

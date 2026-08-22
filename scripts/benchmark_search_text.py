@@ -14,9 +14,8 @@ import shutil
 import statistics
 import subprocess
 import sys
-import tempfile
 import time
-from typing import Any
+from typing import Any, Mapping
 
 import benchmark_codex_support as support
 
@@ -74,7 +73,9 @@ def resolve_run_root(repo_root: Path, value: str) -> Path:
     return candidate
 
 
-def search_command(case: dict[str, Any], index_path: str, max_results: int) -> list[str]:
+def roslynkit_command_prefix(roslynkit_path: Path | None) -> list[str]:
+    if roslynkit_path is not None:
+        return [str(roslynkit_path)]
     return [
         "dotnet",
         "run",
@@ -82,6 +83,17 @@ def search_command(case: dict[str, Any], index_path: str, max_results: int) -> l
         "./src/RoslynKit",
         "--no-build",
         "--",
+    ]
+
+
+def search_command(
+    case: dict[str, Any],
+    index_path: str,
+    max_results: int,
+    roslynkit_path: Path | None = None,
+) -> list[str]:
+    return [
+        *roslynkit_command_prefix(roslynkit_path),
         "search",
         "--target",
         "./RoslynKit.slnx",
@@ -160,8 +172,9 @@ def roslynkit_search_evidence(
     case: dict[str, Any],
     index_path: str,
     max_results: int,
+    roslynkit_path: Path | None,
 ) -> tuple[str, str]:
-    command = search_command(case, index_path, max_results)
+    command = search_command(case, index_path, max_results, roslynkit_path)
     completed = subprocess.run(
         command,
         cwd=repo_root,
@@ -184,11 +197,12 @@ def retrieve_evidence(
     case: dict[str, Any],
     index_path: str,
     max_results: int,
+    roslynkit_path: Path | None,
 ) -> tuple[str, str]:
     if condition == "raw-text":
         return raw_text_evidence(repo_root, case), "controller plain-text ranked excerpt search"
     if condition == "roslynkit-search":
-        return roslynkit_search_evidence(repo_root, environment, case, index_path, max_results)
+        return roslynkit_search_evidence(repo_root, environment, case, index_path, max_results, roslynkit_path)
     fail(f"Unsupported condition: {condition}")
 
 
@@ -209,7 +223,6 @@ def build_codex_command(
     command = [
         codex_path,
         "exec",
-        "--ignore-user-config",
         "--approve-for-me",
         "--config",
         f'model_reasoning_effort="{reasoning_effort}"',
@@ -238,18 +251,10 @@ def build_codex_command(
     return command
 
 
-def isolate_codex_home(environment: dict[str, str]) -> tempfile.TemporaryDirectory[str]:
-    active_home = Path(environment.get("CODEX_HOME", Path.home() / ".codex")).expanduser().resolve()
-    auth_path = active_home / "auth.json"
-    if not auth_path.is_file():
-        fail(f"The active Codex authentication file was not found: {auth_path}")
-
-    temporary_home = tempfile.TemporaryDirectory(prefix="roslynkit-search-benchmark-")
-    destination = Path(temporary_home.name) / "auth.json"
-    shutil.copyfile(auth_path, destination)
-    destination.chmod(0o600)
-    environment["CODEX_HOME"] = temporary_home.name
-    return temporary_home
+def build_child_environment(source: Mapping[str, str]) -> dict[str, str]:
+    environment = dict(source)
+    environment.pop("CODEX_THREAD_ID", None)
+    return environment
 
 
 def answer_covers_case(answer: str, case: dict[str, Any]) -> tuple[bool, list[list[str]]]:
@@ -411,7 +416,12 @@ def write_reports(run_root: Path, rows: list[dict[str, Any]]) -> None:
     (run_root / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def prepare_repository(repo_root: Path, environment: dict[str, str], index_path: str) -> None:
+def prepare_repository(
+    repo_root: Path,
+    environment: dict[str, str],
+    index_path: str,
+    roslynkit_path: Path | None,
+) -> None:
     run_checked(
         ["dotnet", "restore", "./src/RoslynKit/RoslynKit.csproj", "--disable-parallel", "--nologo", "--verbosity", "quiet"],
         repo_root,
@@ -422,14 +432,11 @@ def prepare_repository(repo_root: Path, environment: dict[str, str], index_path:
         repo_root,
         environment,
     )
+    if roslynkit_path is not None and (not roslynkit_path.is_file() or not os.access(roslynkit_path, os.X_OK)):
+        fail(f"The --roslynkit-path executable was not found or was not executable: {roslynkit_path}")
     run_checked(
         [
-            "dotnet",
-            "run",
-            "--project",
-            "./src/RoslynKit",
-            "--no-build",
-            "--",
+            *roslynkit_command_prefix(roslynkit_path),
             "index",
             "--target",
             "./RoslynKit.slnx",
@@ -450,6 +457,7 @@ def main(arguments: list[str]) -> int:
     parser.add_argument("--case-id", default="all")
     parser.add_argument("--index-path", default="./artifacts/roslynkit-text.db")
     parser.add_argument("--max-results", type=int, default=10)
+    parser.add_argument("--roslynkit-path")
     run_root_options = parser.add_mutually_exclusive_group()
     run_root_options.add_argument("--report-run-root")
     run_root_options.add_argument("--resume-run-root")
@@ -463,6 +471,10 @@ def main(arguments: list[str]) -> int:
     repo_root = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()).resolve()
     cases = load_cases(repo_root, options.case_id)
     index_path = support.resolve_benchmark_index_path(repo_root, options.index_path)
+    roslynkit_path = None
+    if options.roslynkit_path:
+        candidate = Path(options.roslynkit_path)
+        roslynkit_path = (candidate if candidate.is_absolute() else repo_root / candidate).resolve()
     if options.report_run_root:
         run_root = resolve_run_root(repo_root, options.report_run_root)
         rows = json.loads((run_root / "runs.json").read_text(encoding="utf-8"))
@@ -477,7 +489,7 @@ def main(arguments: list[str]) -> int:
                 for condition in conditions:
                     print(f"[{case['id']}] {condition} trial {trial}")
                     if condition == "roslynkit-search":
-                        evidence = f"<output of {shlex.join(search_command(case, index_path, options.max_results))}>"
+                        evidence = f"<output of {shlex.join(search_command(case, index_path, options.max_results, roslynkit_path))}>"
                     else:
                         evidence = "<controller-generated bounded plain-text search excerpts>"
                     print(render_prompt(condition, case, evidence))
@@ -490,10 +502,8 @@ def main(arguments: list[str]) -> int:
         fail("The codex executable is required.")
     if dotnet_path is None:
         fail("The dotnet executable is required.")
-    environment = os.environ.copy()
-    environment.pop("CODEX_THREAD_ID", None)
-    temporary_codex_home = isolate_codex_home(environment)
-    prepare_repository(repo_root, environment, index_path)
+    environment = build_child_environment(os.environ)
+    prepare_repository(repo_root, environment, index_path, roslynkit_path)
     manifest = support.get_repository_content_manifest(repo_root)
 
     if options.resume_run_root:
@@ -523,6 +533,7 @@ def main(arguments: list[str]) -> int:
                     case,
                     index_path,
                     options.max_results,
+                    roslynkit_path,
                 )
                 evidence_path.write_text(evidence + "\n", encoding="utf-8")
                 prompt = render_prompt(condition, case, evidence)
@@ -558,7 +569,6 @@ def main(arguments: list[str]) -> int:
                 changes = support.get_repository_content_changes(repo_root, manifest)
                 if changes:
                     fail(f"Repository content changed during benchmark: {changes}")
-    temporary_codex_home.cleanup()
     print(f"Search-text benchmark complete: {run_root}")
     return 0
 

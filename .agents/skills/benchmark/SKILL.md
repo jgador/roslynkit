@@ -39,7 +39,9 @@ For acceptance, pass the model and reasoning effort explicitly and use at least 
 bash ./scripts/benchmark-search-text.sh --model gpt-5.6-sol --reasoning-effort high --trials 3 --case-id all
 ```
 
-The controller must invoke RoslynKit itself through one direct `dotnet run --project ./src/RoslynKit --no-build -- search` command with `--text-only --compact --balanced`. It supplies that output, or the bounded plain-text baseline, to a judge-only LLM turn. Any LLM tool call, missing terminal token accounting, empty answer, missing evidence group, or nonzero exit makes the run non-comparable. The benchmark passes only when every scheduled pair is comparable and saves at least 20% input tokens; a median above the threshold is insufficient.
+The controller normally invokes RoslynKit itself through one direct `dotnet run --project ./src/RoslynKit --no-build -- search` command with `--text-only --compact --balanced`. Pass `--roslynkit-path <apphost>` to invoke one built apphost directly for both index preparation and retrieval. It supplies that output, or the bounded plain-text baseline, to a judge-only LLM turn. Any LLM tool call, missing terminal token accounting, empty answer, missing evidence group, or nonzero exit makes the run non-comparable. The benchmark passes only when every scheduled pair is comparable and saves at least 20% input tokens; a median above the threshold is insufficient.
+
+Use the active host's `CODEX_HOME` and configured credential source directly. Windows Subsystem for Linux (WSL) runs use WSL-local configuration and credentials. Keep that external state stable across the comparison; the runner does not require or copy `auth.json` and clears the parent Codex thread identifier for every child session.
 
 If an outer execution channel is interrupted, use `--resume-run-root` with the original artifact root so completed sessions are retained and only missing case/condition/trial tuples run. Use `--report-run-root` to rebuild reports without starting model turns. Evidence belongs below `artifacts/search-text-benchmark/` and remains Git-ignored.
 

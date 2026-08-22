@@ -37,6 +37,30 @@
         ["src/RoslynKit/RoslynCommandExecutor.SymbolContext.cs"],
         ["tests/RoslynKit.Tests/CommandExecution/SymbolContextCommandExecutionTests.cs", "tests/RoslynKit.Tests/MarkdownFormatTests.cs"]
       ]
+    },
+    {
+      "id": "text-only-workspace-routing",
+      "intent": "Find the production declarations and focused tests that explain how text-only index and search bypass daemon routing, construct an in-process C# workspace without MSBuild, enumerate repository source files, and exclude infrastructure and build-output paths.",
+      "query": "text-only standalone daemon routing DaemonFallbackWorkspaceCommandRouter executeDaemonCommand executeStandaloneCommand TextOnlyWorkspaceLoader RoslynSearchCorpusBuilder LoadTextOnlyAsync EnumerateTextOnlySourceFiles BuildAsync BuildDocumentMapAsync exclude bin obj source documents",
+      "requiredEvidenceGroups": [
+        ["src/RoslynKit/DaemonFallbackWorkspaceCommandRouter.cs"],
+        ["src/RoslynKit/RoslynWorkspaceLoader.cs"],
+        ["src/RoslynKit/RoslynSearchCorpusBuilder.cs"],
+        ["tests/RoslynKit.Tests/DaemonFallbackWorkspaceCommandRouterTests.cs"],
+        ["tests/RoslynKit.Tests/TextOnlyWorkspaceLoaderTests.cs"],
+        ["tests/RoslynKit.Tests/RoslynSearchCorpusBuilderTests.cs"]
+      ]
+    },
+    {
+      "id": "search-ranking-pipeline",
+      "intent": "Find the production declarations and focused tests that explain how identifier-shaped search queries are tokenized, converted to prefix terms, ranked by query-term coverage before Best Matching 25 relevance, and ordered deterministically while retaining strong test evidence.",
+      "query": "search query tokenizer PascalCase underscore prefix matching term coverage member namespace deterministic ranking tie balanced test results",
+      "requiredEvidenceGroups": [
+        ["src/RoslynKit/SearchQueryTokenizer.cs"],
+        ["src/RoslynKit/SqliteSearchIndex.cs"],
+        ["src/RoslynKit/SearchCommandService.cs"],
+        ["tests/RoslynKit.Tests/SearchQueryTokenizerTests.cs", "tests/RoslynKit.Tests/SqliteSearchIndexTests.cs"]
+      ]
     }
   ]
 }
