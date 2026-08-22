@@ -6,7 +6,9 @@ on:
 permissions:
   contents: read
   issues: read
-engine: codex
+engine:
+  id: codex
+  version: "0.149.0"
 model: gpt-5.6-sol
 strict: true
 features:
