@@ -5,23 +5,6 @@ namespace RoslynKit.Benchmarking;
 /// </summary>
 internal static class BenchmarkCommands
 {
-    private static readonly string[] DisabledCodexFeatures =
-    [
-        "apps",
-        "browser_use",
-        "computer_use",
-        "goals",
-        "image_generation",
-        "memories",
-        "multi_agent",
-        "multi_agent_v2",
-        "plugins",
-        "shell_tool",
-        "skill_search",
-        "standalone_web_search",
-        "unified_exec",
-    ];
-
     public static ProcessInvocation BuildRoslynKit(string repositoryRoot)
     {
         return new ProcessInvocation(
@@ -80,49 +63,6 @@ internal static class BenchmarkCommands
                 "--compact",
                 "--balanced",
             ]);
-    }
-
-    public static ProcessInvocation Codex(
-        string repositoryRoot,
-        string model,
-        string reasoningEffort,
-        string answerPath,
-        string prompt)
-    {
-        var arguments = new List<string>
-        {
-            "exec",
-            "--json",
-            "--ephemeral",
-            "--ignore-rules",
-            "--sandbox",
-            "read-only",
-            "--config",
-            $"model_reasoning_effort=\"{reasoningEffort}\"",
-            "--config",
-            "project_doc_max_bytes=0",
-            "--model",
-            model,
-            "--color",
-            "never",
-            "--cd",
-            repositoryRoot,
-            "--output-last-message",
-            answerPath,
-        };
-        foreach (var feature in DisabledCodexFeatures)
-        {
-            arguments.Add("--disable");
-            arguments.Add(feature);
-        }
-
-        arguments.Add("-");
-        return new ProcessInvocation(
-            "codex",
-            repositoryRoot,
-            arguments,
-            prompt,
-            ["CODEX_THREAD_ID"]);
     }
 
     public static string Display(ProcessInvocation invocation)

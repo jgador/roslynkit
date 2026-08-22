@@ -51,13 +51,21 @@ internal static class BenchmarkPaths
 
     public static string ResolveExistingRunRoot(string repositoryRoot, string value)
     {
+        var artifactsRoot = Path.GetFullPath(Path.Combine(repositoryRoot, "artifacts"));
+        var allowedParent = Path.Combine(artifactsRoot, "benchmark");
         var candidate = Path.GetFullPath(Path.IsPathRooted(value)
             ? value
             : Path.Combine(repositoryRoot, value));
-        var allowedParent = Path.GetFullPath(Path.Combine(repositoryRoot, "artifacts", "benchmark"));
         if (!string.Equals(Directory.GetParent(candidate)?.FullName, allowedParent, PathComparison)
-            || !Directory.Exists(candidate)
-            || !File.Exists(Path.Combine(candidate, BenchmarkRunStore.FileName)))
+            || !Directory.Exists(candidate))
+        {
+            throw new BenchmarkException("The run root must identify one existing run below artifacts/benchmark containing run.json.");
+        }
+
+        EnsureDirectoryIsNotReparsePoint(artifactsRoot);
+        EnsureDirectoryIsNotReparsePoint(allowedParent);
+        EnsureDirectoryIsNotReparsePoint(candidate);
+        if (!File.Exists(Path.Combine(candidate, BenchmarkRunStore.FileName)))
         {
             throw new BenchmarkException("The run root must identify one existing run below artifacts/benchmark containing run.json.");
         }
@@ -67,8 +75,12 @@ internal static class BenchmarkPaths
 
     public static string CreateRunRoot(string repositoryRoot, DateTimeOffset timestamp)
     {
-        var parent = Path.Combine(repositoryRoot, "artifacts", "benchmark");
+        var artifactsRoot = Path.Combine(repositoryRoot, "artifacts");
+        Directory.CreateDirectory(artifactsRoot);
+        EnsureDirectoryIsNotReparsePoint(artifactsRoot);
+        var parent = Path.Combine(artifactsRoot, "benchmark");
         Directory.CreateDirectory(parent);
+        EnsureDirectoryIsNotReparsePoint(parent);
         var baseName = timestamp.UtcDateTime.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
         for (var suffix = 0; ; suffix++)
         {
@@ -77,8 +89,30 @@ internal static class BenchmarkPaths
             if (!Directory.Exists(candidate))
             {
                 Directory.CreateDirectory(candidate);
+                EnsureDirectoryIsNotReparsePoint(candidate);
                 return candidate;
             }
+
+            EnsureDirectoryIsNotReparsePoint(candidate);
+        }
+    }
+
+    /// <summary>
+    /// Creates one run-local artifact directory after rejecting symbolic links and reparse points.
+    /// </summary>
+    public static void EnsureArtifactDirectory(string runRoot, string directoryName)
+    {
+        EnsureDirectoryIsNotReparsePoint(runRoot);
+        var path = Path.Combine(runRoot, directoryName);
+        Directory.CreateDirectory(path);
+        EnsureDirectoryIsNotReparsePoint(path);
+    }
+
+    private static void EnsureDirectoryIsNotReparsePoint(string path)
+    {
+        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+        {
+            throw new BenchmarkException("Benchmark run directories must not be symbolic links or reparse points.");
         }
     }
 

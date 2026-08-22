@@ -4,11 +4,11 @@ using System.Text.RegularExpressions;
 namespace RoslynKit.Benchmarking;
 
 /// <summary>
-/// Holds validated command-line settings for the benchmark controller.
+/// Holds validated command-line settings for benchmark preparation.
 /// </summary>
 internal sealed record BenchmarkOptions
 {
-    public string Model { get; init; } = "gpt-5.6-sol";
+    public string Model { get; init; } = "gpt-5.6-terra";
 
     public string ReasoningEffort { get; init; } = "high";
 
@@ -24,25 +24,31 @@ internal sealed record BenchmarkOptions
 
     public string? ResumeRunRoot { get; init; }
 
-    public string? ReportRunRoot { get; init; }
-
     public bool DryRun { get; init; }
 
     public bool Help { get; init; }
 }
 
 /// <summary>
-/// Parses the dependency-free benchmark command line.
+/// Parses dependency-free benchmark preparation options.
 /// </summary>
 internal static partial class BenchmarkOptionsParser
 {
     public static string Usage =>
         """
         Usage:
-          dotnet run --project ./tests/Integration/Benchmarking/RoslynKit.Benchmarking.csproj -- [options]
+          dotnet run --project ./tests/Integration/Benchmarking/RoslynKit.Benchmarking.csproj -- <command> [options]
 
-        Options:
-          --model <id>                 Codex model (default: gpt-5.6-sol)
+        Commands:
+          prepare [options]                         Create or resume a measured run and write schedule.txt
+          prepare-session --run-root <path> --run-id <id>
+                                                    Create one evidence and prompt artifact pair
+          evaluate-session --run-root <path> --run-id <id> --exit-code <int>
+                                                    Record one completed judge session from artifacts
+          report --run-root <path>                  Regenerate CSV and Markdown reports
+
+        Prepare options:
+          --model <id>                 Codex model (default: gpt-5.6-terra)
           --reasoning-effort <level>   Codex reasoning effort (default: high)
           --trials <1-100>             Trials per selected case (default: 1)
           --case <id|all>              Select one case or all cases (default: all)
@@ -50,9 +56,8 @@ internal static partial class BenchmarkOptionsParser
           --max-results <2-50>         Maximum RoslynKit results (default: 10)
           --index-path <path>          Database directly below ./artifacts/
           --roslynkit-path <path>      Use an existing RoslynKit apphost
-          --dry-run                    Print the schedule without building or starting Codex
+          --dry-run                    Print preparation and sessions without creating a run or starting a process
           --resume-run-root <path>     Resume missing sessions from one run document
-          --report-run-root <path>     Regenerate CSV and Markdown from one run document
           --help                       Show this help
         """;
 
@@ -107,10 +112,6 @@ internal static partial class BenchmarkOptionsParser
                     AddOnce(seen, "resume-run-root", option);
                     options = options with { ResumeRunRoot = ReadValue(arguments, ref index, option) };
                     break;
-                case "--report-run-root":
-                    AddOnce(seen, "report-run-root", option);
-                    options = options with { ReportRunRoot = ReadValue(arguments, ref index, option) };
-                    break;
                 default:
                     throw new BenchmarkException($"Unknown benchmark option: '{option}'.");
             }
@@ -148,22 +149,17 @@ internal static partial class BenchmarkOptionsParser
             throw new BenchmarkException("--max-results must be from 2 through 50.");
         }
 
-        if (string.IsNullOrWhiteSpace(options.Model)
-            || string.IsNullOrWhiteSpace(options.ReasoningEffort)
-            || string.IsNullOrWhiteSpace(options.Case))
+        if (string.IsNullOrWhiteSpace(options.Case))
         {
-            throw new BenchmarkException("Model, reasoning effort, and case must not be empty.");
+            throw new BenchmarkException("Case must not be empty.");
         }
 
+        ValidateSingleLineValue(options.Model, "--model");
+        ValidateSingleLineValue(options.ReasoningEffort, "--reasoning-effort");
         _ = NormalizeIndexPath(options.IndexPath);
-        if (options.ResumeRunRoot is not null && options.ReportRunRoot is not null)
+        if (options.DryRun && options.ResumeRunRoot is not null)
         {
-            throw new BenchmarkException("--resume-run-root and --report-run-root are mutually exclusive.");
-        }
-
-        if (options.DryRun && (options.ResumeRunRoot is not null || options.ReportRunRoot is not null))
-        {
-            throw new BenchmarkException("--dry-run cannot be combined with resume or report mode.");
+            throw new BenchmarkException("--dry-run cannot be combined with --resume-run-root.");
         }
     }
 
@@ -193,6 +189,16 @@ internal static partial class BenchmarkOptionsParser
         if (!seen.Add(name))
         {
             throw new BenchmarkException($"Option '{option}' was specified more than once.");
+        }
+    }
+
+    private static void ValidateSingleLineValue(string value, string option)
+    {
+        if (string.IsNullOrWhiteSpace(value)
+            || value.Contains('\r', StringComparison.Ordinal)
+            || value.Contains('\n', StringComparison.Ordinal))
+        {
+            throw new BenchmarkException($"{option} must be one nonempty line.");
         }
     }
 

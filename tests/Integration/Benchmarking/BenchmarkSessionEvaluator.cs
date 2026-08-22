@@ -17,10 +17,16 @@ internal static class BenchmarkSessionEvaluator
         string answerPath,
         string evidencePath,
         string eventPath,
-        string stderrPath)
+        string stderrPath,
+        IReadOnlyList<string>? artifactIssues = null)
     {
         var eventLog = CodexEventParser.Parse(processResult.StandardOutput);
         var issues = eventLog.Issues.ToList();
+        if (artifactIssues is not null)
+        {
+            issues.AddRange(artifactIssues);
+        }
+
         if (processResult.ExitCode != 0)
         {
             issues.Add($"codex exited with {processResult.ExitCode}");

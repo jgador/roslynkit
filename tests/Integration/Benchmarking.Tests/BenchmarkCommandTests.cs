@@ -1,7 +1,7 @@
 namespace RoslynKit.Benchmarking.Tests;
 
 /// <summary>
-/// Verifies direct apphost and isolated Codex command construction.
+/// Verifies direct RoslynKit command construction.
 /// </summary>
 public sealed class BenchmarkCommandTests
 {
@@ -26,21 +26,12 @@ public sealed class BenchmarkCommandTests
     }
 
     [Fact]
-    public void Codex_UsesHostConfigurationJsonEphemeralStdinAndRemovesParentThread()
+    public void BenchmarkCommands_DoesNotExposeCodexConstruction()
     {
-        var invocation = BenchmarkCommands.Codex("/repo", "model", "high", "/answer.md", "judge this");
+        var commandMembers = typeof(BenchmarkCommands)
+            .GetMembers(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 
-        Assert.Equal("codex", invocation.FileName);
-        Assert.Equal("judge this", invocation.StandardInput);
-        Assert.Equal("-", invocation.Arguments[^1]);
-        Assert.Contains("--json", invocation.Arguments);
-        Assert.Contains("--ephemeral", invocation.Arguments);
-        Assert.DoesNotContain("--ignore-user-config", invocation.Arguments);
-        Assert.Contains("--ignore-rules", invocation.Arguments);
-        Assert.Contains("shell_tool", invocation.Arguments);
-        Assert.Contains("multi_agent_v2", invocation.Arguments);
-        var removedVariables = Assert.IsAssignableFrom<IReadOnlyList<string>>(invocation.RemovedEnvironmentVariables);
-        Assert.Equal(["CODEX_THREAD_ID"], removedVariables);
+        Assert.DoesNotContain(commandMembers, member => member.Name.Contains("Codex", StringComparison.Ordinal));
     }
 
     [Fact]

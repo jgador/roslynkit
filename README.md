@@ -250,7 +250,7 @@ Exit codes are `0` for success, `2` for usage errors, `130` for cancellation, an
 - [docs/dev-install.md](docs/dev-install.md): side-by-side prerelease development install.
 - [docs/dotnet-tool-release.md](docs/dotnet-tool-release.md): maintainer packaging and release workflow.
 - [docs/roslyn-lsp-commands.md](docs/roslyn-lsp-commands.md): Roslyn language-server inventory and RoslynKit planning coverage.
-- [docs/benchmark.md](docs/benchmark.md): opt-in native raw-text versus RoslynKit text-only token benchmark.
+- [docs/benchmark.md](docs/benchmark.md): opt-in Bash-controlled raw-text versus RoslynKit text-only token benchmark.
 - [docs/agents/README.md](docs/agents/README.md): operational docs for people maintaining RoslynKit skill files and AI-tool guidance.
 
 ## Non-Goals

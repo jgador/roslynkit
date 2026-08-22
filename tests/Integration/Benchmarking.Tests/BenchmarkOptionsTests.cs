@@ -1,10 +1,18 @@
 namespace RoslynKit.Benchmarking.Tests;
 
 /// <summary>
-/// Verifies benchmark option aliases, bounds, and mutually exclusive modes.
+/// Verifies benchmark preparation option aliases, bounds, and mode restrictions.
 /// </summary>
 public sealed class BenchmarkOptionsTests
 {
+    [Fact]
+    public void Parse_UsesTerraAsDefaultModel()
+    {
+        var parsed = BenchmarkOptionsParser.Parse([]);
+
+        Assert.Equal("gpt-5.6-terra", parsed.Model);
+    }
+
     [Theory]
     [InlineData("--case")]
     [InlineData("--case-id")]
@@ -20,10 +28,17 @@ public sealed class BenchmarkOptionsTests
     {
         Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse(["--trials", "0"]));
         Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse(["--max-results", "51"]));
-        Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse(
-            ["--resume-run-root", "one", "--report-run-root", "two"]));
+        Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse(["--report-run-root", "one"]));
         Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse(
             ["--dry-run", "--resume-run-root", "one"]));
+    }
+
+    [Theory]
+    [InlineData("--model")]
+    [InlineData("--reasoning-effort")]
+    public void Parse_RejectsMultilineControllerValues(string option)
+    {
+        Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse([option, "first\nsecond"]));
     }
 
     [Fact]
