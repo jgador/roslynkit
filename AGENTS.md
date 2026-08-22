@@ -15,7 +15,7 @@ Use one source of truth per topic:
 - [docs/agents/skill-maintenance.md](docs/agents/skill-maintenance.md): ownership and synchronization rules for checked-in RoslynKit skill files.
 - [docs/local-repository-reference.md](docs/local-repository-reference.md): user-owned local repository reference map; use only when explicitly named or tagged by the user.
 - [docs/roslyn-lsp-commands.md](docs/roslyn-lsp-commands.md): human-facing Roslyn language-server inventory and RoslynKit planning coverage; do not use for current command routing.
-- [docs/benchmark-codex.md](docs/benchmark-codex.md): manual benchmark procedure; use only when the user asks to measure token efficiency.
+- [docs/benchmark.md](docs/benchmark.md): native raw-text versus RoslynKit text-only token benchmark; use only when the user asks to measure token efficiency.
 - [AGENTS.md](AGENTS.md): active coding-agent rules, safety rules, and repo workflow expectations.
 
 Keep this file focused on the rules agents need during execution. Put longer repo-maintenance agent guidance under `docs/agents/`, put reusable RoslynKit skill references under [.agents/skills/roslynkit/references/](.agents/skills/roslynkit/references/), and do not restate full command reference material here.
@@ -57,7 +57,7 @@ When changing the stable RoslynKit skill bundle, keep [.agents/skills/roslynkit/
 
 For longer agent-only guidance, start at [docs/agents/README.md](docs/agents/README.md).
 
-Do not read [docs/local-repository-reference.md](docs/local-repository-reference.md), [docs/roslyn-lsp-commands.md](docs/roslyn-lsp-commands.md), or [docs/benchmark-codex.md](docs/benchmark-codex.md) by default. Use those docs only when the user explicitly names or tags them, or when the task is specifically about local reference repositories, RoslynKit roadmap coverage, or token-efficiency measurement.
+Do not read [docs/local-repository-reference.md](docs/local-repository-reference.md), [docs/roslyn-lsp-commands.md](docs/roslyn-lsp-commands.md), or [docs/benchmark.md](docs/benchmark.md) by default. Use those docs only when the user explicitly names or tags them, or when the task is specifically about local reference repositories, RoslynKit roadmap coverage, or token-efficiency measurement.
 
 Do not use Repository Synapse in this repository. Do not run `synapse ensure`, `synapse recall`, `synapse tests`, or any other command that creates `.synapse/` repo-local cache files. Use Atlas, RoslynKit, scout agents, and direct file/test inspection instead.
 

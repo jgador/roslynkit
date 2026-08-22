@@ -3,6 +3,8 @@
     <Project Path="src/RoslynKit/RoslynKit.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Integration/Benchmarking/RoslynKit.Benchmarking.csproj" />
+    <Project Path="tests/Integration/Benchmarking.Tests/RoslynKit.Benchmarking.Tests.csproj" />
     <Project Path="tests/RoslynKit.Tests/RoslynKit.Tests.csproj" />
     <Project Path="tests/RoslynKit.WorkspaceGraphDump/RoslynKit.WorkspaceGraphDump.csproj" />
   </Folder>

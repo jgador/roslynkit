@@ -22,13 +22,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.301
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - run: dotnet restore ./RoslynKit.slnx
       - run: dotnet build ./RoslynKit.slnx --no-restore --tl:off --nologo "-clp:ErrorsOnly;NoSummary"
       - run: dotnet test ./RoslynKit.slnx --no-build --no-restore
-      - name: Bash benchmark regression tests
-        run: bash ./tests/bash/benchmark-regression-tests.sh
-        shell: bash
+      - run: dotnet build ./tests/FixtureWorkspace/IntentNavigation/IntentNavigation.csproj --tl:off --nologo "-clp:ErrorsOnly;NoSummary"
       - run: pwsh -NoProfile -File ./tests/PowerShell/PortabilityRegressionTests.ps1

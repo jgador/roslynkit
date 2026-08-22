@@ -1,7 +1,7 @@
 interface:
   display_name: "Benchmark"
-  short_description: "Run direct-worktree Codex benchmarks"
-  default_prompt: "Use $benchmark to dry-run the direct-worktree Codex benchmark."
+  short_description: "Run native retrieval benchmarks"
+  default_prompt: "Use $benchmark to dry-run the native text-retrieval benchmark."
 
 policy:
   allow_implicit_invocation: false
