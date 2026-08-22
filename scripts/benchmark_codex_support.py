@@ -950,7 +950,13 @@ def get_benchmark_host_kind() -> str:
 def invoke_tool_version_probe(command_name: str, executable_path: str | None = None) -> dict[str, Any]:
     resolved_path = executable_path or shutil.which(command_name)
     if resolved_path is None:
-        return {"resolved_path": None, "output": f"The '{command_name}' application was not found on PATH.", "exit_code": 127}
+        return {
+            "resolved_path": None,
+            "output": f"The '{command_name}' application was not found on PATH.",
+            "version_output": None,
+            "executable_sha256": None,
+            "exit_code": 127,
+        }
     try:
         resolved_path = str(Path(resolved_path).resolve())
         completed = subprocess.run([resolved_path, "--version"], capture_output=True, text=True, check=False)
@@ -963,7 +969,13 @@ def invoke_tool_version_probe(command_name: str, executable_path: str | None = N
             "exit_code": completed.returncode,
         }
     except OSError as error:
-        return {"resolved_path": str(Path(resolved_path).resolve()), "output": str(error), "exit_code": 126}
+        return {
+            "resolved_path": str(Path(resolved_path).resolve()),
+            "output": str(error),
+            "version_output": None,
+            "executable_sha256": None,
+            "exit_code": 126,
+        }
 
 
 def write_internal_tool_probe(output: Path, roslynkit_path: str | None = None) -> None:

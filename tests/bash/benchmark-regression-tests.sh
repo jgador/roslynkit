@@ -172,16 +172,22 @@ bash "${runner_path}" --internal-tool-probe-path "${probe_path}"
 [[ -s "${probe_path}" ]] || fail 'The Bash runner did not write its hidden tool-probe artifact.'
 
 mkdir -p "${temp_root}/isolated-tool"
-isolated_roslynkit_path="${temp_root}/isolated-tool/roslynkit"
-printf '%s\n' '#!/usr/bin/env bash' 'printf "roslynkit version isolated-test\\n"' > "${isolated_roslynkit_path}"
+isolated_executable_name='roslynkit'
+case "$(uname -s)" in
+    MINGW*|MSYS*) isolated_executable_name='roslynkit.exe' ;;
+esac
+isolated_roslynkit_path="${temp_root}/isolated-tool/${isolated_executable_name}"
+cp -- "$(command -v git)" "${isolated_roslynkit_path}"
 chmod 755 "${isolated_roslynkit_path}"
+isolated_version_output="$("${isolated_roslynkit_path}" --version 2>&1)"
 isolated_probe_path="${temp_root}/isolated-tool-probe.json"
 bash "${runner_path}" --internal-tool-probe-path "${isolated_probe_path}" --roslynkit-path "${isolated_roslynkit_path}"
 [[ -s "${isolated_probe_path}" ]] || fail 'The Bash runner did not write a RoslynKit-path tool-probe artifact.'
 isolated_dry_run_output="$(CODEX_HOME="${temp_root}/codex-home" bash "${runner_path}" --dry-run --trials 1 --case-id daemon-disconnect --roslynkit-path "${isolated_roslynkit_path}")"
-assert_contains "${isolated_dry_run_output}" "${isolated_roslynkit_path}" 'The dry run did not identify the isolated RoslynKit executable.'
+resolved_isolated_roslynkit_path="$(cd -- "$(dirname -- "${isolated_roslynkit_path}")" && pwd -P)/$(basename -- "${isolated_roslynkit_path}")"
+assert_contains "${isolated_dry_run_output}" "${resolved_isolated_roslynkit_path}" 'The dry run did not identify the isolated RoslynKit executable.'
 
-"${python_executable}" - "${repo_root}" "${temp_root}" "${probe_path}" "${isolated_probe_path}" "${isolated_roslynkit_path}" "${report_cli_root}" "${legacy_report_cli_root}" <<'PY'
+"${python_executable}" - "${repo_root}" "${temp_root}" "${probe_path}" "${isolated_probe_path}" "${isolated_roslynkit_path}" "${isolated_version_output}" "${report_cli_root}" "${legacy_report_cli_root}" <<'PY'
 import hashlib
 import json
 import sys
@@ -192,8 +198,9 @@ temp_root = Path(sys.argv[2])
 probe_path = Path(sys.argv[3])
 isolated_probe_path = Path(sys.argv[4])
 isolated_roslynkit_path = Path(sys.argv[5])
-report_cli_root = Path(sys.argv[6])
-legacy_report_cli_root = Path(sys.argv[7])
+isolated_version_output = sys.argv[6]
+report_cli_root = Path(sys.argv[7])
+legacy_report_cli_root = Path(sys.argv[8])
 sys.path.insert(0, str(repo_root / "scripts"))
 
 import benchmark_codex_support as support
@@ -239,13 +246,14 @@ search_text_codex_command = search_text.build_codex_command(
     "Judge supplied evidence.",
 )
 check("--ignore-user-config" not in search_text_codex_command, "The search-text runner suppressed the active host Codex configuration.")
+search_text_apphost_path = temp_root / "roslynkit-apphost"
 search_text_apphost_command = search_text.search_command(
     {"query": "daemon transport"},
     "./artifacts/roslynkit-text.db",
     10,
-    Path("/tmp/roslynkit-apphost"),
+    search_text_apphost_path,
 )
-check(search_text_apphost_command[0] == "/tmp/roslynkit-apphost", "The search-text runner did not use the requested apphost.")
+check(Path(search_text_apphost_command[0]) == search_text_apphost_path, "The search-text runner did not use the requested apphost.")
 check("--text-only" in search_text_apphost_command, "The search-text apphost command omitted text-only daemon bypass.")
 
 search_text_cases = search_text.load_cases(repo_root, "all")
@@ -370,10 +378,19 @@ check(probe.get("host_kind") == support.get_benchmark_host_kind(), "The hidden t
 for tool_name in ("ripgrep", "roslynkit"):
     check({"resolved_path", "output", "version_output", "executable_sha256", "exit_code"}.issubset(probe[tool_name]), f"The hidden {tool_name} probe omitted required fields.")
 
+missing_tool_probe = support.invoke_tool_version_probe("roslynkit-intentionally-missing-tool")
+check(
+    {"resolved_path", "output", "version_output", "executable_sha256", "exit_code"}.issubset(missing_tool_probe),
+    "A missing tool produced an incomplete probe record.",
+)
+check(missing_tool_probe["version_output"] is None, "A missing tool reported version output.")
+check(missing_tool_probe["executable_sha256"] is None, "A missing tool reported an executable SHA-256.")
+check(missing_tool_probe["exit_code"] == 127, "A missing tool reported the wrong exit code.")
+
 isolated_probe = json.loads(isolated_probe_path.read_text(encoding="utf-8"))
 isolated_tool = isolated_probe["roslynkit"]
 check(Path(isolated_tool["resolved_path"]) == isolated_roslynkit_path.resolve(), "The tool probe did not use the selected isolated RoslynKit executable.")
-check(isolated_tool["version_output"] == "roslynkit version isolated-test", "The tool probe did not record the selected RoslynKit version output.")
+check(isolated_tool["version_output"] == isolated_version_output, "The tool probe did not record the selected RoslynKit version output.")
 check(isolated_tool["executable_sha256"] == hashlib.sha256(isolated_roslynkit_path.read_bytes()).hexdigest(), "The tool probe did not record the selected RoslynKit SHA-256.")
 
 valid_probe = {
