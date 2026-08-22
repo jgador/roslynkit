@@ -14,6 +14,9 @@ internal sealed record CodexEvent
     [JsonPropertyName("thread_id")]
     public string? ThreadId { get; init; }
 
+    [JsonPropertyName("message")]
+    public string? Message { get; init; }
+
     [JsonPropertyName("item")]
     public CodexEventItem? Item { get; init; }
 
@@ -37,6 +40,9 @@ internal sealed record CodexEventItem
 
     [JsonPropertyName("type")]
     public string Type { get; init; } = string.Empty;
+
+    [JsonPropertyName("message")]
+    public string? Message { get; init; }
 
     [JsonPropertyName("text")]
     public string? Text { get; init; }
@@ -106,6 +112,7 @@ internal static class CodexEventParser
     private static readonly HashSet<string> NonToolItemTypes = new(StringComparer.Ordinal)
     {
         "agent_message",
+        "error",
         "reasoning",
     };
 

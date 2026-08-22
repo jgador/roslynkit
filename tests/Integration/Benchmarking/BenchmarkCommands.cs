@@ -94,7 +94,6 @@ internal static class BenchmarkCommands
             "exec",
             "--json",
             "--ephemeral",
-            "--ignore-user-config",
             "--ignore-rules",
             "--sandbox",
             "read-only",

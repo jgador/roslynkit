@@ -26,7 +26,7 @@ public sealed class BenchmarkCommandTests
     }
 
     [Fact]
-    public void Codex_UsesJsonEphemeralStdinAndRemovesParentThread()
+    public void Codex_UsesHostConfigurationJsonEphemeralStdinAndRemovesParentThread()
     {
         var invocation = BenchmarkCommands.Codex("/repo", "model", "high", "/answer.md", "judge this");
 
@@ -35,11 +35,12 @@ public sealed class BenchmarkCommandTests
         Assert.Equal("-", invocation.Arguments[^1]);
         Assert.Contains("--json", invocation.Arguments);
         Assert.Contains("--ephemeral", invocation.Arguments);
-        Assert.Contains("--ignore-user-config", invocation.Arguments);
+        Assert.DoesNotContain("--ignore-user-config", invocation.Arguments);
         Assert.Contains("--ignore-rules", invocation.Arguments);
         Assert.Contains("shell_tool", invocation.Arguments);
         Assert.Contains("multi_agent_v2", invocation.Arguments);
-        Assert.Contains("CODEX_THREAD_ID", Assert.IsAssignableFrom<IReadOnlyList<string>>(invocation.RemovedEnvironmentVariables));
+        var removedVariables = Assert.IsAssignableFrom<IReadOnlyList<string>>(invocation.RemovedEnvironmentVariables);
+        Assert.Equal(["CODEX_THREAD_ID"], removedVariables);
     }
 
     [Fact]

@@ -35,7 +35,7 @@ The raw-text condition tokenizes alphanumeric and underscore query terms of at l
 
 Condition order alternates by trial. A one-trial all-cases run starts 12 judge turns: two conditions for each of six cases. A three-trial acceptance run starts 36 judge turns.
 
-The active host's `CODEX_HOME` authentication remains the credential source. Each judge process clears `CODEX_THREAD_ID`, ignores user configuration, project instructions, and command rules, disables tool-related features, and runs `codex exec --json --ephemeral` directly. A session is rejected if it calls a tool, lacks exactly one terminal usage event, has an empty answer, exits unsuccessfully, or misses required evidence.
+Each judge inherits the active host's `CODEX_HOME`, including its host-local `config.toml`, selected model provider, and credential source; Windows Subsystem for Linux (WSL) runs use WSL-local configuration. Each process clears `CODEX_THREAD_ID`, ignores project instructions and command rules, disables tool-related features, and runs `codex exec --json --ephemeral` directly. A session is rejected if it calls a tool, lacks exactly one terminal usage event, has an empty answer, exits unsuccessfully, or misses required evidence.
 
 Input-token savings are `100 * (raw input - RoslynKit input) / raw input`. A pair is accepted only when both sessions are valid and correct and RoslynKit saves at least 20%. Every scheduled pair must meet that threshold; a passing median alone is insufficient.
 

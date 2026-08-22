@@ -66,4 +66,20 @@ public sealed class CodexEventParserTests
 
         Assert.Equal(1, result.ToolCallCount);
     }
+
+    [Fact]
+    public void Parse_ClassifiesFailedErrorEventsWithoutToolUse()
+    {
+        var events = """
+            {"type":"error","message":"authentication failed"}
+            {"type":"item.completed","item":{"id":"error-1","type":"error","message":"authentication failed"}}
+            {"type":"turn.failed","error":{"message":"authentication failed"}}
+            """;
+
+        var result = CodexEventParser.Parse(events);
+
+        Assert.Equal(0, result.ToolCallCount);
+        Assert.Null(result.Usage);
+        Assert.Equal(["event log did not contain terminal token accounting"], result.Issues);
+    }
 }
