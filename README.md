@@ -112,7 +112,7 @@ Add the database to the repository's `.gitignore`. SQLite enables write-ahead lo
 
 One database belongs to one repository and stores separate partitions for its targets. `search` validates the selected target before reading and automatically refreshes changed records. `index` is the strict preparation command; use `--rebuild` to discard and recreate the selected target partition. A search waits for its first index, while concurrent searches may receive the last complete data set with `index-state: stale` while another request refreshes it.
 
-For a search-only workflow on a host that cannot create daemon or MSBuild build-host sockets, add `--text-only` to both `index` and `search`. This mode scans repository C# files into a separate in-process partition and bypasses the daemon. Add `--compact` when an LLM should judge the ranked evidence without navigation metadata, and `--balanced` to reserve half of a bounded result set for focused tests when both production and test declarations match. `--text-only` cannot be combined with `--project`; use normal search when exact project evaluation or a follow-up `id:` is required.
+For a search-only workflow on a host that cannot create daemon or MSBuild build-host sockets, add `--text-only` to both `index` and `search`. This mode scans repository C# files into a separate in-process partition and bypasses the daemon. Add `--compact` when a large language model (LLM) should judge the ranked evidence without navigation metadata, and `--balanced` to reserve half of a bounded result set for focused tests when both production and test declarations match. `--text-only` cannot be combined with `--project`; use normal search when exact project evaluation or a follow-up `id:` is required.
 
 ```powershell
 roslynkit index --target ./MySolution.slnx --index-path ./artifacts/roslynkit-text.db --text-only
@@ -138,7 +138,34 @@ roslynkit references --target ./MySolution.slnx --symbol "M:MyApp.Validator.Vali
 
 The command reports XML documentation separately from ordinary C# comments. Ordinary comments are structured with placement, style, location, and normalized text. `--max-results` defaults to `20` descendant items and `--max-comments` defaults to `3` comments; each bounded collection reports its count and truncation state.
 
-The intended evidence loop is `search` -> `symbol-context` -> semantic navigation -> source or focused-test evidence -> LLM decision. RoslynKit provides deterministic results and stable identities. The LLM retains the intent, selects the next relationship, records visited identities or locations to avoid cycles, and stops after evidence satisfies that intent. Documentation and ordinary comments are routing hints, not proof; confirm a route with `definition`, `references`, `implementations`, `symbol-source`, or a narrow `document-lines` read.
+The intended intent-to-evidence loop is:
+
+```mermaid
+flowchart TD
+    A["Intent / English query"] --> B["search<br/>SQLite FTS5 + deterministic ranking"]
+    B --> C["Ranked declaration candidates<br/>loc + optional id / excerpt"]
+    C --> D["LLM compares and selects candidates"]
+
+    D --> E{"Available selector"}
+    E -->|id| F["symbol-context<br/>syntax node + semantic symbol"]
+    E -->|loc → file / line / column| F
+
+    F --> G["XML documentation + declaration comments<br/>local semantic context"]
+    F --> H["definition · references · implementations"]
+    F --> I["type-definition<br/>position selector only"]
+
+    G --> J["LLM chooses the next evidence"]
+    H --> J
+    I --> J
+    J --> K["symbol-source / document-lines<br/>or focused-test evidence"]
+    K --> L{"Intent satisfied?"}
+    L -->|Yes| M["Return focused evidence"]
+    L -->|No| N["Choose another relation<br/>or refine the query"]
+    N --> E
+    N --> B
+```
+
+This diagram describes the semantic workflow rather than the execution transport. RoslynKit provides deterministic results and stable identities. The LLM retains the intent, selects the next relationship, records visited identities or locations to avoid cycles, and stops after evidence satisfies that intent. Documentation and ordinary comments are routing hints, not proof; confirm a route with `definition`, `references`, `implementations`, `symbol-source`, or a narrow `document-lines` read.
 
 ## CLI Plus Skill Files
 
