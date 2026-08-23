@@ -48,6 +48,7 @@ has_flag() {
 # Cleanup removes every artifact entry except .gitkeep and refuses a symlinked root.
 clean_benchmark_artifacts() {
     local artifacts_root="$REPOSITORY_ROOT/artifacts"
+    local physical_artifacts_root
     local removed=0
     local artifact_entry
 
@@ -60,6 +61,11 @@ clean_benchmark_artifacts() {
     fi
 
     if [[ -d "$artifacts_root" ]]; then
+        physical_artifacts_root="$(cd -- "$artifacts_root" && pwd -P)"
+        if [[ "$physical_artifacts_root" != "$artifacts_root" ]]; then
+            die "Refusing to clean through symlinked artifacts root: '$artifacts_root'."
+        fi
+
         while IFS= read -r -d '' artifact_entry; do
             rm -rf -- "$artifact_entry"
             printf 'Removed: %s\n' "${artifact_entry#"$REPOSITORY_ROOT/"}"
