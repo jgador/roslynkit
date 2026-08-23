@@ -9,7 +9,9 @@ set -euo pipefail
 REPOSITORY_ROOT=""
 BENCHMARK_PROJECT=""
 
-# The helper owns benchmark state and retrieval; this script owns process-level orchestration.
+# Print the small amount of usage text that belongs to this Bash controller. The
+# C# helper owns all benchmark options, so this deliberately lists only the two
+# options that work without building the helper.
 usage() {
     cat <<'EOF'
 Usage:
@@ -27,11 +29,16 @@ Two controller-owned options work without building the helper:
 EOF
 }
 
+# Print a consistent error message to standard error, then stop with exit code 2
+# (the conventional exit code for invalid command-line usage or unsafe input).
 die() {
     printf 'error: %s\n' "$*" >&2
     exit 2
 }
 
+# Return success when the remaining command-line arguments contain the requested
+# flag. Bash uses a zero exit code for true, which lets callers use this directly
+# in an `if` condition without producing output.
 has_flag() {
     local needle="$1"
     shift
@@ -45,7 +52,9 @@ has_flag() {
     return 1
 }
 
-# Cleanup removes every artifact entry except .gitkeep and refuses a symlinked root.
+# Remove every artifact entry except .gitkeep. Cleanup is intentionally strict:
+# it refuses a redirected root so the `rm -rf` below can never traverse outside
+# this repository's own artifacts directory.
 clean_benchmark_artifacts() {
     local artifacts_root="$REPOSITORY_ROOT/artifacts"
     local physical_artifacts_root
@@ -61,6 +70,10 @@ clean_benchmark_artifacts() {
     fi
 
     if [[ -d "$artifacts_root" ]]; then
+        # `-L` recognizes ordinary symbolic links on Unix. Git Bash on Windows
+        # can represent a redirected directory as a reparse point instead, for
+        # which `-L` is false. Resolving the directory physically catches both
+        # forms before `find` enumerates entries or `rm -rf` removes anything.
         physical_artifacts_root="$(cd -- "$artifacts_root" && pwd -P)"
         if [[ "$physical_artifacts_root" != "$artifacts_root" ]]; then
             die "Refusing to clean through symlinked artifacts root: '$artifacts_root'."
@@ -80,6 +93,8 @@ clean_benchmark_artifacts() {
     fi
 }
 
+# Build the C# helper once for commands that need benchmark preparation,
+# retrieval, evaluation, or reporting. Cleanup and help bypass this function.
 build_helper() {
     dotnet build "$BENCHMARK_PROJECT" \
         --configuration Release \
@@ -88,6 +103,8 @@ build_helper() {
         "-clp:ErrorsOnly;NoSummary"
 }
 
+# Invoke the already-built C# helper. Keeping this in one function means every
+# controller operation uses the same project, configuration, and argument pass-through.
 benchmark_helper() {
     dotnet run --project "$BENCHMARK_PROJECT" \
         --configuration Release \
@@ -95,12 +112,18 @@ benchmark_helper() {
         -- "$@"
 }
 
+# Return success only for an absolute Unix path or an absolute Windows drive path.
+# The helper may run on either platform, so later file operations must not accept
+# a relative path that could escape the intended benchmark run directory.
 is_absolute_path() {
     local path="$1"
 
     [[ "$path" == /* || "$path" =~ ^[A-Za-z]:[\\/] ]]
 }
 
+# Convert a Windows drive path to the slash-based form used by Git Bash when
+# `cygpath` is available. On Unix and already-compatible paths, print the input
+# unchanged so callers can use one cross-platform code path.
 to_shell_path() {
     local path="$1"
 
@@ -112,6 +135,9 @@ to_shell_path() {
     printf '%s\n' "$path"
 }
 
+# Accept only simple helper-provided run IDs before using them as artifact file
+# names. This blocks path separators and other characters that could redirect a
+# prompt, answer, event, or error log outside the selected run directory.
 require_safe_run_id() {
     local run_id="$1"
 
@@ -120,7 +146,9 @@ require_safe_run_id() {
     fi
 }
 
-# Run prepared sessions serially so every prompt, judge transcript, and evaluation share one run ID.
+# Run prepared judge sessions serially. Each session has one run ID shared by its
+# prompt, answer, event transcript, error log, and evaluator result; serial work
+# keeps those artifacts deterministic and avoids overlapping paid Codex sessions.
 run_sessions() {
     local run_root="$1"
     local model="$2"
@@ -192,7 +220,9 @@ run_sessions() {
     benchmark_helper report --run-root "$run_root"
 }
 
-# Parse the helper's control directive and execute only the Codex-owned work.
+# Ask the helper to prepare a command, parse its machine-readable control
+# directive, and perform only the Bash-owned Codex work. The helper owns option
+# parsing and benchmark state; Bash owns the actual judge process invocation.
 run_from_control() {
     local control
     control="$(benchmark_helper prepare "$@")"
@@ -244,7 +274,9 @@ run_from_control() {
     esac
 }
 
-# Handle build-free controller modes before building the helper or starting a judge session.
+# Establish repository paths, then route the top-level command. Help and cleanup
+# return before a build or a Codex session; every other request is validated by
+# the C# helper before this controller starts any paid judge work.
 main() {
     local script_directory
 
