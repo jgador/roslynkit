@@ -6,25 +6,23 @@ public sealed class DaemonProtocolMessageTests
     public async Task Messages_RoundTripEveryRequestAndResponseShape()
     {
         var requestId = Guid.Parse("10cb0757-c567-4276-a1a8-ec566d54cdcd");
-        var version = RoslynKitBuildInfo.DaemonProtocolVersion;
         DaemonRequest[] requests =
         [
-            new DaemonHandshakeRequest(version, requestId),
+            new DaemonHandshakeRequest(requestId),
             new DaemonCommandRequest(
-                version,
                 requestId,
                 "symbols",
                 new Dictionary<string, string>(StringComparer.Ordinal) { ["query"] = "Protocol" },
                 DateTimeOffset.Parse("2026-07-30T12:00:00+00:00")),
-            new DaemonStatusRequest(version, requestId),
-            new DaemonStopRequest(version, requestId),
+            new DaemonStatusRequest(requestId),
+            new DaemonStopRequest(requestId),
         ];
         DaemonResponse[] responses =
         [
-            new DaemonHandshakeResponse(version, requestId, Accepted: true, Diagnostic: null),
-            new DaemonCommandResponse(version, requestId, 0, "output\n", string.Empty),
-            new DaemonStatusResponse(version, requestId, Running: true, "C:\\repo\\RoslynKit.slnx", 123, "ready", 4, 2, 1, null),
-            new DaemonStopResponse(version, requestId, Stopping: true),
+            new DaemonHandshakeResponse(requestId, Accepted: true, Diagnostic: null),
+            new DaemonCommandResponse(requestId, 0, "output\n", string.Empty),
+            new DaemonStatusResponse(requestId, Running: true, "C:\\repo\\RoslynKit.slnx", 123, "ready", 4, 2, 1, null),
+            new DaemonStopResponse(requestId, Stopping: true),
         ];
 
         foreach (var request in requests)
@@ -34,7 +32,6 @@ public sealed class DaemonProtocolMessageTests
             stream.Position = 0;
 
             var decoded = await DaemonProtocol.ReadRequestAsync(stream, TestContext.Current.CancellationToken);
-            Assert.Equal(request.ProtocolVersion, decoded.ProtocolVersion);
             Assert.Equal(request.RequestId, decoded.RequestId);
             Assert.Equal(request.GetType(), decoded.GetType());
             if (request is DaemonCommandRequest expectedCommand)
@@ -58,18 +55,6 @@ public sealed class DaemonProtocolMessageTests
 
             Assert.Equal(response, await DaemonProtocol.ReadResponseAsync(stream, TestContext.Current.CancellationToken));
         }
-    }
-
-    [Fact]
-    public void EnsureCompatible_RejectsDifferentProtocolVersion()
-    {
-        var request = new DaemonHandshakeRequest(
-            RoslynKitBuildInfo.DaemonProtocolVersion + 1,
-            Guid.NewGuid());
-
-        var exception = Assert.Throws<DaemonProtocolException>(() => DaemonProtocol.EnsureCompatible(request));
-
-        Assert.Equal(DaemonProtocolError.UnsupportedVersion, exception.Error);
     }
 
     [Fact]
@@ -122,7 +107,6 @@ public sealed class DaemonProtocolMessageTests
     public void CommandRequest_ToParsedCommandRejectsUnknownOptions()
     {
         var request = new DaemonCommandRequest(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
             Guid.NewGuid(),
             "symbols",
             new Dictionary<string, string>(StringComparer.Ordinal) { ["not-an-option"] = "value" },
@@ -160,7 +144,6 @@ public sealed class DaemonProtocolMessageTests
     public void CommandRequest_ToParsedCommandRejectsLocalCommands(string commandName)
     {
         var request = new DaemonCommandRequest(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
             Guid.NewGuid(),
             commandName,
             new Dictionary<string, string>(StringComparer.Ordinal),

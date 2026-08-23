@@ -77,7 +77,6 @@ public sealed class DaemonFallbackProcessIntegrationTests
                     await DaemonProtocol.WriteResponseAsync(
                         server,
                         new DaemonHandshakeResponse(
-                            RoslynKitBuildInfo.DaemonProtocolVersion,
                             handshake.RequestId,
                         Accepted: true,
                         Diagnostic: null),

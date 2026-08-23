@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 namespace RoslynKit;
 
 /// <summary>
-/// Reads and writes bounded versioned daemon messages using length-prefixed strict UTF-8 JSON frames.
+/// Reads and writes bounded daemon messages using length-prefixed strict UTF-8 JSON frames.
 /// </summary>
 internal static class DaemonProtocol
 {
@@ -48,20 +48,6 @@ internal static class DaemonProtocol
     public static async Task<DaemonResponse> ReadResponseAsync(Stream stream, CancellationToken cancellationToken)
     {
         return await ReadAsync<DaemonResponse>(stream, MaxResponseFrameLength, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Rejects a decoded message that cannot be dispatched by this exact protocol implementation.
-    /// </summary>
-    public static void EnsureCompatible(DaemonMessage message)
-    {
-        ArgumentNullException.ThrowIfNull(message);
-        if (message.ProtocolVersion != RoslynKitBuildInfo.DaemonProtocolVersion)
-        {
-            throw new DaemonProtocolException(
-                DaemonProtocolError.UnsupportedVersion,
-                $"Daemon protocol version {message.ProtocolVersion} is incompatible with version {RoslynKitBuildInfo.DaemonProtocolVersion}.");
-        }
     }
 
     private static async Task WriteAsync<TMessage>(
@@ -245,7 +231,6 @@ internal enum DaemonProtocolError
     InvalidUtf8,
     InvalidJson,
     InvalidMessage,
-    UnsupportedVersion,
 }
 
 /// <summary>

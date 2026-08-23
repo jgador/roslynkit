@@ -29,9 +29,27 @@ public sealed class BenchmarkOptionsTests
     {
         Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse(["--trials", "0"]));
         Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse(["--max-results", "51"]));
-        Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse(["--report-run-root", "one"]));
         Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse(
             ["--dry-run", "--resume-run-root", "one"]));
+        Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse(
+            ["--dry-run", "--report-run-root", "one"]));
+        Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse(
+            ["--report-run-root", "one", "--resume-run-root", "two"]));
+    }
+
+    [Fact]
+    public void Parse_AcceptsReportRunRoot()
+    {
+        var parsed = BenchmarkOptionsParser.Parse(["--report-run-root", "artifacts/benchmark/run"]);
+
+        Assert.Equal("artifacts/benchmark/run", parsed.ReportRunRoot);
+    }
+
+    [Fact]
+    public void Parse_RejectsDuplicateCaseAlias()
+    {
+        Assert.Throws<BenchmarkException>(() => BenchmarkOptionsParser.Parse(
+            ["--case", "sample", "--case-id", "sample"]));
     }
 
     [Theory]

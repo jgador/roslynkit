@@ -198,24 +198,10 @@ internal sealed class WorkspaceDaemonServer
                 "A daemon connection must begin with a handshake request.");
         }
 
-        DaemonHandshakeResponse handshakeResponse;
-        try
-        {
-            DaemonProtocol.EnsureCompatible(handshake);
-            handshakeResponse = new DaemonHandshakeResponse(
-                RoslynKitBuildInfo.DaemonProtocolVersion,
-                handshake.RequestId,
-                Accepted: true,
-                Diagnostic: null);
-        }
-        catch (DaemonProtocolException exception) when (exception.Error == DaemonProtocolError.UnsupportedVersion)
-        {
-            handshakeResponse = new DaemonHandshakeResponse(
-                RoslynKitBuildInfo.DaemonProtocolVersion,
-                handshake.RequestId,
-                Accepted: false,
-                exception.Message);
-        }
+        var handshakeResponse = new DaemonHandshakeResponse(
+            handshake.RequestId,
+            Accepted: true,
+            Diagnostic: null);
 
         await DaemonProtocol.WriteResponseAsync(
             pipe,
@@ -236,7 +222,6 @@ internal sealed class WorkspaceDaemonServer
             return;
         }
 
-        DaemonProtocol.EnsureCompatible(request);
         DaemonResponse? response = request switch
         {
             DaemonCommandRequest command => await ExecuteCommandAsync(

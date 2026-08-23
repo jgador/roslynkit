@@ -17,8 +17,6 @@ internal static class BenchmarkConditions
 /// </summary>
 internal sealed record BenchmarkCatalogDocument
 {
-    public int SchemaVersion { get; init; }
-
     public BenchmarkCase[] Cases { get; init; } = [];
 }
 
@@ -65,8 +63,6 @@ internal sealed record BenchmarkRunConfiguration
 /// </summary>
 internal sealed record BenchmarkRunDocument
 {
-    public int SchemaVersion { get; init; }
-
     public DateTimeOffset CreatedAtUtc { get; init; }
 
     public DateTimeOffset UpdatedAtUtc { get; set; }

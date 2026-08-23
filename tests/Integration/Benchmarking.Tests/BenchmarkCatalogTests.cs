@@ -26,7 +26,6 @@ public sealed class BenchmarkCatalogTests
             "tests/Integration/Benchmarking/cases.json",
             """
             {
-              "schemaVersion": 1,
               "cases": [{
                 "id": "sample-case",
                 "isDefault": true,
@@ -41,9 +40,9 @@ public sealed class BenchmarkCatalogTests
     }
 
     [Theory]
-    [InlineData("{\"schemaVersion\":1,\"cases\":null}")]
-    [InlineData("{\"schemaVersion\":1,\"cases\":[{\"id\":\"sample-case\",\"isDefault\":true,\"intent\":\"intent\",\"query\":\"query\",\"requiredEvidenceGroups\":null}]}")]
-    [InlineData("{\"schemaVersion\":1,\"cases\":[{\"id\":\"sample-case\",\"isDefault\":true,\"intent\":\"intent\",\"query\":\"query\",\"requiredEvidenceGroups\":[null]}]}")]
+    [InlineData("{\"cases\":null}")]
+    [InlineData("{\"cases\":[{\"id\":\"sample-case\",\"isDefault\":true,\"intent\":\"intent\",\"query\":\"query\",\"requiredEvidenceGroups\":null}]}")]
+    [InlineData("{\"cases\":[{\"id\":\"sample-case\",\"isDefault\":true,\"intent\":\"intent\",\"query\":\"query\",\"requiredEvidenceGroups\":[null]}]}")]
     public void Load_RejectsNullCollections(string json)
     {
         using var repository = CreateValidRepository();

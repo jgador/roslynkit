@@ -5,7 +5,7 @@ public sealed class DaemonLifetimeLeaseTests
     [Fact]
     public void CreateMutexName_UsesGlobalWindowsNamespace()
     {
-        var name = DaemonLifetimeLease.CreateMutexName("roslynkit-v1-test");
+        var name = DaemonLifetimeLease.CreateMutexName("roslynkit-test");
 
         if (OperatingSystem.IsWindows())
         {

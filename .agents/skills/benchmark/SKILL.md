@@ -7,7 +7,7 @@ description: Run, inspect, analyze, resume, report, or clean the opt-in raw-text
 
 Treat the text after `$benchmark` as a forgiving command-like request. Accept obvious aliases, natural modifiers such as `3 trials` or `case daemon-disconnect`, and the controller's exact options. Do not silently ignore unknown or conflicting modifiers. A bare `$benchmark` behaves as `help`.
 
-Read [docs/benchmark.md](../../../docs/benchmark.md) before measured or state-changing work. [scripts/benchmark.sh](../../../scripts/benchmark.sh) remains authoritative for controller options:
+Read [docs/benchmark.md](../../../docs/benchmark.md) before measured or state-changing work. The C# benchmark helper is the single source of truth for every option, default, and validation rule; [scripts/benchmark.sh](../../../scripts/benchmark.sh) is the entrypoint that forwards those options and runs the judge:
 
 ```bash
 bash ./scripts/benchmark.sh [options]
@@ -46,4 +46,4 @@ The Bash controller launches the configured `codex exec` judge for each schedule
 - invalid sessions, correctness failures, and notable outliers;
 - a concise conclusion and the next most useful command.
 
-The Bash controller owns options, scheduling, and direct `codex exec` calls. It clears host-injected `CODEX_THREAD_ID`, uses `--ephemeral`, and retains `CODEX_HOME`. The C# helper owns catalog validation, retrieval, JSON Lines (JSONL) evaluation, persisted run state, and reports; it does not launch Codex. Judge prompts prohibit tool calls, and the evaluator rejects tool events; `--sandbox read-only` does not mean tools are disabled.
+The Bash controller forwards user options to the helper, schedules the judge loop from the helper's control directive, and makes the direct `codex exec` calls. It keeps only build-free `--clean` and `--help`, clears host-injected `CODEX_THREAD_ID`, uses `--ephemeral`, and retains `CODEX_HOME`. The C# helper owns option parsing, defaults, validation, catalog validation, retrieval, JSON Lines (JSONL) evaluation, persisted run state, and reports; it does not launch Codex. Judge prompts prohibit tool calls, and the evaluator rejects tool events; `--sandbox read-only` does not mean tools are disabled.

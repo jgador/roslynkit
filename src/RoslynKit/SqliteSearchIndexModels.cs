@@ -47,7 +47,6 @@ internal sealed record SqliteSearchIndexQuery(
 /// Reports persistent metadata for one indexed target partition.
 /// </summary>
 internal sealed record SqliteSearchIndexMetadata(
-    int SchemaVersion,
     RepositoryRelativePath TargetIdentity,
     string? Fingerprint,
     DateTimeOffset IndexedAtUtc,

@@ -6,28 +6,30 @@ namespace RoslynKit.Benchmarking.Tests;
 public sealed class BenchmarkApplicationTests
 {
     [Fact]
-    public async Task RunAsync_PrepareDryRunPrintsPlanWithoutCreatingRunOrStartingProcess()
+    public async Task RunAsync_PrepareDryRunPrintsPlanToErrorAndDirectiveToOutput()
     {
         using var repository = CreateRepository();
         var processRunner = new CountingProcessRunner();
         using var output = new StringWriter();
-        var application = CreateApplication(repository, processRunner, output);
+        using var error = new StringWriter();
+        var application = CreateApplication(repository, processRunner, output, error);
 
         var exitCode = await application.RunAsync(
             ["prepare", "--dry-run", "--trials", "1", "--case", "sample-case"],
             TestContext.Current.CancellationToken);
 
+        var control = ParseControl(output.ToString());
         Assert.Equal(0, exitCode);
         Assert.Equal(0, processRunner.InvocationCount);
         Assert.False(Directory.Exists(Path.Combine(repository.RootPath, "artifacts", "benchmark")));
-        Assert.Contains("Preparation:", output.ToString(), StringComparison.Ordinal);
-        Assert.Contains("Sessions:", output.ToString(), StringComparison.Ordinal);
-        Assert.Contains("--text-only --compact --balanced", output.ToString(), StringComparison.Ordinal);
-        Assert.DoesNotContain("Codex:", output.ToString(), StringComparison.Ordinal);
+        Assert.Equal("dry-run", control["action"]);
+        Assert.Contains("Preparation:", error.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Sessions:", error.ToString(), StringComparison.Ordinal);
+        Assert.Contains("--text-only --compact --balanced", error.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task RunAsync_PrepareCreatesRunBuildsIndexAndPrintsOnlyRunRoot()
+    public async Task RunAsync_PrepareCreatesRunBuildsIndexAndPrintsRunControlDirective()
     {
         using var repository = CreateRepository();
         var apphostPath = CreateAppHost(repository);
@@ -39,24 +41,27 @@ public sealed class BenchmarkApplicationTests
             ["prepare", "--case", "sample-case", "--roslynkit-path", apphostPath],
             TestContext.Current.CancellationToken);
 
-        var runRoot = output.ToString().Trim();
+        var control = ParseControl(output.ToString());
+        var runRoot = control["run-root"];
         var document = BenchmarkRunStore.Load(repository.RootPath, runRoot);
         Assert.Equal(0, exitCode);
+        Assert.Equal("run", control["action"]);
         Assert.True(Path.IsPathFullyQualified(runRoot));
-        Assert.Equal(runRoot + Environment.NewLine, output.ToString());
         Assert.Equal(1, processRunner.InvocationCount);
         Assert.False(document.Configuration.BuildRoslynKit);
+        Assert.Equal("gpt-5.6-terra", control["model"]);
+        Assert.Equal("high", control["reasoning-effort"]);
         Assert.Equal(
-            BenchmarkSchedule.Pending(document).Select(key => key.RunId),
-            File.ReadAllLines(Path.Combine(runRoot, "schedule.txt")));
-        Assert.Equal("gpt-5.6-terra\n", File.ReadAllText(Path.Combine(runRoot, "model.txt")));
-        Assert.Equal("high\n", File.ReadAllText(Path.Combine(runRoot, "reasoning-effort.txt")));
+            string.Join(",", BenchmarkSchedule.Pending(document).Select(key => key.RunId)),
+            control["sessions"]);
+        Assert.False(File.Exists(Path.Combine(runRoot, "schedule.txt")));
+        Assert.False(File.Exists(Path.Combine(runRoot, "model.txt")));
         Assert.True(File.Exists(Path.Combine(runRoot, "runs.csv")));
         Assert.True(File.Exists(Path.Combine(runRoot, "summary.md")));
     }
 
     [Fact]
-    public async Task RunAsync_PrepareResumeWritesOnlyPendingScheduleEntries()
+    public async Task RunAsync_PrepareResumeEmitsOnlyPendingSessions()
     {
         using var repository = CreateRepository();
         var runRoot = CreateRunRoot(repository, "partial-run");
@@ -72,11 +77,45 @@ public sealed class BenchmarkApplicationTests
             ["prepare", "--resume-run-root", runRoot],
             TestContext.Current.CancellationToken);
 
+        var control = ParseControl(output.ToString());
         var pending = Assert.Single(BenchmarkSchedule.Pending(BenchmarkRunStore.Load(repository.RootPath, runRoot)));
         Assert.Equal(0, exitCode);
-        Assert.Equal(runRoot + Environment.NewLine, output.ToString());
+        Assert.Equal("run", control["action"]);
+        Assert.Equal(runRoot, control["run-root"]);
         Assert.Equal(1, processRunner.InvocationCount);
-        Assert.Equal([pending.RunId], File.ReadAllLines(Path.Combine(runRoot, "schedule.txt")));
+        Assert.Equal(pending.RunId, control["sessions"]);
+    }
+
+    [Fact]
+    public async Task RunAsync_PrepareReportRunRootRefreshesReportsAndEmitsReportAction()
+    {
+        using var repository = CreateRepository();
+        var runRoot = CreateRunRoot(repository, "prepare-report-run");
+        var document = CreateRunDocument(
+            repository,
+            sessions:
+            [
+                BenchmarkTestData.Session(BenchmarkConditions.RawText, 1, 100),
+                BenchmarkTestData.Session(BenchmarkConditions.RoslynKitSearch, 1, 75),
+            ]);
+        await BenchmarkRunStore.SaveAsync(runRoot, document, TestContext.Current.CancellationToken);
+        var processRunner = new CountingProcessRunner();
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var application = CreateApplication(repository, processRunner, output, error);
+
+        var exitCode = await application.RunAsync(
+            ["prepare", "--report-run-root", runRoot],
+            TestContext.Current.CancellationToken);
+
+        var control = ParseControl(output.ToString());
+        Assert.Equal(0, exitCode);
+        Assert.Equal(0, processRunner.InvocationCount);
+        Assert.Equal("report", control["action"]);
+        Assert.Equal(runRoot, control["run-root"]);
+        Assert.False(control.ContainsKey("model"));
+        Assert.True(File.Exists(Path.Combine(runRoot, "runs.csv")));
+        Assert.Contains("Benchmark reports refreshed", error.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -246,7 +285,39 @@ public sealed class BenchmarkApplicationTests
         IProcessRunner processRunner,
         TextWriter output)
     {
-        return new BenchmarkApplication(repository.RootPath, processRunner, output, TimeProvider.System);
+        return new BenchmarkApplication(repository.RootPath, processRunner, output, TextWriter.Null, TimeProvider.System);
+    }
+
+    private static BenchmarkApplication CreateApplication(
+        TemporaryBenchmarkRepository repository,
+        IProcessRunner processRunner,
+        TextWriter output,
+        TextWriter error)
+    {
+        return new BenchmarkApplication(repository.RootPath, processRunner, output, error, TimeProvider.System);
+    }
+
+    private static IReadOnlyDictionary<string, string> ParseControl(string output)
+    {
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        var sessions = new List<string>();
+        foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = line.IndexOf('=', StringComparison.Ordinal);
+            Assert.True(separator > 0, $"Control line was not key=value: '{line}'.");
+            var key = line[..separator];
+            var value = line[(separator + 1)..];
+            if (key == "session")
+            {
+                sessions.Add(value);
+                continue;
+            }
+
+            values[key] = value;
+        }
+
+        values["sessions"] = string.Join(",", sessions);
+        return values;
     }
 
     private static TemporaryBenchmarkRepository CreateRepository()

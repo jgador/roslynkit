@@ -69,7 +69,22 @@ shift
 case "$command_name" in
     prepare)
         if [[ " $* " == *" --dry-run "* ]]; then
-            printf 'dry-run plan\n'
+            printf 'dry-run plan\n' >&2
+            printf 'action=dry-run\n'
+            exit 0
+        fi
+
+        report_root=""
+        previous=""
+        for token in "$@"; do
+            if [[ "$previous" == "--report-run-root" ]]; then
+                report_root="$token"
+            fi
+            previous="$token"
+        done
+        if [[ -n "$report_root" ]]; then
+            printf 'Benchmark reports refreshed: %s\n' "$report_root" >&2
+            printf 'action=report\nrun-root=%s\n' "$report_root"
             exit 0
         fi
 
@@ -94,14 +109,13 @@ case "$command_name" in
                 ;;
         esac
         mkdir -p "$run_root/answers" "$run_root/events" "$run_root/stderr" "$run_root/prompts"
+        printf 'action=run\nrun-root=%s\nmodel=%s\nreasoning-effort=%s\n' \
+            "$run_root" "$model" "$reasoning_effort"
         if [[ -n "$schedule" ]]; then
-            printf '%s\n' "$schedule" >"$run_root/schedule.txt"
-        else
-            : >"$run_root/schedule.txt"
+            while IFS= read -r session_id; do
+                printf 'session=%s\n' "$session_id"
+            done <<<"$schedule"
         fi
-        printf '%s\n' "$model" >"$run_root/model.txt"
-        printf '%s\n' "$reasoning_effort" >"$run_root/reasoning-effort.txt"
-        printf '%s\n' "$run_root"
         ;;
     prepare-session)
         run_root=""
@@ -224,6 +238,16 @@ if bash "$clean_repository/scripts/benchmark.sh" --clean --dry-run >/dev/null 2>
 fi
 assert_contains '--clean cannot be combined with other options' "$TEST_ROOT/clean-conflict.stderr"
 
+# --help is honored build-free only when standalone. Combined with another token it
+# must not short-circuit, so --clean --help still hits the --clean exclusivity error
+# instead of printing usage.
+if bash "$clean_repository/scripts/benchmark.sh" --clean --help \
+    >"$TEST_ROOT/clean-help-conflict.stdout" 2>"$TEST_ROOT/clean-help-conflict.stderr"; then
+    fail 'Expected clean combined with help to fail.'
+fi
+assert_contains '--clean cannot be combined with other options' "$TEST_ROOT/clean-help-conflict.stderr"
+assert_not_contains 'Usage:' "$TEST_ROOT/clean-help-conflict.stdout"
+
 symlink_repository="$TEST_ROOT/symlink repository"
 symlink_target="$TEST_ROOT/symlink-artifacts-target"
 mkdir -p "$symlink_repository/scripts" "$symlink_target/benchmark"
@@ -287,24 +311,25 @@ bash "$CONTROLLER" \
 assert_contains 'codex <exec> <--json> <--ephemeral> <--ignore-rules> <--sandbox> <read-only> <--model> <resume-model> <--config> <model_reasoning_effort="low">' "$BENCHMARK_TEST_LOG"
 unset BENCHMARK_TEST_MODE
 
+# The controller forwards user arguments verbatim; the C# helper owns defaults and
+# validation, so the controller no longer injects --model or --case defaults here.
 : >"$BENCHMARK_TEST_LOG"
-bash "$CONTROLLER" --dry-run >"$TEST_ROOT/dry-run.stdout"
-assert_contains 'dry-run plan' "$TEST_ROOT/dry-run.stdout"
+bash "$CONTROLLER" --dry-run >"$TEST_ROOT/dry-run.stdout" 2>"$TEST_ROOT/dry-run.stderr"
+assert_contains 'dry-run plan' "$TEST_ROOT/dry-run.stderr"
 assert_not_contains 'codex <exec>' "$BENCHMARK_TEST_LOG"
 assert_contains ' <prepare> ' "$BENCHMARK_TEST_LOG"
-assert_contains '<--model> <gpt-5.6-terra>' "$BENCHMARK_TEST_LOG"
-assert_contains '<--case> <default>' "$BENCHMARK_TEST_LOG"
+assert_contains ' <--dry-run>' "$BENCHMARK_TEST_LOG"
 
+# Report mode is a helper-owned option: the controller forwards it to prepare and
+# runs no judge session and no per-session preparation.
 : >"$BENCHMARK_TEST_LOG"
-bash "$CONTROLLER" --report-run-root "$TEST_ROOT/run space" >"$TEST_ROOT/report.stdout"
-assert_contains 'helper report <--run-root> <' "$BENCHMARK_TEST_LOG"
-assert_not_contains ' <prepare> ' "$BENCHMARK_TEST_LOG"
+bash "$CONTROLLER" --report-run-root "$TEST_ROOT/run space" \
+    >"$TEST_ROOT/report.stdout" 2>"$TEST_ROOT/report.stderr"
+assert_contains ' <prepare> ' "$BENCHMARK_TEST_LOG"
+assert_contains ' <--report-run-root> ' "$BENCHMARK_TEST_LOG"
+assert_not_contains ' <prepare-session> ' "$BENCHMARK_TEST_LOG"
 assert_not_contains 'codex <exec>' "$BENCHMARK_TEST_LOG"
-
-if bash "$CONTROLLER" --case sample --case-id sample >/dev/null 2>"$TEST_ROOT/duplicate.stderr"; then
-    fail 'Expected duplicate case aliases to fail.'
-fi
-assert_contains 'specified more than once' "$TEST_ROOT/duplicate.stderr"
+assert_contains 'Benchmark reports refreshed' "$TEST_ROOT/report.stderr"
 
 rm -- "$TEST_ROOT/bin/codex"
 export PATH="$TEST_ROOT/bin:/usr/bin:/bin"

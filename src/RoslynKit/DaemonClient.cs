@@ -150,9 +150,7 @@ internal sealed class DaemonClient
             return null;
         }
 
-        var request = new DaemonStatusRequest(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
-            Guid.NewGuid());
+        var request = new DaemonStatusRequest(Guid.NewGuid());
         var response = await _sendAsync(
             endpoint.EndpointName,
             request,
@@ -175,9 +173,7 @@ internal sealed class DaemonClient
             return null;
         }
 
-        var request = new DaemonStopRequest(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
-            Guid.NewGuid());
+        var request = new DaemonStopRequest(Guid.NewGuid());
         var response = await _sendAsync(
             endpoint.EndpointName,
             request,
@@ -316,7 +312,6 @@ internal sealed class DaemonClient
 
     private static void EnsureResponse(DaemonResponse response, Guid requestId)
     {
-        DaemonProtocol.EnsureCompatible(response);
         if (response.RequestId != requestId)
         {
             throw new DaemonProtocolException(

@@ -4,9 +4,9 @@ using System.Text.Json.Serialization;
 namespace RoslynKit;
 
 /// <summary>
-/// Carries the compatibility version and correlation identifier shared by every daemon wire message.
+/// Carries the correlation identifier shared by every daemon wire message.
 /// </summary>
-internal abstract record DaemonMessage(int ProtocolVersion, Guid RequestId);
+internal abstract record DaemonMessage(Guid RequestId);
 
 /// <summary>
 /// Identifies the closed set of messages accepted by a daemon connection.
@@ -16,8 +16,8 @@ internal abstract record DaemonMessage(int ProtocolVersion, Guid RequestId);
 [JsonDerivedType(typeof(DaemonCommandRequest), "command")]
 [JsonDerivedType(typeof(DaemonStatusRequest), "status")]
 [JsonDerivedType(typeof(DaemonStopRequest), "stop")]
-internal abstract record DaemonRequest(int ProtocolVersion, Guid RequestId)
-    : DaemonMessage(ProtocolVersion, RequestId);
+internal abstract record DaemonRequest(Guid RequestId)
+    : DaemonMessage(RequestId);
 
 /// <summary>
 /// Identifies the closed set of messages returned by a daemon connection.
@@ -27,35 +27,33 @@ internal abstract record DaemonRequest(int ProtocolVersion, Guid RequestId)
 [JsonDerivedType(typeof(DaemonCommandResponse), "command")]
 [JsonDerivedType(typeof(DaemonStatusResponse), "status")]
 [JsonDerivedType(typeof(DaemonStopResponse), "stop")]
-internal abstract record DaemonResponse(int ProtocolVersion, Guid RequestId)
-    : DaemonMessage(ProtocolVersion, RequestId);
+internal abstract record DaemonResponse(Guid RequestId)
+    : DaemonMessage(RequestId);
 
 /// <summary>
 /// Probes a connected endpoint before it is considered ready for requests.
 /// </summary>
-internal sealed record DaemonHandshakeRequest(int ProtocolVersion, Guid RequestId)
-    : DaemonRequest(ProtocolVersion, RequestId);
+internal sealed record DaemonHandshakeRequest(Guid RequestId)
+    : DaemonRequest(RequestId);
 
 /// <summary>
 /// Confirms whether a connected endpoint accepts the client's protocol handshake.
 /// </summary>
 internal sealed record DaemonHandshakeResponse(
-    int ProtocolVersion,
     Guid RequestId,
     bool Accepted,
     string? Diagnostic)
-    : DaemonResponse(ProtocolVersion, RequestId);
+    : DaemonResponse(RequestId);
 
 /// <summary>
 /// Carries one locally parsed workspace command with canonical path options and an absolute deadline.
 /// </summary>
 internal sealed record DaemonCommandRequest(
-    int ProtocolVersion,
     Guid RequestId,
     string CommandName,
     IReadOnlyDictionary<string, string> Options,
     DateTimeOffset DeadlineUtc)
-    : DaemonRequest(ProtocolVersion, RequestId)
+    : DaemonRequest(RequestId)
 {
     private static readonly HashSet<string> EligibleCommandNames = new(StringComparer.Ordinal)
     {
@@ -107,7 +105,6 @@ internal sealed record DaemonCommandRequest(
         }
 
         return new DaemonCommandRequest(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
             requestId,
             command.Name,
             new ReadOnlyDictionary<string, string>(options),
@@ -119,7 +116,6 @@ internal sealed record DaemonCommandRequest(
     /// </summary>
     public ParsedCommand ToParsedCommand()
     {
-        DaemonProtocol.EnsureCompatible(this);
         EnsureEligibleCommand(CommandName);
         var builtin = BuiltinCommandRegistry.GetBuiltin(CommandName)
             ?? throw new DaemonProtocolException(
@@ -207,12 +203,11 @@ internal sealed record DaemonCommandRequest(
 /// Returns one complete buffered command result without publishing partial process output.
 /// </summary>
 internal sealed record DaemonCommandResponse(
-    int ProtocolVersion,
     Guid RequestId,
     int ExitCode,
     string Stdout,
     string Stderr)
-    : DaemonResponse(ProtocolVersion, RequestId)
+    : DaemonResponse(RequestId)
 {
     public CliProcessResult ToProcessResult()
     {
@@ -223,7 +218,6 @@ internal sealed record DaemonCommandResponse(
     {
         ArgumentNullException.ThrowIfNull(result);
         return new DaemonCommandResponse(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
             requestId,
             result.ExitCode,
             result.Stdout,
@@ -234,14 +228,13 @@ internal sealed record DaemonCommandResponse(
 /// <summary>
 /// Requests a non-starting snapshot of daemon lifecycle and workspace state.
 /// </summary>
-internal sealed record DaemonStatusRequest(int ProtocolVersion, Guid RequestId)
-    : DaemonRequest(ProtocolVersion, RequestId);
+internal sealed record DaemonStatusRequest(Guid RequestId)
+    : DaemonRequest(RequestId);
 
 /// <summary>
 /// Reports daemon lifecycle, workspace generation, and bounded diagnostic state.
 /// </summary>
 internal sealed record DaemonStatusResponse(
-    int ProtocolVersion,
     Guid RequestId,
     bool Running,
     string? TargetPath,
@@ -251,16 +244,16 @@ internal sealed record DaemonStatusResponse(
     int ActiveRequests,
     int QueuedRequests,
     string? Diagnostic)
-    : DaemonResponse(ProtocolVersion, RequestId);
+    : DaemonResponse(RequestId);
 
 /// <summary>
 /// Requests graceful daemon shutdown without starting an absent daemon.
 /// </summary>
-internal sealed record DaemonStopRequest(int ProtocolVersion, Guid RequestId)
-    : DaemonRequest(ProtocolVersion, RequestId);
+internal sealed record DaemonStopRequest(Guid RequestId)
+    : DaemonRequest(RequestId);
 
 /// <summary>
 /// Confirms whether graceful daemon shutdown has begun.
 /// </summary>
-internal sealed record DaemonStopResponse(int ProtocolVersion, Guid RequestId, bool Stopping)
-    : DaemonResponse(ProtocolVersion, RequestId);
+internal sealed record DaemonStopResponse(Guid RequestId, bool Stopping)
+    : DaemonResponse(RequestId);

@@ -22,12 +22,8 @@ public sealed class GitWorkspaceIdentityResolverTests
         Assert.True(result.IsSupported, result.Diagnostic);
         var identity = Assert.IsType<GitWorkspaceIdentity>(result.Identity);
         Assert.Equal("src/App.csproj", NormalizeRelativePath(Path.GetRelativePath(identity.WorktreeRoot, identity.TargetPath)));
-        Assert.Equal(RoslynKitBuildInfo.DaemonProtocolVersion, identity.ProtocolVersion);
-        Assert.Equal(RoslynKitBuildInfo.Identity, identity.RoslynKit);
         Assert.False(string.IsNullOrWhiteSpace(identity.ProcessArchitecture));
-        Assert.False(string.IsNullOrWhiteSpace(identity.DotNetSdk.Version));
         Assert.True(Directory.Exists(identity.MSBuild.MSBuildPath));
-        Assert.False(string.IsNullOrWhiteSpace(identity.MSBuild.InstanceVersion));
         Assert.Contains("DOTNET_ROOT", identity.BuildEnvironment.Keys);
         Assert.Contains("MSBuildSDKsPath", identity.BuildEnvironment.Keys);
         Assert.Contains("NUGET_PACKAGES", identity.BuildEnvironment.Keys);

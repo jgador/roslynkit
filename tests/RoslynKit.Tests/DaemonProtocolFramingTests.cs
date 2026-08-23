@@ -27,7 +27,6 @@ public sealed class DaemonProtocolFramingTests
         var decoded = Assert.IsType<DaemonCommandRequest>(
             await DaemonProtocol.ReadRequestAsync(fragmented, TestContext.Current.CancellationToken));
 
-        Assert.Equal(request.ProtocolVersion, decoded.ProtocolVersion);
         Assert.Equal(request.RequestId, decoded.RequestId);
         Assert.Equal(request.CommandName, decoded.CommandName);
         Assert.Equal(request.Options, decoded.Options);
@@ -73,10 +72,11 @@ public sealed class DaemonProtocolFramingTests
         Assert.Equal(DaemonProtocolError.InvalidUtf8, exception.Error);
     }
 
-    [Fact]
-    public async Task ReadRequestAsync_RejectsQuotedNumericProperties()
+    [Theory]
+    [InlineData("{\"messageType\":\"handshake\",\"unknownProperty\":\"1\",\"requestId\":\"10cb0757-c567-4276-a1a8-ec566d54cdcd\"}")]
+    [InlineData("{\"messageType\":\"handshake\",\"protocolVersion\":1,\"requestId\":\"10cb0757-c567-4276-a1a8-ec566d54cdcd\"}")]
+    public async Task ReadRequestAsync_RejectsUnknownProperties(string json)
     {
-        const string json = "{\"messageType\":\"handshake\",\"protocolVersion\":\"1\",\"requestId\":\"10cb0757-c567-4276-a1a8-ec566d54cdcd\"}";
         await using var stream = CreateFrame(System.Text.Encoding.UTF8.GetBytes(json));
 
         var exception = await Assert.ThrowsAsync<DaemonProtocolException>(
@@ -87,7 +87,7 @@ public sealed class DaemonProtocolFramingTests
 
     [Theory]
     [InlineData("{")]
-    [InlineData("{\"messageType\":\"unknown\",\"protocolVersion\":1,\"requestId\":\"10cb0757-c567-4276-a1a8-ec566d54cdcd\"}")]
+    [InlineData("{\"messageType\":\"unknown\",\"requestId\":\"10cb0757-c567-4276-a1a8-ec566d54cdcd\"}")]
     public async Task ReadRequestAsync_RejectsInvalidJsonMessage(string json)
     {
         await using var stream = CreateFrame(System.Text.Encoding.UTF8.GetBytes(json));
@@ -162,7 +162,6 @@ public sealed class DaemonProtocolFramingTests
     private static DaemonCommandRequest CreateRequest()
     {
         return new DaemonCommandRequest(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
             Guid.Parse("10cb0757-c567-4276-a1a8-ec566d54cdcd"),
             "symbols",
             new Dictionary<string, string>(StringComparer.Ordinal)

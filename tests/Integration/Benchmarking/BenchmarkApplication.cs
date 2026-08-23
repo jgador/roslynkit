@@ -10,12 +10,13 @@ internal sealed class BenchmarkApplication(
     string repositoryRoot,
     IProcessRunner processRunner,
     TextWriter output,
+    TextWriter error,
     TimeProvider timeProvider)
 {
     public static BenchmarkApplication CreateDefault()
     {
         var repositoryRoot = BenchmarkPaths.FindRepositoryRoot(Environment.CurrentDirectory);
-        return new BenchmarkApplication(repositoryRoot, new ProcessRunner(), Console.Out, TimeProvider.System);
+        return new BenchmarkApplication(repositoryRoot, new ProcessRunner(), Console.Out, Console.Error, TimeProvider.System);
     }
 
     /// <summary>
@@ -58,6 +59,17 @@ internal sealed class BenchmarkApplication(
                 BenchmarkCatalog.Load(repositoryRoot),
                 options.Case));
             await WriteDryRunAsync(dryRunDocument).ConfigureAwait(false);
+            await WriteControlAsync("dry-run").ConfigureAwait(false);
+            return 0;
+        }
+
+        if (options.ReportRunRoot is not null)
+        {
+            var reportRoot = BenchmarkPaths.ResolveExistingRunRoot(repositoryRoot, options.ReportRunRoot);
+            var reportDocument = BenchmarkRunStore.Load(repositoryRoot, reportRoot);
+            await BenchmarkReports.WriteAsync(reportRoot, reportDocument, cancellationToken).ConfigureAwait(false);
+            await error.WriteLineAsync($"Benchmark reports refreshed: {reportRoot}").ConfigureAwait(false);
+            await WriteControlAsync("report", reportRoot).ConfigureAwait(false);
             return 0;
         }
 
@@ -79,15 +91,18 @@ internal sealed class BenchmarkApplication(
 
         CreateArtifactDirectories(runRoot);
         var pending = BenchmarkSchedule.Pending(document);
-        await WriteControllerConfigurationAsync(runRoot, document.Configuration, cancellationToken).ConfigureAwait(false);
-        await WriteScheduleAsync(runRoot, pending, cancellationToken).ConfigureAwait(false);
         if (pending.Count > 0)
         {
             await PrepareAsync(document.Configuration, cancellationToken).ConfigureAwait(false);
         }
 
         await BenchmarkReports.WriteAsync(runRoot, document, cancellationToken).ConfigureAwait(false);
-        await output.WriteLineAsync(runRoot).ConfigureAwait(false);
+        await WriteControlAsync(
+            "run",
+            runRoot,
+            document.Configuration.Model,
+            document.Configuration.ReasoningEffort,
+            pending.Select(key => key.RunId).ToArray()).ConfigureAwait(false);
         return 0;
     }
 
@@ -210,7 +225,6 @@ internal sealed class BenchmarkApplication(
         var now = timeProvider.GetUtcNow();
         return new BenchmarkRunDocument
         {
-            SchemaVersion = BenchmarkRunStore.SchemaVersion,
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
             Configuration = new BenchmarkRunConfiguration
@@ -264,13 +278,13 @@ internal sealed class BenchmarkApplication(
     {
         if (document.Configuration.BuildRoslynKit)
         {
-            await output.WriteLineAsync(
+            await error.WriteLineAsync(
                 $"Preparation: {BenchmarkCommands.Display(BenchmarkCommands.BuildRoslynKit(repositoryRoot))}").ConfigureAwait(false);
         }
 
-        await output.WriteLineAsync(
+        await error.WriteLineAsync(
             $"Index: {BenchmarkCommands.Display(BenchmarkCommands.Index(repositoryRoot, document.Configuration.RoslynKitPath, document.Configuration.IndexPath))}").ConfigureAwait(false);
-        await output.WriteLineAsync("Sessions:").ConfigureAwait(false);
+        await error.WriteLineAsync("Sessions:").ConfigureAwait(false);
         foreach (var key in BenchmarkSchedule.Create(document))
         {
             var benchmarkCase = document.Cases.Single(candidate => candidate.Id == key.CaseId);
@@ -282,37 +296,44 @@ internal sealed class BenchmarkApplication(
                     benchmarkCase,
                     document.Configuration.MaximumResults))
                 : "controller plain-text ranked excerpt search";
-            await output.WriteLineAsync($"- {key.RunId}").ConfigureAwait(false);
-            await output.WriteLineAsync($"  Retrieval: {retrieval}").ConfigureAwait(false);
+            await error.WriteLineAsync($"- {key.RunId}").ConfigureAwait(false);
+            await error.WriteLineAsync($"  Retrieval: {retrieval}").ConfigureAwait(false);
         }
     }
 
-    private static async Task WriteScheduleAsync(
-        string runRoot,
-        IReadOnlyList<BenchmarkSessionKey> pending,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// Emits the control directive that the Bash controller consumes on standard output.
+    /// </summary>
+    private async Task WriteControlAsync(
+        string action,
+        string? runRoot = null,
+        string? model = null,
+        string? reasoningEffort = null,
+        IReadOnlyList<string>? sessions = null)
     {
-        await File.WriteAllLinesAsync(
-            Path.Combine(runRoot, "schedule.txt"),
-            pending.Select(key => key.RunId),
-            cancellationToken).ConfigureAwait(false);
-    }
+        var builder = new System.Text.StringBuilder();
+        builder.Append("action=").Append(action).Append('\n');
+        if (runRoot is not null)
+        {
+            builder.Append("run-root=").Append(EnsureControlValue(runRoot, "run root")).Append('\n');
+        }
 
-    private static async Task WriteControllerConfigurationAsync(
-        string runRoot,
-        BenchmarkRunConfiguration configuration,
-        CancellationToken cancellationToken)
-    {
-        ValidateControllerValue(configuration.Model, "model");
-        ValidateControllerValue(configuration.ReasoningEffort, "reasoning effort");
-        await File.WriteAllTextAsync(
-            Path.Combine(runRoot, "model.txt"),
-            configuration.Model + "\n",
-            cancellationToken).ConfigureAwait(false);
-        await File.WriteAllTextAsync(
-            Path.Combine(runRoot, "reasoning-effort.txt"),
-            configuration.ReasoningEffort + "\n",
-            cancellationToken).ConfigureAwait(false);
+        if (model is not null)
+        {
+            builder.Append("model=").Append(EnsureControlValue(model, "model")).Append('\n');
+        }
+
+        if (reasoningEffort is not null)
+        {
+            builder.Append("reasoning-effort=").Append(EnsureControlValue(reasoningEffort, "reasoning effort")).Append('\n');
+        }
+
+        foreach (var session in sessions ?? [])
+        {
+            builder.Append("session=").Append(EnsureControlValue(session, "session id")).Append('\n');
+        }
+
+        await output.WriteAsync(builder.ToString()).ConfigureAwait(false);
     }
 
     private static BenchmarkSessionKey GetPendingKey(BenchmarkRunDocument document, string runId)
@@ -489,7 +510,7 @@ internal sealed class BenchmarkApplication(
 
     private static bool IsHelp(string value) => value is "--help" or "-h" or "help";
 
-    private static void ValidateControllerValue(string value, string name)
+    private static string EnsureControlValue(string value, string name)
     {
         if (string.IsNullOrWhiteSpace(value)
             || value.Contains('\r', StringComparison.Ordinal)
@@ -497,6 +518,8 @@ internal sealed class BenchmarkApplication(
         {
             throw new BenchmarkException($"Benchmark {name} must be one nonempty line.");
         }
+
+        return value;
     }
 
     private static void CreateArtifactDirectories(string runRoot)

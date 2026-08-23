@@ -8,8 +8,6 @@ namespace RoslynKit.Benchmarking;
 /// </summary>
 internal static partial class BenchmarkCatalog
 {
-    public const int SchemaVersion = 1;
-
     public static BenchmarkCase[] Load(string repositoryRoot)
     {
         var path = Path.Combine(repositoryRoot, "tests", "Integration", "Benchmarking", "cases.json");
@@ -27,11 +25,6 @@ internal static partial class BenchmarkCatalog
         catch (JsonException exception)
         {
             throw new BenchmarkException($"Benchmark catalog was not valid strict JSON: {exception.Message}", exception);
-        }
-
-        if (document.SchemaVersion != SchemaVersion)
-        {
-            throw new BenchmarkException($"Benchmark catalog must use schemaVersion {SchemaVersion}.");
         }
 
         if (document.Cases is null)

@@ -36,12 +36,23 @@ The benchmark reads ten case definitions from [tests/Integration/Benchmarking/ca
 
 ## Controller boundary
 
-The Bash controller owns option parsing, scheduling, and the direct judge invocation. The C# benchmark helper is an internal controller collaborator with four operations:
+The C# benchmark helper is the single source of truth for every option, default, and validation rule. The Bash controller does not parse measured-run options; it forwards user arguments verbatim to the helper and drives only the paid judge turn. This keeps the two layers from drifting: adding or changing a helper option requires no controller change. The helper has four operations:
 
-- `prepare` validates the catalog, creates `run.json`, builds RoslynKit when required, refreshes the text-only index, and produces the schedule.
+- `prepare` parses and validates all options, selects the mode, and prints a control directive on standard output. For a measured run it validates the catalog, creates `run.json`, builds RoslynKit when required, refreshes the text-only index, and lists the scheduled sessions. For `--dry-run` and `--report-run-root` it does the requested work, writes human-readable text to standard error, and emits a non-run directive.
 - `prepare-session` retrieves raw-text or RoslynKit evidence and writes the evidence and judge-prompt files for one scheduled session.
 - `evaluate-session` parses the judge JSONL, validates evidence and usage, persists the session result, and updates the run state.
 - `report` derives `runs.csv` and `summary.md` from the persisted run state.
+
+The controller keeps only two build-free options of its own, `--clean` and `--help`, so cleanup and usage work even when the helper cannot build. It honors each only as the sole argument; any other combination is forwarded to the helper (or, for `--clean`, rejected as non-exclusive) so invalid modifiers such as `--help --bogus` or `--clean --help` are never silently treated as help or cleanup. It recognizes exactly those two tokens; the helper rejects them as unknown, so the two layers cannot silently disagree on their meaning.
+
+### Control directive
+
+`prepare` prints a line-based control directive on standard output; all human-readable output goes to standard error. This is the entire controller-facing contract, so it needs no JSON parser:
+
+- `action=run|dry-run|report` selects controller behavior; an unknown action or line stops the controller.
+- for `action=run`, `run-root`, `model`, `reasoning-effort`, and zero or more `session` lines carry everything the judge loop needs.
+
+The controller passes `model` and `reasoning-effort` straight from the directive to `codex exec`, so resumed runs use their stored configuration rather than any re-typed options. The Bash regression suite exercises the directive against the real helper so any handoff drift fails in continuous integration.
 
 The helper may launch RoslynKit directly for retrieval, but it does not launch Bash or `codex`. The controller is deliberately Bash → C# helper plus Bash → `codex exec`; there is no Python controller and no C# → Bash → Codex nesting.
 
@@ -59,6 +70,6 @@ Input-token savings are `100 * (raw input - RoslynKit input) / raw input`. A pai
 
 ## Artifacts and reports
 
-Each new run writes one canonical schema-versioned typed document to `artifacts/benchmark/<timestamp>/run.json`. The C# helper derives `runs.csv` and `summary.md` from that document. Resume and report-only modes hydrate the same document, so historical benchmark artifacts produced by earlier Bash or Python implementations are intentionally unsupported.
+Each new run writes one canonical typed document to `artifacts/benchmark/<timestamp>/run.json`. The C# helper derives `runs.csv` and `summary.md` from that document. Resume and report-only modes hydrate the same document, so historical benchmark artifacts produced by earlier Bash or Python implementations are intentionally unsupported.
 
 Resume uses the cases and configuration stored in `run.json` and schedules only unfinished case, condition, and trial tuples. Report-only mode asks the helper to generate derived files from the persisted run state; it starts no Codex session and does not use the checked-in catalog.

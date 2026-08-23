@@ -221,7 +221,6 @@ public sealed class DaemonClientTests
         var client = CreateClient(
             sendAsync: (_, request, _, _) => Task.FromResult<DaemonResponse?>(
                 new DaemonStopResponse(
-                    RoslynKitBuildInfo.DaemonProtocolVersion,
                     request.RequestId,
                     Stopping: true)),
             probeAsync: (_, _, _) => throw new InvalidOperationException("Readiness was not expected."),
@@ -324,7 +323,6 @@ public sealed class DaemonClientTests
                 Assert.IsType<DaemonStopRequest>(request);
                 return Task.FromResult<DaemonResponse?>(
                     new DaemonStopResponse(
-                        RoslynKitBuildInfo.DaemonProtocolVersion,
                         request.RequestId,
                         Stopping: true));
             },
@@ -370,7 +368,6 @@ public sealed class DaemonClientTests
         var client = CreateClient(
             sendAsync: (_, request, _, _) => Task.FromResult<DaemonResponse?>(
                 new DaemonStatusResponse(
-                    RoslynKitBuildInfo.DaemonProtocolVersion,
                     request.RequestId,
                     Running: true,
                     TargetPath: targetPath,

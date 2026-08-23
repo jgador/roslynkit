@@ -8,8 +8,8 @@ namespace RoslynKit;
 /// </summary>
 internal static class DaemonEndpointName
 {
-    internal const string Prefix = "roslynkit-v1-";
-    internal const int Length = 77;
+    internal const string Prefix = "roslynkit-";
+    internal const int Length = 74;
 
     public static string Create(DaemonIdentity identity)
     {
@@ -32,7 +32,6 @@ internal static class DaemonEndpointName
             var workspace = identity.Workspace;
 
             writer.WriteStartObject();
-            writer.WriteNumber("schemaVersion", 1);
             writer.WriteStartObject("user");
             writer.WriteString("kind", identity.User.Kind);
             writer.WriteString("value", identity.User.Value);
@@ -42,15 +41,10 @@ internal static class DaemonEndpointName
             writer.WriteString("worktreeRoot", workspace.WorktreeRoot);
             writer.WriteString("targetPath", workspace.TargetPath);
             WriteGlobalJson(writer, workspace.GlobalJson);
-            writer.WriteStartObject("dotnetSdk");
-            writer.WriteString("version", workspace.DotNetSdk.Version);
-            writer.WriteEndObject();
             writer.WriteStartObject("msbuild");
             writer.WriteString("name", workspace.MSBuild.Name);
             writer.WriteString("discoveryType", workspace.MSBuild.DiscoveryType);
-            writer.WriteString("instanceVersion", workspace.MSBuild.InstanceVersion);
             writer.WriteString("path", workspace.MSBuild.MSBuildPath);
-            writer.WriteString("assemblyVersion", workspace.MSBuild.MSBuildAssemblyVersion);
             writer.WriteEndObject();
             writer.WriteStartObject("buildEnvironment");
             foreach (var pair in workspace.BuildEnvironment.OrderBy(pair => pair.Key, StringComparer.Ordinal))
@@ -59,11 +53,6 @@ internal static class DaemonEndpointName
             }
 
             writer.WriteEndObject();
-            writer.WriteStartObject("roslynKit");
-            writer.WriteString("informationalVersion", workspace.RoslynKit.InformationalVersion);
-            writer.WriteString("moduleVersionId", workspace.RoslynKit.ModuleVersionId);
-            writer.WriteEndObject();
-            writer.WriteNumber("protocolVersion", workspace.ProtocolVersion);
             writer.WriteString("processArchitecture", workspace.ProcessArchitecture);
             writer.WriteEndObject();
             writer.WriteEndObject();

@@ -52,7 +52,7 @@ public sealed class SqliteSearchIndexTests
     }
 
     [Fact]
-    public async Task ReplaceTargetAsync_SchemaVersionOneOmitsTargetPathAndPersistsCanonicalRelativeValues()
+    public async Task ReplaceTargetAsync_OmitsTargetPathAndPersistsCanonicalRelativeValues()
     {
         await using var area = SearchIndexTestArea.Create();
         var index = new SqliteSearchIndex(area.DatabasePath);
@@ -76,9 +76,11 @@ public sealed class SqliteSearchIndexTests
 
         var metadata = await index.ReadMetadataAsync(RelativePath(targetIdentity), cancellationToken);
         var targetColumns = await ReadColumnNamesAsync(area.DatabasePath, "search_index_targets", cancellationToken);
+        var tableNames = await ReadTableNamesAsync(area.DatabasePath, cancellationToken);
         var persisted = await ReadPersistedPathValuesAsync(area.DatabasePath, targetIdentity, cancellationToken);
 
-        Assert.Equal(1, metadata!.SchemaVersion);
+        Assert.NotNull(metadata);
+        Assert.DoesNotContain("search_index_schema", tableNames, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("target_path", targetColumns, StringComparer.OrdinalIgnoreCase);
         Assert.Equal(targetIdentity, persisted.TargetIdentity);
         Assert.Equal(projectPath, persisted.ProjectPath);
@@ -95,7 +97,7 @@ public sealed class SqliteSearchIndexTests
     }
 
     [Fact]
-    public async Task ReadMetadataAsync_RejectsVersionOneSchemaWithLegacyTargetPathColumn()
+    public async Task ReadMetadataAsync_RejectsLegacyTargetPathColumn()
     {
         await using var area = SearchIndexTestArea.Create();
         var index = new SqliteSearchIndex(area.DatabasePath);
@@ -392,29 +394,6 @@ public sealed class SqliteSearchIndexTests
 
         Assert.Contains("search_index_fts", exception.Message, StringComparison.Ordinal);
         Assert.Contains("incomplete", exception.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task ReadMetadataAsync_RejectsSchemaVersionMismatchWithRebuildGuidance()
-    {
-        await using var area = SearchIndexTestArea.Create();
-        var index = new SqliteSearchIndex(area.DatabasePath);
-        var cancellationToken = TestContext.Current.CancellationToken;
-        await index.ReplaceTargetAsync(
-            new SqliteSearchIndexTarget(RelativePath("target"), "fingerprint"),
-            [CreateSymbol("existing", "ExistingWorkspace", "existing workspace")],
-            cancellationToken);
-        await ExecuteSqlAsync(
-            area.DatabasePath,
-            "UPDATE search_index_schema SET schema_version = 999 WHERE schema_key = 1;",
-            cancellationToken);
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => index.ReadMetadataAsync(
-            RelativePath("target"),
-            cancellationToken));
-
-        Assert.Contains("schema version 999", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("Delete the index database", exception.Message, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -771,6 +750,29 @@ public sealed class SqliteSearchIndexTests
         while (await reader.ReadAsync(cancellationToken))
         {
             names.Add(reader.GetString(1));
+        }
+
+        return names;
+    }
+
+    private static async Task<IReadOnlySet<string>> ReadTableNamesAsync(
+        string databasePath,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = databasePath,
+            Mode = SqliteOpenMode.ReadOnly,
+            Pooling = false,
+        }.ToString());
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table';";
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            names.Add(reader.GetString(0));
         }
 
         return names;

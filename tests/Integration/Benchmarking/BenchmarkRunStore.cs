@@ -3,13 +3,11 @@ using System.Text.Json;
 namespace RoslynKit.Benchmarking;
 
 /// <summary>
-/// Persists and hydrates the canonical schema-versioned benchmark run document.
+/// Persists and hydrates the canonical benchmark run document.
 /// </summary>
 internal static class BenchmarkRunStore
 {
     public const string FileName = "run.json";
-
-    public const int SchemaVersion = 1;
 
     public static async Task SaveAsync(
         string runRoot,
@@ -49,11 +47,6 @@ internal static class BenchmarkRunStore
 
     private static void Validate(string repositoryRoot, string runRoot, BenchmarkRunDocument document)
     {
-        if (document.SchemaVersion != SchemaVersion)
-        {
-            throw new BenchmarkException($"Benchmark run document must use schemaVersion {SchemaVersion}.");
-        }
-
         if (document.Cases is null || document.Configuration is null || document.Sessions is null)
         {
             throw new BenchmarkException("Benchmark run document contains a null cases, configuration, or sessions property.");

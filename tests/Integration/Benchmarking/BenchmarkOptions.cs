@@ -24,6 +24,8 @@ internal sealed record BenchmarkOptions
 
     public string? ResumeRunRoot { get; init; }
 
+    public string? ReportRunRoot { get; init; }
+
     public bool DryRun { get; init; }
 
     public bool Help { get; init; }
@@ -40,7 +42,7 @@ internal static partial class BenchmarkOptionsParser
           dotnet run --project ./tests/Integration/Benchmarking/RoslynKit.Benchmarking.csproj -- <command> [options]
 
         Commands:
-          prepare [options]                         Create or resume a measured run and write schedule.txt
+          prepare [options]                         Create, resume, dry-run, or report a run and print the control directive
           prepare-session --run-root <path> --run-id <id>
                                                     Create one evidence and prompt artifact pair
           evaluate-session --run-root <path> --run-id <id> --exit-code <int>
@@ -58,6 +60,7 @@ internal static partial class BenchmarkOptionsParser
           --roslynkit-path <path>      Use an existing RoslynKit apphost
           --dry-run                    Print preparation and sessions without creating a run or starting a process
           --resume-run-root <path>     Resume missing sessions from one run document
+          --report-run-root <path>     Regenerate reports from one run document without starting a process
           --help                       Show this help
         """;
 
@@ -112,6 +115,10 @@ internal static partial class BenchmarkOptionsParser
                     AddOnce(seen, "resume-run-root", option);
                     options = options with { ResumeRunRoot = ReadValue(arguments, ref index, option) };
                     break;
+                case "--report-run-root":
+                    AddOnce(seen, "report-run-root", option);
+                    options = options with { ReportRunRoot = ReadValue(arguments, ref index, option) };
+                    break;
                 default:
                     throw new BenchmarkException($"Unknown benchmark option: '{option}'.");
             }
@@ -160,6 +167,19 @@ internal static partial class BenchmarkOptionsParser
         if (options.DryRun && options.ResumeRunRoot is not null)
         {
             throw new BenchmarkException("--dry-run cannot be combined with --resume-run-root.");
+        }
+
+        if (options.ReportRunRoot is not null)
+        {
+            if (options.DryRun)
+            {
+                throw new BenchmarkException("--report-run-root cannot be combined with --dry-run.");
+            }
+
+            if (options.ResumeRunRoot is not null)
+            {
+                throw new BenchmarkException("--report-run-root cannot be combined with --resume-run-root.");
+            }
         }
     }
 

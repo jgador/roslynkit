@@ -30,7 +30,6 @@ internal static class BenchmarkTestData
     {
         return new BenchmarkRunDocument
         {
-            SchemaVersion = BenchmarkRunStore.SchemaVersion,
             CreatedAtUtc = DateTimeOffset.Parse("2026-08-22T00:00:00Z", System.Globalization.CultureInfo.InvariantCulture),
             UpdatedAtUtc = DateTimeOffset.Parse("2026-08-22T00:00:00Z", System.Globalization.CultureInfo.InvariantCulture),
             Configuration = new BenchmarkRunConfiguration
@@ -90,7 +89,6 @@ internal static class BenchmarkTestData
     {
         var document = new BenchmarkCatalogDocument
         {
-            SchemaVersion = BenchmarkCatalog.SchemaVersion,
             Cases = [benchmarkCase],
         };
         var json = JsonSerializer.Serialize(document, BenchmarkJson.Options);
