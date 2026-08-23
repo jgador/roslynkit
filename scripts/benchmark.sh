@@ -22,7 +22,7 @@ such as --model, --reasoning-effort, --trials, --case, --max-results,
 --report-run-root. See docs/benchmark.md for the full option reference.
 
 Two controller-owned options work without building the helper:
-  --clean   Remove benchmark-owned local artifacts (exclusive)
+  --clean   Remove every artifact except artifacts/.gitkeep (exclusive)
   --help    Show this help
 EOF
 }
@@ -45,54 +45,26 @@ has_flag() {
     return 1
 }
 
-# Cleanup is deliberately limited to fixed, benchmark-owned paths and rejects symlink traversal.
+# Cleanup removes every artifact entry except .gitkeep and refuses a symlinked root.
 clean_benchmark_artifacts() {
     local artifacts_root="$REPOSITORY_ROOT/artifacts"
     local removed=0
-    local target
-    local protocol_database
-    local -a targets=(
-        "$artifacts_root/benchmark"
-        "$artifacts_root/benchmark-integration"
-        "$artifacts_root/roslynkit-text.db"
-        "$artifacts_root/roslynkit-text.db-shm"
-        "$artifacts_root/roslynkit-text.db-wal"
-        "$artifacts_root/bin/RoslynKit.Benchmarking"
-        "$artifacts_root/obj/RoslynKit.Benchmarking"
-        "$artifacts_root/bin/RoslynKit.Benchmarking.Tests"
-        "$artifacts_root/obj/RoslynKit.Benchmarking.Tests"
-        "$artifacts_root/bin/RoslynKit/release"
-        "$artifacts_root/obj/RoslynKit/release"
-    )
+    local artifact_entry
 
     if [[ -L "$artifacts_root" ]]; then
         die "Refusing to clean through symlinked artifacts root: '$artifacts_root'."
     fi
 
-    for target in "${targets[@]}"; do
-        require_no_symlink_components "$artifacts_root" "$target"
-    done
-
-    for target in "${targets[@]}"; do
-        if [[ -e "$target" || -L "$target" ]]; then
-            rm -rf -- "$target"
-            printf 'Removed: %s\n' "${target#"$REPOSITORY_ROOT/"}"
-            removed=$((removed + 1))
-        fi
-    done
+    if [[ -e "$artifacts_root" && ! -d "$artifacts_root" ]]; then
+        die "Refusing to clean a non-directory artifacts root: '$artifacts_root'."
+    fi
 
     if [[ -d "$artifacts_root" ]]; then
-        while IFS= read -r -d '' protocol_database; do
-            rm -f -- "$protocol_database"
-            printf 'Removed: %s\n' "${protocol_database#"$REPOSITORY_ROOT/"}"
+        while IFS= read -r -d '' artifact_entry; do
+            rm -rf -- "$artifact_entry"
+            printf 'Removed: %s\n' "${artifact_entry#"$REPOSITORY_ROOT/"}"
             removed=$((removed + 1))
-        done < <(
-            find "$artifacts_root" -maxdepth 1 -type f \
-                \( -name 'benchmark-protocol-*.db' \
-                -o -name 'benchmark-protocol-*.db-shm' \
-                -o -name 'benchmark-protocol-*.db-wal' \) \
-                -print0
-        )
+        done < <(find "$artifacts_root" -mindepth 1 -maxdepth 1 ! -name '.gitkeep' -print0)
     fi
 
     if ((removed == 0)); then
@@ -100,27 +72,6 @@ clean_benchmark_artifacts() {
     else
         printf 'Benchmark artifacts cleaned.\n'
     fi
-}
-
-require_no_symlink_components() {
-    local root="$1"
-    local path="$2"
-    local relative_path="${path#"$root/"}"
-    local current_path="$root"
-    local component
-    local -a components
-
-    if [[ "$relative_path" == "$path" ]]; then
-        die "Refusing to clean a path outside the artifacts root: '$path'."
-    fi
-
-    IFS='/' read -r -a components <<<"$relative_path"
-    for component in "${components[@]}"; do
-        current_path="$current_path/$component"
-        if [[ -L "$current_path" ]]; then
-            die "Refusing to clean through symlinked artifact path: '$current_path'."
-        fi
-    done
 }
 
 build_helper() {

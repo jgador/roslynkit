@@ -205,9 +205,13 @@ mkdir -p \
     "$clean_repository/artifacts/obj/RoslynKit.Benchmarking.Tests/debug" \
     "$clean_repository/artifacts/bin/RoslynKit/release" \
     "$clean_repository/artifacts/obj/RoslynKit/release" \
-    "$clean_repository/artifacts/unrelated"
+    "$clean_repository/artifacts/unrelated" \
+    "$clean_repository/artifacts/.hidden"
 cp -- "$CONTROLLER" "$clean_repository/scripts/benchmark.sh"
 printf 'keep\n' >"$external_sentinel"
+printf 'keep\n' >"$clean_repository/artifacts/.gitkeep"
+printf 'remove\n' >"$clean_repository/artifacts/commit-context.md"
+printf 'remove\n' >"$clean_repository/artifacts/.hidden/keep.txt"
 printf 'keep\n' >"$clean_repository/artifacts/unrelated/keep.txt"
 printf 'remove\n' >"$clean_repository/artifacts/roslynkit-text.db"
 printf 'remove\n' >"$clean_repository/artifacts/roslynkit-text.db-shm"
@@ -228,7 +232,13 @@ bash "$clean_repository/scripts/benchmark.sh" --clean >"$TEST_ROOT/clean.stdout"
 [[ ! -e "$clean_repository/artifacts/obj/RoslynKit.Benchmarking.Tests" ]] || fail 'Expected benchmark proof intermediates to be removed.'
 [[ ! -e "$clean_repository/artifacts/bin/RoslynKit/release" ]] || fail 'Expected the benchmark apphost to be removed.'
 [[ ! -e "$clean_repository/artifacts/obj/RoslynKit/release" ]] || fail 'Expected benchmark apphost intermediates to be removed.'
-[[ -f "$clean_repository/artifacts/unrelated/keep.txt" ]] || fail 'Expected unrelated artifacts to be preserved.'
+[[ -f "$clean_repository/artifacts/.gitkeep" ]] || fail 'Expected .gitkeep to be preserved.'
+[[ ! -e "$clean_repository/artifacts/commit-context.md" ]] || fail 'Expected the commit context to be removed.'
+[[ ! -e "$clean_repository/artifacts/.hidden" ]] || fail 'Expected hidden artifacts to be removed.'
+[[ ! -e "$clean_repository/artifacts/unrelated" ]] || fail 'Expected unrelated artifacts to be removed.'
+[[ ! -L "$clean_repository/artifacts/benchmark/run/external-link" ]] || fail 'Expected artifact symlinks to be removed.'
+remaining_artifact_entry="$(find "$clean_repository/artifacts" -mindepth 1 -maxdepth 1 ! -name '.gitkeep' -print -quit)"
+[[ -z "$remaining_artifact_entry" ]] || fail 'Expected .gitkeep to be the only remaining artifact entry.'
 [[ -f "$external_sentinel" ]] || fail 'Expected cleanup not to follow artifact symlinks.'
 [[ ! -s "$BENCHMARK_TEST_LOG" ]] || fail 'Expected cleanup not to invoke dotnet or Codex.'
 assert_contains 'Benchmark artifacts cleaned.' "$TEST_ROOT/clean.stdout"
@@ -266,11 +276,10 @@ mkdir -p "$intermediate_repository/scripts" "$intermediate_repository/artifacts/
 cp -- "$CONTROLLER" "$intermediate_repository/scripts/benchmark.sh"
 printf 'keep\n' >"$intermediate_target/sentinel.txt"
 ln -s -- "$intermediate_target" "$intermediate_repository/artifacts/bin/RoslynKit.Benchmarking"
-if bash "$intermediate_repository/scripts/benchmark.sh" --clean >/dev/null 2>"$TEST_ROOT/clean-intermediate-symlink.stderr"; then
-    fail 'Expected cleanup through a symlinked artifact path to fail.'
-fi
-assert_contains 'Refusing to clean through symlinked artifact path' "$TEST_ROOT/clean-intermediate-symlink.stderr"
-[[ -f "$intermediate_target/sentinel.txt" ]] || fail 'Expected the symlink target to remain untouched.'
+bash "$intermediate_repository/scripts/benchmark.sh" --clean
+[[ ! -L "$intermediate_repository/artifacts/bin/RoslynKit.Benchmarking" ]] \
+    || fail 'Expected cleanup to remove an artifact symlink.'
+[[ -f "$intermediate_target/sentinel.txt" ]] || fail 'Expected cleanup not to follow an artifact symlink.'
 
 : >"$BENCHMARK_TEST_LOG"
 bash "$CONTROLLER" --help >"$TEST_ROOT/help.stdout"

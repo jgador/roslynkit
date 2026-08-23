@@ -28,7 +28,7 @@ bash ./scripts/benchmark.sh [options]
 - `analyze <run-root|latest>`: inspect the persisted reports and session failures without starting another model session.
 - `compare <run-root> <run-root>`: compare configuration, validity, correctness, pair acceptance, and token savings without starting model sessions.
 - `status`, `history`: summarize available run roots and completion state without starting model sessions.
-- `clean`, `reset`: run `bash ./scripts/benchmark.sh --clean`. This permanently removes only controller-declared benchmark artifacts and the shared Release apphost that the benchmark builds; unrelated artifacts remain. Either word is explicit deletion authorization, so list the fixed scope and proceed without another confirmation.
+- `clean`, `reset`: run `bash ./scripts/benchmark.sh --clean`. This permanently removes every entry under [artifacts/](../../../artifacts/) except [artifacts/.gitkeep](../../../artifacts/.gitkeep), including unrelated and hidden artifacts. Either word is explicit deletion authorization, so list that exact scope and proceed without another confirmation.
 
 `latest` must be resolved before the requested action: sort immediate `artifacts/benchmark/*/run.json` candidates by parent-directory name, newest first, and select the first run accepted by the current helper's report-only validation. Inspection commands use the same helper-validated set and derive completion from persisted session state. Never pass the word `latest` to the controller.
 
