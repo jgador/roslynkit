@@ -40,6 +40,11 @@ internal static partial class BenchmarkCatalog
         }
 
         ValidateCases(repositoryRoot, document.Cases);
+        if (!document.Cases.Any(benchmarkCase => benchmarkCase.IsDefault))
+        {
+            throw new BenchmarkException("Benchmark catalog must contain at least one default case.");
+        }
+
         return document.Cases;
     }
 
@@ -48,6 +53,17 @@ internal static partial class BenchmarkCatalog
         if (caseId == "all")
         {
             return [.. cases];
+        }
+
+        if (caseId == "default")
+        {
+            var defaultCases = cases.Where(candidate => candidate.IsDefault).ToArray();
+            if (defaultCases.Length == 0)
+            {
+                throw new BenchmarkException("Benchmark catalog does not define any default cases.");
+            }
+
+            return defaultCases;
         }
 
         var selected = cases.Where(candidate => candidate.Id == caseId).ToArray();

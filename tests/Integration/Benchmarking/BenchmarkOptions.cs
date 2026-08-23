@@ -14,7 +14,7 @@ internal sealed record BenchmarkOptions
 
     public int Trials { get; init; } = 1;
 
-    public string Case { get; init; } = "all";
+    public string Case { get; init; } = "default";
 
     public int MaximumResults { get; init; } = 10;
 
@@ -51,8 +51,8 @@ internal static partial class BenchmarkOptionsParser
           --model <id>                 Codex model (default: gpt-5.6-terra)
           --reasoning-effort <level>   Codex reasoning effort (default: high)
           --trials <1-100>             Trials per selected case (default: 1)
-          --case <id|all>              Select one case or all cases (default: all)
-          --case-id <id|all>           Compatibility alias for --case
+          --case <id|default|all>      Select one case, the default suite, or all cases (default: default)
+          --case-id <id|default|all>   Compatibility alias for --case
           --max-results <2-50>         Maximum RoslynKit results (default: 10)
           --index-path <path>          Database directly below ./artifacts/
           --roslynkit-path <path>      Use an existing RoslynKit apphost

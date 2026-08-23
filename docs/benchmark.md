@@ -13,16 +13,16 @@ The benchmark requires Bash. On Windows, run it from Windows Subsystem for Linux
 Benchmark sessions can incur model costs. Start sessions only after an explicit user request. Start with a dry run, which validates options and the case catalog and prints planned work without building RoslynKit or starting a Codex session:
 
 ```bash
-bash ./scripts/benchmark.sh --dry-run --trials 1 --case daemon-disconnect
+bash ./scripts/benchmark.sh --dry-run --trials 1 --case default
 ```
 
-The benchmark reads its six case definitions from [tests/Integration/Benchmarking/cases.json](../tests/Integration/Benchmarking/cases.json). Each case defines an ID, query, intent, and required evidence groups. Catalog validation rejects unknown or malformed properties and evidence paths that do not identify repository files.
+The benchmark reads ten case definitions from [tests/Integration/Benchmarking/cases.json](../tests/Integration/Benchmarking/cases.json). The catalog owns the default selector: six `isDefault: true` code-search cases run from simple to complex—`search-option-parsing`, `search-query-tokenization`, `text-only-workspace`, `search-corpus-building`, `search-result-ranking`, and `search-command-flow`. Four optional navigation and stress cases—`daemon-disconnect`, `workspace-generation`, `stale-search-index`, and `symbol-comments`—run only through `--case all` or their individual ID. Each case defines an ID, query, intent, and required evidence groups. Catalog validation rejects unknown or malformed properties and evidence paths that do not identify repository files.
 
 ## Options
 
 - `--model <model>` and `--reasoning-effort <effort>` select the Codex judge configuration. The default model is the balanced `gpt-5.6-terra`.
 - `--trials <count>` sets the number of paired trials per selected case.
-- `--case <id|all>` selects a case; `--case-id` remains a compatibility alias.
+- `--case <id|default|all>` selects one case, the six-case default code-search suite, or all ten cases; `--case-id` remains a compatibility alias.
 - `--max-results <count>` bounds retrieval evidence.
 - `--index-path <path>` selects the Git-ignored text-only search index.
 - `--roslynkit-path <path>` selects a built RoslynKit apphost.
@@ -53,7 +53,7 @@ For every pending session, Bash unsets the host-injected `CODEX_THREAD_ID` conte
 
 The raw-text condition tokenizes alphanumeric and underscore query terms of at least three characters. It ranks C# files independently in `src/RoslynKit` and `tests/RoslynKit.Tests` by distinct-term coverage, total occurrences, and path. Each scope contributes at most eight files; each file contributes at most eight matching anchors, three lines of surrounding context, and 300 characters per rendered line. Build-output and infrastructure directories are excluded. The RoslynKit condition uses one bounded compact balanced search over the same repository.
 
-Condition order alternates by trial. A one-trial all-cases run starts 12 judge turns: two conditions for each of six cases. A three-trial acceptance run starts 36 judge turns.
+Condition order alternates by trial. A one-trial default run starts 12 judge turns: two conditions for each of six code-search cases. A three-trial default acceptance run starts 36 judge turns. A one-trial all-cases run starts 20 judge turns, and a three-trial all-cases run starts 60.
 
 Input-token savings are `100 * (raw input - RoslynKit input) / raw input`. A pair is accepted only when both sessions are valid and correct and RoslynKit saves at least 20%. Every scheduled pair must meet that threshold; a passing median alone is insufficient.
 

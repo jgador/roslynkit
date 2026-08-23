@@ -29,6 +29,8 @@ internal sealed record BenchmarkCase
 {
     public string Id { get; init; } = string.Empty;
 
+    public bool IsDefault { get; init; }
+
     public string Intent { get; init; } = string.Empty;
 
     public string Query { get; init; } = string.Empty;

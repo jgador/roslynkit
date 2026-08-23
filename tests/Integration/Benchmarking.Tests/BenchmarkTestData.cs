@@ -10,11 +10,13 @@ internal static class BenchmarkTestData
     public static BenchmarkCase Case(
         string id = "sample-case",
         string query = "alpha beta",
-        string[][]? evidenceGroups = null)
+        string[][]? evidenceGroups = null,
+        bool isDefault = true)
     {
         return new BenchmarkCase
         {
             Id = id,
+            IsDefault = isDefault,
             Intent = "Find the relevant production and test declarations.",
             Query = query,
             RequiredEvidenceGroups = evidenceGroups ?? [["src/RoslynKit/Alpha.cs"], ["tests/RoslynKit.Tests/AlphaTests.cs"]],
@@ -36,7 +38,7 @@ internal static class BenchmarkTestData
                 Model = "gpt-5.6-sol",
                 ReasoningEffort = "high",
                 Trials = trials,
-                Case = "all",
+                Case = "default",
                 MaximumResults = 10,
                 IndexPath = "./artifacts/test.db",
                 RoslynKitPath = "/tmp/RoslynKit",

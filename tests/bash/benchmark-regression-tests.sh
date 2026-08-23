@@ -293,6 +293,7 @@ assert_contains 'dry-run plan' "$TEST_ROOT/dry-run.stdout"
 assert_not_contains 'codex <exec>' "$BENCHMARK_TEST_LOG"
 assert_contains ' <prepare> ' "$BENCHMARK_TEST_LOG"
 assert_contains '<--model> <gpt-5.6-terra>' "$BENCHMARK_TEST_LOG"
+assert_contains '<--case> <default>' "$BENCHMARK_TEST_LOG"
 
 : >"$BENCHMARK_TEST_LOG"
 bash "$CONTROLLER" --report-run-root "$TEST_ROOT/run space" >"$TEST_ROOT/report.stdout"

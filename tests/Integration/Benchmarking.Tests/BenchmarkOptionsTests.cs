@@ -6,11 +6,12 @@ namespace RoslynKit.Benchmarking.Tests;
 public sealed class BenchmarkOptionsTests
 {
     [Fact]
-    public void Parse_UsesTerraAsDefaultModel()
+    public void Parse_UsesTerraAndDefaultSuite()
     {
         var parsed = BenchmarkOptionsParser.Parse([]);
 
         Assert.Equal("gpt-5.6-terra", parsed.Model);
+        Assert.Equal("default", parsed.Case);
     }
 
     [Theory]
@@ -18,9 +19,9 @@ public sealed class BenchmarkOptionsTests
     [InlineData("--case-id")]
     public void Parse_AcceptsCaseOptionAndCompatibilityAlias(string option)
     {
-        var parsed = BenchmarkOptionsParser.Parse([option, "daemon-disconnect"]);
+        var parsed = BenchmarkOptionsParser.Parse([option, "sample-case"]);
 
-        Assert.Equal("daemon-disconnect", parsed.Case);
+        Assert.Equal("sample-case", parsed.Case);
     }
 
     [Fact]

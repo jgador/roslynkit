@@ -5,7 +5,7 @@ set -euo pipefail
 readonly DEFAULT_MODEL="gpt-5.6-terra"
 readonly DEFAULT_REASONING_EFFORT="high"
 readonly DEFAULT_TRIALS="1"
-readonly DEFAULT_CASE="all"
+readonly DEFAULT_CASE="default"
 readonly DEFAULT_MAX_RESULTS="10"
 readonly DEFAULT_INDEX_PATH="./artifacts/roslynkit-text.db"
 
@@ -34,8 +34,8 @@ Options:
   --model <id>                 Codex model (default: gpt-5.6-terra)
   --reasoning-effort <level>   Codex reasoning effort (default: high)
   --trials <1-100>             Trials per selected case (default: 1)
-  --case <id|all>              Select one case or all cases (default: all)
-  --case-id <id|all>           Compatibility alias for --case
+  --case <id|default|all>      Select one case, the default suite, or all cases (default: default)
+  --case-id <id|default|all>   Compatibility alias for --case
   --max-results <2-50>         Maximum RoslynKit results (default: 10)
   --index-path <path>          Database directly below ./artifacts/
   --roslynkit-path <path>      Use an existing RoslynKit apphost

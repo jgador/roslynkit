@@ -15,14 +15,14 @@ bash ./scripts/benchmark.sh [options]
 
 ## Fast commands
 
-- `help`, `?`: show these presets, current defaults from `--help`, current case IDs from [tests/Integration/Benchmarking/cases.json](../../../tests/Integration/Benchmarking/cases.json), and a few examples. Start nothing.
-- `cases`: list case IDs and their one-line intent. Start nothing.
+- `help`, `?`: show these presets, current defaults from `--help`, current case IDs from [tests/Integration/Benchmarking/cases.json](../../../tests/Integration/Benchmarking/cases.json), identify the default code-search suite versus optional navigation and stress cases, and give a few examples. Start nothing.
+- `cases`: list case IDs and their one-line intent, grouped as default code-search or optional navigation and stress cases. Start nothing.
 - `doctor`: check Bash, .NET, Codex, controller syntax, and required files without starting a model session.
 - `plan`, `dry`, `dry-run [preset or modifiers]`: run only the resolved `--dry-run` command. This builds the benchmark helper but does not build RoslynKit, create the index, or start a model session.
-- `default`, `run`: use `gpt-5.6-terra`, reasoning effort `high`, one trial, all cases, ten results, and the default index. Run the matching dry run and then the measured command.
-- `smoke`, `quick [case]`: run one trial for one case. When no case is supplied, select the first current catalog case and state that choice. Run the matching dry run first.
+- `default`, `run`: use `gpt-5.6-terra`, reasoning effort `high`, one trial, `--case default`, ten results, and the default index. The default selector runs the six catalog-marked code-search cases, ordered from simple to complex: `search-option-parsing`, `search-query-tokenization`, `text-only-workspace`, `search-corpus-building`, `search-result-ranking`, and `search-command-flow`. Run the matching dry run and then the measured command.
+- `smoke`, `quick [case]`: run one trial for one case. When no case is supplied, select the first and easiest default case, `search-option-parsing`, and state that choice. Run the matching dry run first.
 - `case <id> [modifiers]`: run one trial for that case unless another trial count is supplied. Run the matching dry run first.
-- `acceptance [modifiers]`: run all cases with three trials unless overridden. Run the matching dry run first.
+- `acceptance [modifiers]`: run `--case default` with three trials unless overridden. Run the matching dry run first.
 - `resume <run-root|latest>`: inspect the stored configuration and resume only unfinished sessions. Resume does not support `--dry-run`.
 - `report <run-root|latest>`: regenerate reports without starting a model session.
 - `analyze <run-root|latest>`: inspect the persisted reports and session failures without starting another model session.
@@ -32,7 +32,7 @@ bash ./scripts/benchmark.sh [options]
 
 `latest` must be resolved before the requested action: sort immediate `artifacts/benchmark/*/run.json` candidates by parent-directory name, newest first, and select the first run accepted by the current helper's report-only validation. Inspection commands use the same helper-validated set and derive completion from persisted session state. Never pass the word `latest` to the controller.
 
-Friendly modifiers map to `--model`, `--reasoning-effort`, `--trials`, `--case`, `--max-results`, `--index-path`, and `--roslynkit-path`. Accept at most one action preset and one case selector, and reject duplicate or conflicting presets, selectors, or values with a compact usage correction. Exact or friendly configuration modifiers without another preset behave as `run`. Print the resolved configuration and planned judge-turn count before a measured run, but do not request confirmation again.
+The catalog owns case selection: `--case default` selects its six `isDefault: true` code-search cases, while `--case all` also includes the four optional `daemon-disconnect`, `workspace-generation`, `stale-search-index`, and `symbol-comments` cases. Friendly modifiers map to `--model`, `--reasoning-effort`, `--trials`, `--case`, `--max-results`, `--index-path`, and `--roslynkit-path`. Accept at most one action preset and one case selector, and reject duplicate or conflicting presets, selectors, or values with a compact usage correction. Exact or friendly configuration modifiers without another preset behave as `run`. Print the resolved configuration and planned judge-turn count before a measured run, but do not request confirmation again.
 
 `default`, `run`, `smoke`, `quick`, `case`, `acceptance`, `resume`, and configuration-only invocations explicitly authorize their required paid Codex sessions. Help, planning, inspection, reporting, cleanup, benchmark design, and benchmark modification do not authorize a paid session. If paid intent is unclear, show the closest safe command instead of guessing.
 

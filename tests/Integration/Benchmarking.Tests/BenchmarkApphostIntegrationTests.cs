@@ -7,7 +7,7 @@ namespace RoslynKit.Benchmarking.Tests;
 public sealed class BenchmarkApphostIntegrationTests
 {
     [Fact]
-    public async Task ReleaseApphost_TextOnlyIndexAndSearchDoNotStartDaemon()
+    public async Task ReleaseApphost_DefaultTextOnlySearchesDoNotStartDaemon()
     {
         var repositoryRoot = BenchmarkPaths.FindRepositoryRoot(AppContext.BaseDirectory);
         var processRunner = new ProcessRunner();
@@ -49,19 +49,29 @@ public sealed class BenchmarkApphostIntegrationTests
             AssertSuccess(index, "text-only index");
             Assert.Contains("command: index", index.StandardOutput, StringComparison.Ordinal);
 
-            var search = await RunApphostAsync(
-                processRunner,
-                apphost,
-                repositoryRoot,
-                [
-                    "search", "--target", targetPath, "--index-path", indexPath,
-                    "--query", "search query tokenizer", "--max-results", "4",
-                    "--text-only", "--compact", "--balanced",
-                ],
-                timeout.Token);
-            AssertSuccess(search, "text-only search");
-            Assert.StartsWith("results:", search.StandardOutput, StringComparison.Ordinal);
-            Assert.DoesNotContain("workspace daemon", search.StandardError, StringComparison.OrdinalIgnoreCase);
+            var defaultCases = BenchmarkCatalog.Select(BenchmarkCatalog.Load(repositoryRoot), "default");
+            foreach (var benchmarkCase in defaultCases)
+            {
+                var search = await RunApphostAsync(
+                    processRunner,
+                    apphost,
+                    repositoryRoot,
+                    [
+                        "search", "--target", targetPath, "--index-path", indexPath,
+                        "--query", benchmarkCase.Query, "--max-results", "10",
+                        "--text-only", "--compact", "--balanced",
+                    ],
+                    timeout.Token);
+                AssertSuccess(search, $"text-only search for '{benchmarkCase.Id}'");
+                Assert.StartsWith("results:", search.StandardOutput, StringComparison.Ordinal);
+                Assert.DoesNotContain("workspace daemon", search.StandardError, StringComparison.OrdinalIgnoreCase);
+                foreach (var evidenceGroup in benchmarkCase.RequiredEvidenceGroups)
+                {
+                    Assert.True(
+                        evidenceGroup.Any(path => search.StandardOutput.Contains(path, StringComparison.Ordinal)),
+                        $"Text-only search for '{benchmarkCase.Id}' did not return any path from required evidence group: {string.Join(", ", evidenceGroup)}.\nOutput:\n{search.StandardOutput}");
+                }
+            }
 
             var finalStatus = await RunApphostAsync(
                 processRunner,

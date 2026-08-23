@@ -2,7 +2,71 @@
   "schemaVersion": 1,
   "cases": [
     {
+      "id": "search-option-parsing",
+      "isDefault": true,
+      "intent": "Find the production declaration and focused tests that parse search command options and reject invalid combinations involving text-only, compact, balanced, project, and index selections.",
+      "query": "CliParser Parse search command options text-only compact balanced project index validation",
+      "requiredEvidenceGroups": [
+        ["src/RoslynKit/CliParser.cs"],
+        ["tests/RoslynKit.Tests/CliParserTests.cs", "tests/RoslynKit.Tests/SearchCliContractTests.cs"]
+      ]
+    },
+    {
+      "id": "search-query-tokenization",
+      "isDefault": true,
+      "intent": "Find the production declaration and focused tests that turn natural-language search questions and PascalCase or underscore identifiers into normalized full-text search terms.",
+      "query": "how does search split natural language questions PascalCase and underscore identifiers into normalized matching terms",
+      "requiredEvidenceGroups": [
+        ["src/RoslynKit/SearchQueryTokenizer.cs"],
+        ["tests/RoslynKit.Tests/SearchQueryTokenizerTests.cs"]
+      ]
+    },
+    {
+      "id": "text-only-workspace",
+      "isDefault": true,
+      "intent": "Find the production declaration and focused tests that build the text-only C# workspace directly from repository sources without evaluating Microsoft Build projects, while excluding infrastructure and build-output paths.",
+      "query": "how does text-only search load repository C# source files without evaluating projects and exclude infrastructure bin obj output",
+      "requiredEvidenceGroups": [
+        ["src/RoslynKit/RoslynWorkspaceLoader.cs"],
+        ["tests/RoslynKit.Tests/TextOnlyWorkspaceLoaderTests.cs"]
+      ]
+    },
+    {
+      "id": "search-corpus-building",
+      "isDefault": true,
+      "intent": "Find the production declaration and focused tests that convert C# declarations into deterministic searchable records containing identities, documentation, comments, signatures, and source excerpts.",
+      "query": "how are C# declarations converted into deterministic searchable records with identity documentation comments signatures and source excerpts",
+      "requiredEvidenceGroups": [
+        ["src/RoslynKit/RoslynSearchCorpusBuilder.cs"],
+        ["tests/RoslynKit.Tests/RoslynSearchCorpusBuilderTests.cs"]
+      ]
+    },
+    {
+      "id": "search-result-ranking",
+      "isDefault": true,
+      "intent": "Find the production declarations and focused tests that rank natural-language matches by query-term coverage and Best Matching 25 relevance, then preserve useful test hits for balanced output.",
+      "query": "how does search rank natural language matches by query term coverage and BM25 relevance while balanced results preserve test hits",
+      "requiredEvidenceGroups": [
+        ["src/RoslynKit/SearchCommandService.cs"],
+        ["src/RoslynKit/SqliteSearchIndex.cs"],
+        ["tests/RoslynKit.Tests/SearchCommandTests.cs", "tests/RoslynKit.Tests/SqliteSearchIndexTests.cs"]
+      ]
+    },
+    {
+      "id": "search-command-flow",
+      "isDefault": true,
+      "intent": "Trace the normal search --text-only --compact --balanced flow from command parsing through execution and retrieval to repository-relative Markdown output, including its public contract tests.",
+      "query": "trace CliParser Parse search text-only compact balanced through RoslynCommandExecutor SearchCommandService and MarkdownProjection repository-relative output",
+      "requiredEvidenceGroups": [
+        ["src/RoslynKit/CliParser.cs", "tests/RoslynKit.Tests/CliParserTests.cs", "tests/RoslynKit.Tests/SearchCliContractTests.cs"],
+        ["src/RoslynKit/RoslynCommandExecutor.cs"],
+        ["src/RoslynKit/SearchCommandService.cs"],
+        ["src/RoslynKit/MarkdownProjection.cs", "tests/RoslynKit.Tests/SearchMarkdownFormatTests.cs"]
+      ]
+    },
+    {
       "id": "daemon-disconnect",
+      "isDefault": false,
       "intent": "Find the production declarations and focused tests that explain how a daemon transport disconnect avoids partial stdout or stderr, when standalone retry occurs, and which failures do not retry.",
       "query": "daemon client transport disconnect complete buffered response partial stdout stderr standalone retry infrastructure cancellation exception",
       "requiredEvidenceGroups": [
@@ -13,6 +77,7 @@
     },
     {
       "id": "workspace-generation",
+      "isDefault": false,
       "intent": "Find the production declarations and focused tests for consistent compiler views while tracked files change, including clean-reader capacity, pending reload priority, quiet-period retry, and a second mismatch.",
       "query": "consistent compiler view tracked files change clean readers pending reload quiet period retry second mismatch",
       "requiredEvidenceGroups": [
@@ -22,6 +87,7 @@
     },
     {
       "id": "stale-search-index",
+      "isDefault": false,
       "intent": "Find the production declarations and focused tests for serving a coherent stale search partition during refresh while preventing partial index updates from becoming visible.",
       "query": "SearchCommandService SearchAsync RefreshAsync stale partition writer lease coherent transaction committed visibility",
       "requiredEvidenceGroups": [
@@ -32,35 +98,12 @@
     },
     {
       "id": "symbol-comments",
+      "isDefault": false,
       "intent": "Find the production declarations and focused tests that collect ordinary C# declaration comments and classify them as leading, body, or trailing with nested-declaration ownership and bounded descendants.",
       "query": "ordinary C# declaration comments leading body trailing nested ownership descendants truncation",
       "requiredEvidenceGroups": [
         ["src/RoslynKit/RoslynCommandExecutor.SymbolContext.cs"],
         ["tests/RoslynKit.Tests/CommandExecution/SymbolContextCommandExecutionTests.cs", "tests/RoslynKit.Tests/MarkdownFormatTests.cs"]
-      ]
-    },
-    {
-      "id": "text-only-workspace-routing",
-      "intent": "Find the production declarations and focused tests that explain how text-only index and search bypass daemon routing, construct an in-process C# workspace without MSBuild, enumerate repository source files, and exclude infrastructure and build-output paths.",
-      "query": "text-only standalone daemon routing DaemonFallbackWorkspaceCommandRouter executeDaemonCommand executeStandaloneCommand TextOnlyWorkspaceLoader RoslynSearchCorpusBuilder LoadTextOnlyAsync EnumerateTextOnlySourceFiles BuildAsync BuildDocumentMapAsync exclude bin obj source documents",
-      "requiredEvidenceGroups": [
-        ["src/RoslynKit/DaemonFallbackWorkspaceCommandRouter.cs"],
-        ["src/RoslynKit/RoslynWorkspaceLoader.cs"],
-        ["src/RoslynKit/RoslynSearchCorpusBuilder.cs"],
-        ["tests/RoslynKit.Tests/DaemonFallbackWorkspaceCommandRouterTests.cs"],
-        ["tests/RoslynKit.Tests/TextOnlyWorkspaceLoaderTests.cs"],
-        ["tests/RoslynKit.Tests/RoslynSearchCorpusBuilderTests.cs"]
-      ]
-    },
-    {
-      "id": "search-ranking-pipeline",
-      "intent": "Find the production declarations and focused tests that explain how identifier-shaped search queries are tokenized, converted to prefix terms, ranked by query-term coverage before Best Matching 25 relevance, and ordered deterministically while retaining strong test evidence.",
-      "query": "search query tokenizer PascalCase underscore prefix matching term coverage member namespace deterministic ranking tie balanced test results",
-      "requiredEvidenceGroups": [
-        ["src/RoslynKit/SearchQueryTokenizer.cs"],
-        ["src/RoslynKit/SqliteSearchIndex.cs"],
-        ["src/RoslynKit/SearchCommandService.cs"],
-        ["tests/RoslynKit.Tests/SearchQueryTokenizerTests.cs", "tests/RoslynKit.Tests/SqliteSearchIndexTests.cs"]
       ]
     }
   ]
