@@ -29,7 +29,10 @@ The benchmark reads its six case definitions from [tests/Integration/Benchmarkin
 - `--dry-run` validates and prints planned work without starting a Codex session.
 - `--resume-run-root <path>` continues only unfinished case, condition, and trial tuples from one prior run.
 - `--report-run-root <path>` rebuilds reports from one prior run without starting a Codex session.
+- `--clean` removes benchmark-owned ignored artifacts without building the helper or starting a Codex session.
 - `--help` prints the available options.
+
+`--clean` is exclusive and permanently removes benchmark run roots, the default SQLite index and its sidecars, benchmark protocol-test databases, benchmark helper and helper-test outputs, the benchmark integration-test area, and the Release RoslynKit apphost plus its intermediate output. It preflights the fixed cleanup paths and refuses a symlinked artifacts root or intermediate path before deleting anything. It preserves [artifacts/.gitkeep](../artifacts/.gitkeep), [artifacts/commit-context.md](../artifacts/commit-context.md), debug and publish RoslynKit builds, and unrelated test artifacts. The shared Release apphost may need rebuilding after cleanup.
 
 ## Controller boundary
 

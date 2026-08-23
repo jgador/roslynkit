@@ -19,6 +19,7 @@ ROSLYNKIT_PATH=""
 DRY_RUN=false
 RESUME_RUN_ROOT=""
 REPORT_RUN_ROOT=""
+CLEAN=false
 SHOW_HELP=false
 REPOSITORY_ROOT=""
 BENCHMARK_PROJECT=""
@@ -41,6 +42,7 @@ Options:
   --dry-run                    Print the schedule without starting Codex
   --resume-run-root <path>     Resume unfinished sessions from one run document
   --report-run-root <path>     Regenerate CSV and Markdown from one run document
+  --clean                      Remove benchmark-owned local artifacts
   --help                       Show this help
 EOF
 }
@@ -139,6 +141,11 @@ parse_options() {
                 REPORT_RUN_ROOT="$2"
                 shift 2
                 ;;
+            --clean)
+                mark_once "clean" "$1"
+                CLEAN=true
+                shift
+                ;;
             *)
                 die "Unknown benchmark option: '$1'."
                 ;;
@@ -152,6 +159,87 @@ parse_options() {
     if [[ "$DRY_RUN" == true && ( -n "$RESUME_RUN_ROOT" || -n "$REPORT_RUN_ROOT" ) ]]; then
         die "--dry-run cannot be combined with resume or report mode."
     fi
+
+    if [[ "$CLEAN" == true && "$SEEN_OPTIONS" != "clean " ]]; then
+        die "--clean cannot be combined with other options."
+    fi
+}
+
+clean_benchmark_artifacts() {
+    local artifacts_root="$REPOSITORY_ROOT/artifacts"
+    local removed=0
+    local target
+    local protocol_database
+    local -a targets=(
+        "$artifacts_root/benchmark"
+        "$artifacts_root/benchmark-integration"
+        "$artifacts_root/roslynkit-text.db"
+        "$artifacts_root/roslynkit-text.db-shm"
+        "$artifacts_root/roslynkit-text.db-wal"
+        "$artifacts_root/bin/RoslynKit.Benchmarking"
+        "$artifacts_root/obj/RoslynKit.Benchmarking"
+        "$artifacts_root/bin/RoslynKit.Benchmarking.Tests"
+        "$artifacts_root/obj/RoslynKit.Benchmarking.Tests"
+        "$artifacts_root/bin/RoslynKit/release"
+        "$artifacts_root/obj/RoslynKit/release"
+    )
+
+    if [[ -L "$artifacts_root" ]]; then
+        die "Refusing to clean through symlinked artifacts root: '$artifacts_root'."
+    fi
+
+    for target in "${targets[@]}"; do
+        require_no_symlink_components "$artifacts_root" "$target"
+    done
+
+    for target in "${targets[@]}"; do
+        if [[ -e "$target" || -L "$target" ]]; then
+            rm -rf -- "$target"
+            printf 'Removed: %s\n' "${target#"$REPOSITORY_ROOT/"}"
+            removed=$((removed + 1))
+        fi
+    done
+
+    if [[ -d "$artifacts_root" ]]; then
+        while IFS= read -r -d '' protocol_database; do
+            rm -f -- "$protocol_database"
+            printf 'Removed: %s\n' "${protocol_database#"$REPOSITORY_ROOT/"}"
+            removed=$((removed + 1))
+        done < <(
+            find "$artifacts_root" -maxdepth 1 -type f \
+                \( -name 'benchmark-protocol-*.db' \
+                -o -name 'benchmark-protocol-*.db-shm' \
+                -o -name 'benchmark-protocol-*.db-wal' \) \
+                -print0
+        )
+    fi
+
+    if ((removed == 0)); then
+        printf 'Benchmark artifacts already clean.\n'
+    else
+        printf 'Benchmark artifacts cleaned.\n'
+    fi
+}
+
+require_no_symlink_components() {
+    local root="$1"
+    local path="$2"
+    local relative_path="${path#"$root/"}"
+    local current_path="$root"
+    local component
+    local -a components
+
+    if [[ "$relative_path" == "$path" ]]; then
+        die "Refusing to clean a path outside the artifacts root: '$path'."
+    fi
+
+    IFS='/' read -r -a components <<<"$relative_path"
+    for component in "${components[@]}"; do
+        current_path="$current_path/$component"
+        if [[ -L "$current_path" ]]; then
+            die "Refusing to clean through symlinked artifact path: '$current_path'."
+        fi
+    done
 }
 
 build_helper() {
@@ -309,6 +397,10 @@ main() {
     parse_options "$@"
     if [[ "$SHOW_HELP" == true ]]; then
         usage
+        return 0
+    fi
+    if [[ "$CLEAN" == true ]]; then
+        clean_benchmark_artifacts
         return 0
     fi
 

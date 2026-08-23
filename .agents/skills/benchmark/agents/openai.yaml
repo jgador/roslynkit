@@ -1,7 +1,7 @@
 interface:
   display_name: "Benchmark"
-  short_description: "Run Bash-controlled native retrieval benchmarks"
-  default_prompt: "Use $benchmark to dry-run the Bash-controlled text-retrieval benchmark."
+  short_description: "Run or analyze native retrieval benchmarks"
+  default_prompt: "Use $benchmark help to show fast benchmark presets and current cases."
 
 policy:
   allow_implicit_invocation: false

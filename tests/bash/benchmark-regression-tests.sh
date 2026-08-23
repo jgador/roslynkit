@@ -179,6 +179,80 @@ export BENCHMARK_TEST_LOG="$TEST_ROOT/command.log"
 export CODEX_THREAD_ID="host-thread"
 export PATH="$TEST_ROOT/bin:$PATH"
 
+clean_repository="$TEST_ROOT/clean repository"
+external_sentinel="$TEST_ROOT/external-sentinel.txt"
+mkdir -p \
+    "$clean_repository/scripts" \
+    "$clean_repository/artifacts/benchmark/run" \
+    "$clean_repository/artifacts/benchmark-integration/proof" \
+    "$clean_repository/artifacts/bin/RoslynKit.Benchmarking/release" \
+    "$clean_repository/artifacts/obj/RoslynKit.Benchmarking/release" \
+    "$clean_repository/artifacts/bin/RoslynKit.Benchmarking.Tests/debug" \
+    "$clean_repository/artifacts/obj/RoslynKit.Benchmarking.Tests/debug" \
+    "$clean_repository/artifacts/bin/RoslynKit/release" \
+    "$clean_repository/artifacts/obj/RoslynKit/release" \
+    "$clean_repository/artifacts/unrelated"
+cp -- "$CONTROLLER" "$clean_repository/scripts/benchmark.sh"
+printf 'keep\n' >"$external_sentinel"
+printf 'keep\n' >"$clean_repository/artifacts/unrelated/keep.txt"
+printf 'remove\n' >"$clean_repository/artifacts/roslynkit-text.db"
+printf 'remove\n' >"$clean_repository/artifacts/roslynkit-text.db-shm"
+printf 'remove\n' >"$clean_repository/artifacts/roslynkit-text.db-wal"
+printf 'remove\n' >"$clean_repository/artifacts/benchmark-protocol-123.db"
+printf 'remove\n' >"$clean_repository/artifacts/benchmark-protocol-123.db-shm"
+printf 'remove\n' >"$clean_repository/artifacts/benchmark-protocol-123.db-wal"
+ln -s -- "$external_sentinel" "$clean_repository/artifacts/benchmark/run/external-link"
+: >"$BENCHMARK_TEST_LOG"
+bash "$clean_repository/scripts/benchmark.sh" --clean >"$TEST_ROOT/clean.stdout"
+[[ ! -e "$clean_repository/artifacts/benchmark" ]] || fail 'Expected benchmark runs to be removed.'
+[[ ! -e "$clean_repository/artifacts/benchmark-integration" ]] || fail 'Expected benchmark proof artifacts to be removed.'
+[[ ! -e "$clean_repository/artifacts/roslynkit-text.db" ]] || fail 'Expected the benchmark index to be removed.'
+[[ ! -e "$clean_repository/artifacts/benchmark-protocol-123.db" ]] || fail 'Expected protocol test databases to be removed.'
+[[ ! -e "$clean_repository/artifacts/bin/RoslynKit.Benchmarking" ]] || fail 'Expected benchmark helper output to be removed.'
+[[ ! -e "$clean_repository/artifacts/obj/RoslynKit.Benchmarking" ]] || fail 'Expected benchmark helper intermediates to be removed.'
+[[ ! -e "$clean_repository/artifacts/bin/RoslynKit.Benchmarking.Tests" ]] || fail 'Expected benchmark proof output to be removed.'
+[[ ! -e "$clean_repository/artifacts/obj/RoslynKit.Benchmarking.Tests" ]] || fail 'Expected benchmark proof intermediates to be removed.'
+[[ ! -e "$clean_repository/artifacts/bin/RoslynKit/release" ]] || fail 'Expected the benchmark apphost to be removed.'
+[[ ! -e "$clean_repository/artifacts/obj/RoslynKit/release" ]] || fail 'Expected benchmark apphost intermediates to be removed.'
+[[ -f "$clean_repository/artifacts/unrelated/keep.txt" ]] || fail 'Expected unrelated artifacts to be preserved.'
+[[ -f "$external_sentinel" ]] || fail 'Expected cleanup not to follow artifact symlinks.'
+[[ ! -s "$BENCHMARK_TEST_LOG" ]] || fail 'Expected cleanup not to invoke dotnet or Codex.'
+assert_contains 'Benchmark artifacts cleaned.' "$TEST_ROOT/clean.stdout"
+
+if bash "$clean_repository/scripts/benchmark.sh" --clean --dry-run >/dev/null 2>"$TEST_ROOT/clean-conflict.stderr"; then
+    fail 'Expected clean combined with another option to fail.'
+fi
+assert_contains '--clean cannot be combined with other options' "$TEST_ROOT/clean-conflict.stderr"
+
+symlink_repository="$TEST_ROOT/symlink repository"
+symlink_target="$TEST_ROOT/symlink-artifacts-target"
+mkdir -p "$symlink_repository/scripts" "$symlink_target/benchmark"
+cp -- "$CONTROLLER" "$symlink_repository/scripts/benchmark.sh"
+printf 'keep\n' >"$symlink_target/benchmark/sentinel.txt"
+ln -s -- "$symlink_target" "$symlink_repository/artifacts"
+if bash "$symlink_repository/scripts/benchmark.sh" --clean >/dev/null 2>"$TEST_ROOT/clean-symlink.stderr"; then
+    fail 'Expected cleanup through a symlinked artifacts root to fail.'
+fi
+assert_contains 'Refusing to clean through symlinked artifacts root' "$TEST_ROOT/clean-symlink.stderr"
+[[ -f "$symlink_target/benchmark/sentinel.txt" ]] || fail 'Expected symlinked artifacts to remain untouched.'
+
+intermediate_repository="$TEST_ROOT/intermediate symlink repository"
+intermediate_target="$TEST_ROOT/intermediate-symlink-target"
+mkdir -p "$intermediate_repository/scripts" "$intermediate_repository/artifacts/bin" "$intermediate_target"
+cp -- "$CONTROLLER" "$intermediate_repository/scripts/benchmark.sh"
+printf 'keep\n' >"$intermediate_target/sentinel.txt"
+ln -s -- "$intermediate_target" "$intermediate_repository/artifacts/bin/RoslynKit.Benchmarking"
+if bash "$intermediate_repository/scripts/benchmark.sh" --clean >/dev/null 2>"$TEST_ROOT/clean-intermediate-symlink.stderr"; then
+    fail 'Expected cleanup through a symlinked artifact path to fail.'
+fi
+assert_contains 'Refusing to clean through symlinked artifact path' "$TEST_ROOT/clean-intermediate-symlink.stderr"
+[[ -f "$intermediate_target/sentinel.txt" ]] || fail 'Expected the symlink target to remain untouched.'
+
+: >"$BENCHMARK_TEST_LOG"
+bash "$CONTROLLER" --help >"$TEST_ROOT/help.stdout"
+assert_contains '--clean' "$TEST_ROOT/help.stdout"
+[[ ! -s "$BENCHMARK_TEST_LOG" ]] || fail 'Expected help not to invoke dotnet or Codex.'
+
 (
     cd -- "$TEST_ROOT"
     bash "$CONTROLLER" \
