@@ -27,7 +27,7 @@ public sealed class WorkspaceDaemonHostTests
         var originalIdleDelay = delays.GetPending(TimeSpan.FromMinutes(5));
 
         var response = host.CreateStatusResponse(
-            new DaemonStatusRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid()));
+            new DaemonStatusRequest(Guid.NewGuid()));
 
         Assert.True(response.Running);
         Assert.Equal(TestPaths.SolutionPath(), response.TargetPath);
@@ -123,7 +123,7 @@ public sealed class WorkspaceDaemonHostTests
         await started.Task.WaitAsync(TestContext.Current.CancellationToken);
 
         var response = host.BeginStop(
-            new DaemonStopRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid()));
+            new DaemonStopRequest(Guid.NewGuid()));
 
         Assert.True(response.Stopping);
         Assert.Equal(WorkspaceDaemonHostState.Stopping, host.CaptureStatus().State);
@@ -174,7 +174,7 @@ public sealed class WorkspaceDaemonHostTests
         var execution = host.ExecuteAsync(CreateRequest(Guid.NewGuid()), CancellationToken.None);
         await started.Task.WaitAsync(TestContext.Current.CancellationToken);
         _ = host.BeginStop(
-            new DaemonStopRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid()));
+            new DaemonStopRequest(Guid.NewGuid()));
 
         delays.GetPending(TimeSpan.FromSeconds(30)).Release();
         await cancellationObserved.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -245,7 +245,7 @@ public sealed class WorkspaceDaemonHostTests
         var execution = host.ExecuteAsync(CreateRequest(Guid.NewGuid()), CancellationToken.None);
         await started.Task.WaitAsync(TestContext.Current.CancellationToken);
         _ = host.BeginStop(
-            new DaemonStopRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid()));
+            new DaemonStopRequest(Guid.NewGuid()));
 
         var dispose = host.DisposeAsync().AsTask();
         await cancellationObserved.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -273,7 +273,7 @@ public sealed class WorkspaceDaemonHostTests
             });
 
         _ = host.BeginStop(
-            new DaemonStopRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid()));
+            new DaemonStopRequest(Guid.NewGuid()));
 
         Assert.Equal(
             WorkspaceDaemonStopReason.StopRequested,
@@ -332,7 +332,7 @@ public sealed class WorkspaceDaemonHostTests
         var second = host.ExecuteAsync(CreateRequest(Guid.NewGuid()), CancellationToken.None);
         await bothStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
         _ = host.BeginStop(
-            new DaemonStopRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid()));
+            new DaemonStopRequest(Guid.NewGuid()));
 
         delays.GetPending(TimeSpan.FromSeconds(30)).Release();
 

@@ -66,7 +66,7 @@ internal sealed class DaemonPipeClient
     }
 
     /// <summary>
-    /// Reports readiness only after a compatible handshake completes successfully.
+    /// Reports readiness only after a handshake completes successfully.
     /// </summary>
     public async Task<bool> ProbeAsync(
         string endpointName,
@@ -116,9 +116,7 @@ internal sealed class DaemonPipeClient
 
     private static async Task CompleteHandshakeAsync(Stream stream, CancellationToken cancellationToken)
     {
-        var request = new DaemonHandshakeRequest(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
-            Guid.NewGuid());
+        var request = new DaemonHandshakeRequest(Guid.NewGuid());
         await DaemonProtocol.WriteRequestAsync(stream, request, cancellationToken).ConfigureAwait(false);
         var response = await DaemonProtocol.ReadResponseAsync(stream, cancellationToken).ConfigureAwait(false);
         ValidateResponse(response, request.RequestId);
@@ -135,7 +133,6 @@ internal sealed class DaemonPipeClient
 
     private static void ValidateResponse(DaemonResponse response, Guid requestId)
     {
-        DaemonProtocol.EnsureCompatible(response);
         if (response.RequestId != requestId)
         {
             throw InvalidMessage("The daemon response request ID did not match the request.");

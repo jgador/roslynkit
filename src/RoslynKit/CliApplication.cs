@@ -1,3 +1,5 @@
+using System.Reflection;
+
 namespace RoslynKit;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace RoslynKit;
 /// </summary>
 public sealed class CliApplication
 {
-    private static readonly string VersionText = $"roslynkit version {RoslynKitBuildInfo.DisplayVersion}";
+    private static readonly string VersionText = $"roslynkit version {GetDisplayVersion()}";
 
     private readonly TextWriter _stdout;
     private readonly TextWriter _stderr;
@@ -45,6 +47,15 @@ public sealed class CliApplication
         _stderr = stderr;
         _executeWorkspaceCommand = executeWorkspaceCommand;
         _executeDaemonCommand = executeDaemonCommand;
+    }
+
+    private static string GetDisplayVersion()
+    {
+        var assembly = typeof(CliApplication).Assembly;
+        var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        return !string.IsNullOrWhiteSpace(informationalVersion)
+            ? informationalVersion
+            : assembly.GetName().Version?.ToString() ?? "unknown";
     }
 
     /// <summary>

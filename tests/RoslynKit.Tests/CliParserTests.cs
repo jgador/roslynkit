@@ -122,6 +122,25 @@ public sealed class CliParserTests
     }
 
     [Fact]
+    public void Parse_AcceptsTextOnlyCompactSearchOptions()
+    {
+        var command = CliParser.Parse(
+            [
+                "search",
+                "--target", "repo.slnx",
+                "--index-path", "artifacts/roslynkit.db",
+                "--query", "workspace reload",
+                "--text-only",
+                "--compact",
+                "--balanced",
+            ]);
+
+        Assert.True(command.Flag("text-only"));
+        Assert.True(command.Flag("compact"));
+        Assert.True(command.Flag("balanced"));
+    }
+
+    [Fact]
     public void Parse_RejectsDocumentKeySelector()
     {
         var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
@@ -323,6 +342,58 @@ public sealed class CliParserTests
         Assert.Equal("RoslynKit.CliApplication", command.Required("symbol"));
         Assert.Null(command.Optional("file"));
         Assert.Null(command.OptionalInt("line", 1));
+    }
+
+    [Fact]
+    public void Parse_AcceptsSymbolContextSymbolSelectorAndLimits()
+    {
+        var command = CliParser.Parse([
+            "symbol-context",
+            "--target", "repo.slnx",
+            "--symbol", "T:IntentNavigation.DiagnosticReportValidator",
+            "--max-results", "7",
+            "--max-comments", "2",
+        ]);
+
+        Assert.Equal("symbol-context", command.Name);
+        Assert.Equal("T:IntentNavigation.DiagnosticReportValidator", command.Required("symbol"));
+        Assert.Equal(7, command.OptionalInt("max-results", 1, 1));
+        Assert.Equal(2, command.OptionalInt("max-comments", 1, 1));
+        Assert.Null(command.Optional("file"));
+    }
+
+    [Fact]
+    public void Parse_AcceptsSymbolContextPositionSelector()
+    {
+        var command = CliParser.Parse([
+            "symbol-context",
+            "--target", "repo.slnx",
+            "--file", "DiagnosticBootstrap.cs",
+            "--line", "18",
+            "--column", "26",
+        ]);
+
+        Assert.Equal("symbol-context", command.Name);
+        Assert.Equal("DiagnosticBootstrap.cs", command.Required("file"));
+        Assert.Equal(18, command.OptionalInt("line", 1, 1));
+        Assert.Equal(26, command.OptionalInt("column", 1, 1));
+        Assert.Null(command.Optional("symbol"));
+    }
+
+    [Fact]
+    public void Parse_RejectsSymbolContextSymbolCombinedWithPosition()
+    {
+        var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse([
+            "symbol-context",
+            "--target", "repo.slnx",
+            "--symbol", "T:IntentNavigation.DiagnosticReportValidator",
+            "--file", "DiagnosticReportValidator.cs",
+            "--line", "12",
+            "--column", "41",
+        ]));
+
+        Assert.Equal("symbol-context", exception.CommandName);
+        Assert.Contains("Option '--symbol' cannot be combined with", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

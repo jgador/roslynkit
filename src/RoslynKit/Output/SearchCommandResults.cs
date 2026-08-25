@@ -10,6 +10,17 @@ public enum SearchIndexState
 }
 
 /// <summary>
+/// Identifies the indexed field that supplied a search result excerpt.
+/// </summary>
+public enum SearchExcerptSource
+{
+    Documentation,
+    Comment,
+    Signature,
+    Body,
+}
+
+/// <summary>
 /// Represents the <c>index</c> command payload after building or refreshing one target partition.
 /// </summary>
 public sealed record IndexResult(
@@ -32,7 +43,8 @@ public sealed record SearchResult(
     int ReturnedCount,
     bool Truncated,
     IReadOnlyList<SearchHit> Hits,
-    IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics);
+    IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics,
+    bool Compact = false);
 
 /// <summary>
 /// Represents one ranked C# symbol hit returned by a full-text search query.
@@ -42,4 +54,10 @@ public sealed record SearchHit(
     string Kind,
     SourceRange Location,
     string? SymbolId,
-    string? Excerpt);
+    string? Excerpt)
+{
+    /// <summary>
+    /// Gets the indexed field that supplied <see cref="Excerpt"/> when one is present.
+    /// </summary>
+    public SearchExcerptSource? ExcerptSource { get; init; }
+}

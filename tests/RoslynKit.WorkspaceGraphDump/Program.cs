@@ -27,7 +27,7 @@ internal static class Program
         catch (CliUsageException ex)
         {
             Console.Error.WriteLine(ex.Message);
-            Console.Error.WriteLine("Usage: dotnet run --project .\\tests\\RoslynKit.WorkspaceGraphDump [<solution.slnx|solution.sln|project.csproj>]");
+            Console.Error.WriteLine("Usage: dotnet run --project ./tests/RoslynKit.WorkspaceGraphDump [<solution.slnx|solution.sln|project.csproj>]");
             return 1;
         }
     }

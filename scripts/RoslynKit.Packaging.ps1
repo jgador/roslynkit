@@ -132,17 +132,87 @@ function Assert-PathUnderRoot
         [string]$Label
     )
 
-    $normalizedRoot = [System.IO.Path]::GetFullPath($RootPath).TrimEnd("\", "/")
+    $pathComparison = if ($IsWindows) { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
+    $directorySeparators = [char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    $normalizedRoot = [System.IO.Path]::GetFullPath($RootPath)
     $normalizedPath = [System.IO.Path]::GetFullPath($Path)
 
-    if (-not $normalizedPath.StartsWith($normalizedRoot, [System.StringComparison]::OrdinalIgnoreCase))
+    $rootVolume = [System.IO.Path]::GetPathRoot($normalizedRoot)
+    if ($normalizedRoot.Length -gt $rootVolume.Length)
+    {
+        $normalizedRoot = $normalizedRoot.TrimEnd($directorySeparators)
+    }
+
+    $pathVolume = [System.IO.Path]::GetPathRoot($normalizedPath)
+    if ($normalizedPath.Length -gt $pathVolume.Length)
+    {
+        $normalizedPath = $normalizedPath.TrimEnd($directorySeparators)
+    }
+
+    if ($normalizedPath.Equals($normalizedRoot, $pathComparison))
+    {
+        throw "$Label cannot target the protected root path $normalizedRoot."
+    }
+
+    $rootBoundary = if ($normalizedRoot.EndsWith([System.IO.Path]::DirectorySeparatorChar.ToString(), [System.StringComparison]::Ordinal) -or
+        $normalizedRoot.EndsWith([System.IO.Path]::AltDirectorySeparatorChar.ToString(), [System.StringComparison]::Ordinal))
+    {
+        $normalizedRoot
+    }
+    else
+    {
+        $normalizedRoot + [System.IO.Path]::DirectorySeparatorChar
+    }
+
+    if (-not $normalizedPath.StartsWith($rootBoundary, $pathComparison))
     {
         throw "$Label must stay under $normalizedRoot, but resolved to $normalizedPath."
     }
 
-    if ($normalizedPath.Equals($normalizedRoot, [System.StringComparison]::OrdinalIgnoreCase))
+    $relativePath = $normalizedPath.Substring($rootBoundary.Length)
+    $currentPath = $normalizedRoot
+    foreach ($pathSegment in ($relativePath -split '[\\/]'))
     {
-        throw "$Label cannot target the protected root path $normalizedRoot."
+        if ([string]::IsNullOrEmpty($pathSegment))
+        {
+            continue
+        }
+
+        $currentPath = Join-Path $currentPath $pathSegment
+        try
+        {
+            $pathItem = Get-Item -LiteralPath $currentPath -Force -ErrorAction Stop
+        }
+        catch [System.Management.Automation.ItemNotFoundException]
+        {
+            break
+        }
+
+        if (($pathItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -eq 0)
+        {
+            continue
+        }
+
+        try
+        {
+            $resolvedTarget = $pathItem.ResolveLinkTarget($true)
+        }
+        catch
+        {
+            throw "$Label cannot traverse reparse point '$currentPath' under the protected root $normalizedRoot."
+        }
+
+        if ($null -eq $resolvedTarget)
+        {
+            throw "$Label cannot traverse reparse point '$currentPath' under the protected root $normalizedRoot."
+        }
+
+        $resolvedTargetPath = [System.IO.Path]::GetFullPath($resolvedTarget.FullName)
+        if (-not $resolvedTargetPath.Equals($normalizedRoot, $pathComparison) -and
+            -not $resolvedTargetPath.StartsWith($rootBoundary, $pathComparison))
+        {
+            throw "$Label must stay under $normalizedRoot, but reparse point '$currentPath' resolves to $resolvedTargetPath."
+        }
     }
 }
 
@@ -318,7 +388,7 @@ function Show-RoslynKitDogfoodCommands
         "$($Context.PackageVersion)-dev.1"
     }
 
-    Write-Host "pwsh .\scripts\install-roslynkit-dev.ps1 -Version $devVersionExample"
+    Write-Host "pwsh ./scripts/install-roslynkit-dev.ps1 -Version $devVersionExample"
     Write-Host "The dev installer builds, packs, and installs the requested prerelease from the current checkout."
     Write-Host "& `"$($Context.DevToolCommandPath)`" version"
     Write-Host "& `"$($Context.DevToolCommandPath)`" help"

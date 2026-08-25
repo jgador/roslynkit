@@ -16,7 +16,7 @@ The audit has two main-agent tracks:
 
 ## Workflow
 
-1. Size and scope the repository first with `git status --short --branch`, `git rev-list --all --count`, `git ls-files`, `git ls-files -o --exclude-standard`, and `Get-Command gitleaks,trufflehog -ErrorAction SilentlyContinue`. The pipeline-based history scans below are practical for small histories (roughly under a few thousand commits); for large repositories, prefer a dedicated scanner such as gitleaks or trufflehog for layers 2 and 3.
+1. Size and scope the repository first with `git status --short --branch`, `git rev-list --all --count`, `git ls-files`, and `git ls-files -o --exclude-standard`. Check optional scanner availability through an explicit PowerShell host with `pwsh -NoProfile -Command 'Get-Command gitleaks,trufflehog -ErrorAction SilentlyContinue'`. The pipeline-based history scans below are practical for small histories (roughly under a few thousand commits); for large repositories, prefer a dedicated scanner such as gitleaks or trufflehog for layers 2 and 3.
 2. Run the code-level review checklist in the main agent. Use search results to identify security-sensitive code paths, then verify every suspected issue by reading the actual code.
 3. Run all three secret-scan layers: working tree, full git history, and every blob in the object database.
 4. For .NET repositories with a solution or project file, run package metadata checks such as `dotnet list <solution-or-project> package --vulnerable --include-transitive` and `dotnet list <solution-or-project> package --deprecated --include-transitive`. For other ecosystems, run the nearest read-only package audit command when available.
@@ -61,6 +61,8 @@ Also list the files actually examined. Be rigorous - verify each finding by
 reading the actual code, not just pattern matches.
 
 ## Secret-Scan Commands (PowerShell, read-only)
+
+Explicitly select `pwsh` as the execution shell before running any fenced block below. If shell selection is unavailable, invoke the entire block through `pwsh -NoProfile -Command`; do not submit individual PowerShell cmdlets to Bash, sh, zsh, or another non-PowerShell shell.
 
 All commands assume the current directory is the repository root. Define the high-confidence token pattern once per session (AWS, GitHub, Anthropic, OpenAI, Slack, Google, GitLab, npm/NuGet, Azure, private key blocks, JWTs):
 

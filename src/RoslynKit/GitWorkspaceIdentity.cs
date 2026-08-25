@@ -7,11 +7,8 @@ internal sealed record GitWorkspaceIdentity(
     string WorktreeRoot,
     string TargetPath,
     GlobalJsonIdentity? GlobalJson,
-    DotNetSdkIdentity DotNetSdk,
     MSBuildInstanceIdentity MSBuild,
     IReadOnlyDictionary<string, string?> BuildEnvironment,
-    RoslynKitBuildIdentity RoslynKit,
-    int ProtocolVersion,
     string ProcessArchitecture);
 
 /// <summary>
@@ -20,24 +17,12 @@ internal sealed record GitWorkspaceIdentity(
 internal sealed record GlobalJsonIdentity(string Path, string Sha256);
 
 /// <summary>
-/// Identifies the .NET SDK selected from the target directory.
-/// </summary>
-internal sealed record DotNetSdkIdentity(string Version);
-
-/// <summary>
 /// Identifies the MSBuild installation selected for the target directory.
 /// </summary>
 internal sealed record MSBuildInstanceIdentity(
     string Name,
     string DiscoveryType,
-    string InstanceVersion,
-    string MSBuildPath,
-    string? MSBuildAssemblyVersion);
-
-/// <summary>
-/// Identifies the exact RoslynKit build independently of its public package version.
-/// </summary>
-internal sealed record RoslynKitBuildIdentity(string InformationalVersion, string ModuleVersionId);
+    string MSBuildPath);
 
 /// <summary>
 /// Distinguishes unsupported workspace boundaries from failures in identity infrastructure.

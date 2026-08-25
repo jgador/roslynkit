@@ -33,7 +33,7 @@ public sealed class DaemonProcessStarterTests
     }
 
     [Fact]
-    public void CreateWindowsCommandLine_QuotesExecutableAndArgumentsWithoutChangingValues()
+    public void CreateWindowsCommandLine_RecognizesWindowsDotNetHostPathsAcrossHostPlatforms()
     {
         var startInfo = DaemonProcessStarter.CreateStartInfo(
             @"C:\Program Files\dotnet\dotnet.exe",

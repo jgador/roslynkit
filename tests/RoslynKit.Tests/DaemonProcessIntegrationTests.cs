@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace RoslynKit.Tests;
 
@@ -115,6 +116,47 @@ public sealed class DaemonProcessIntegrationTests
         Assert.Equal(firstStatus.Generation + 1, changedStatus.Generation);
     }
 
+    [Theory]
+    [InlineData(SigHup)]
+    [InlineData(SigInt)]
+    [InlineData(SigTerm)]
+    public async Task PosixSignal_GracefullyStopsRunningDaemonOnLinux(int signal)
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var area = await DaemonProcessTestArea.CreateAsync(cancellationToken);
+
+        using var daemon = new Process
+        {
+            StartInfo = CreateDaemonStartInfo(area),
+        };
+        Assert.True(daemon.Start());
+
+        var standardOutput = daemon.StandardOutput
+            .ReadToEndAsync(TestContext.Current.CancellationToken);
+        var standardError = daemon.StandardError
+            .ReadToEndAsync(TestContext.Current.CancellationToken);
+        var status = await area.WaitForRunningStatusAsync(cancellationToken);
+
+        Assert.Equal(daemon.Id, status.ProcessId!.Value);
+
+        SendPosixSignal(daemon.Id, signal);
+        await daemon.WaitForExitAsync(cancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+
+        await Task.WhenAll(standardOutput, standardError)
+            .WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+
+        Assert.Equal(130, daemon.ExitCode);
+        Assert.Empty(await standardOutput);
+        Assert.Empty(await standardError);
+        await area.WaitForNotRunningStatusAsync(cancellationToken);
+    }
+
     private static async Task WaitForProcessExitAsync(int processId)
     {
         try
@@ -128,6 +170,39 @@ public sealed class DaemonProcessIntegrationTests
             // The daemon exited before the process handle was opened.
         }
     }
+
+    private static ProcessStartInfo CreateDaemonStartInfo(DaemonProcessTestArea area)
+    {
+        var startInfo = new ProcessStartInfo("dotnet")
+        {
+            WorkingDirectory = area.RootPath,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        startInfo.ArgumentList.Add(typeof(Program).Assembly.Location);
+        startInfo.ArgumentList.Add(DaemonServerRunner.InternalModeToken);
+        startInfo.ArgumentList.Add("--target");
+        startInfo.ArgumentList.Add(area.TargetPath);
+        startInfo.Environment["DOTNET_CLI_HOME"] = Path.Combine(area.RootPath, ".dotnet-cli");
+        startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
+        startInfo.Environment["DOTNET_NOLOGO"] = "1";
+        startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
+        return startInfo;
+    }
+
+    private static void SendPosixSignal(int processId, int signal)
+    {
+        Assert.Equal(0, Kill(processId, signal));
+    }
+
+    [DllImport("libc", EntryPoint = "kill", SetLastError = true)]
+    private static extern int Kill(int processId, int signal);
+
+    private const int SigHup = 1;
+    private const int SigInt = 2;
+    private const int SigTerm = 15;
 }
 
 /// <summary>

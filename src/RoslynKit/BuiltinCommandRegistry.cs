@@ -57,16 +57,17 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "index",
             "Build or refresh a repository-local full-text search index for the loaded target.",
-            ["roslynkit index --target <target> --index-path <path> [--rebuild]"],
+            ["roslynkit index --target <target> --index-path <path> [--rebuild] [--text-only]"],
             [
                 TargetOption(),
                 IndexPathOption(),
                 OptionSpec.Flag(null, "rebuild", "discard the selected target's existing index records before indexing"),
+                OptionSpec.Flag(null, "text-only", "index repository C# source in-process without loading MSBuild or using the daemon"),
             ]),
         new BuiltinCommand(
             "search",
             "Search indexed C# symbols using English-oriented text matching and ranking.",
-            ["roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>]"],
+            ["roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>] [--text-only] [--compact] [--balanced]"],
             [
                 TargetOption(),
                 IndexPathOption(),
@@ -74,6 +75,9 @@ public static class BuiltinCommandRegistry
                 SearchProjectOption(),
                 SymbolKindOption(),
                 SearchMaxResultsOption(),
+                OptionSpec.Flag(null, "text-only", "search repository C# source in-process without loading MSBuild or using the daemon"),
+                OptionSpec.Flag(null, "compact", "emit concise ranked evidence with repository-relative locations"),
+                OptionSpec.Flag(null, "balanced", "reserve half of bounded results for focused test declarations when both source and tests match"),
             ]),
         new BuiltinCommand(
             "symbols",
@@ -187,6 +191,25 @@ public static class BuiltinCommandRegistry
                 ColumnOption(required: false),
                 SymbolOption(),
                 MaxResultsOption(),
+            ]),
+        new BuiltinCommand(
+            "symbol-context",
+            "Return the local syntax node, resolved symbol, ordinary comments, and bounded semantic context.",
+            [
+                "roslynkit symbol-context --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n> [--max-results <n>] [--max-comments <n>]",
+                "roslynkit symbol-context --target <target> --symbol <selector> [--max-results <n>] [--max-comments <n>]",
+            ],
+            [
+                TargetOption(),
+                FileOption(),
+                ProjectOption(),
+                TargetFrameworkOption(),
+                DocumentKindOption(),
+                LineOption(required: false),
+                ColumnOption(required: false),
+                SymbolOption(),
+                SymbolContextMaxResultsOption(),
+                MaxCommentsOption(),
             ]),
         new BuiltinCommand(
             "quick-info",
@@ -353,6 +376,16 @@ public static class BuiltinCommandRegistry
     private static OptionSpec MaxResultsOption()
     {
         return OptionSpec.Integer(null, "max-results", "n", "maximum results to return");
+    }
+
+    private static OptionSpec SymbolContextMaxResultsOption()
+    {
+        return OptionSpec.Integer(null, "max-results", "n", "maximum semantic descendants to return (default: 20)");
+    }
+
+    private static OptionSpec MaxCommentsOption()
+    {
+        return OptionSpec.Integer(null, "max-comments", "n", "maximum ordinary comments to return (default: 3)");
     }
 
     private static OptionSpec SymbolKindOption()

@@ -39,6 +39,14 @@ internal static class TestPaths
     }
 
     /// <summary>
+    /// Returns the isolated fixture project used for intent-driven semantic-navigation tests.
+    /// </summary>
+    public static string IntentNavigationProjectPath()
+    {
+        return Path.Combine(RepositoryRoot(), "tests", "FixtureWorkspace", "IntentNavigation", "IntentNavigation.csproj");
+    }
+
+    /// <summary>
     /// Builds an absolute repository path from relative path segments.
     /// </summary>
     public static string RepoFile(params string[] relativeSegments)

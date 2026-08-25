@@ -44,7 +44,10 @@ public sealed class SearchMarkdownFormatTests
                     "method",
                     new SourceRange(@"src\App\WorkspaceDaemonSession.cs", 18, 20, 18, 31),
                     "M:App.WorkspaceDaemonSession.ReloadAsync(System.Threading.CancellationToken)",
-                    "Reloads the workspace generation after source changes."),
+                    "Reloads the workspace generation after source changes.")
+                {
+                    ExcerptSource = SearchExcerptSource.Documentation,
+                },
                 new SearchHit(
                     "App.WorkspaceDaemonSession",
                     "class",
@@ -66,6 +69,7 @@ public sealed class SearchMarkdownFormatTests
             + "\n"
             + "- rank: 1 kind: method name: `App.WorkspaceDaemonSession.ReloadAsync` loc: `src\\App\\WorkspaceDaemonSession.cs:18:20-18:31` id: `M:App.WorkspaceDaemonSession.ReloadAsync(System.Threading.CancellationToken)`\n"
             + "  excerpt: `Reloads the workspace generation after source changes.`\n"
+            + "  excerpt-source: documentation\n"
             + "- rank: 2 kind: class name: `App.WorkspaceDaemonSession` loc: `src\\App\\WorkspaceDaemonSession.cs:5:21-5:43` id: `T:App.WorkspaceDaemonSession`";
         Assert.Equal(expected, rendered);
         Assert.DoesNotContain("score", rendered, StringComparison.OrdinalIgnoreCase);
@@ -125,5 +129,39 @@ public sealed class SearchMarkdownFormatTests
 
         Assert.Contains("query: `` `worker` ``", rendered, StringComparison.Ordinal);
         Assert.Contains("excerpt: ``Returns `worker` state.``", rendered, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_CompactSearchEmitsOnlyRankedRepositoryRelativeEvidence()
+    {
+        var result = new SearchResult(
+            "app.slnx",
+            "artifacts/roslynkit.db",
+            "workspace reload",
+            SearchIndexState.Fresh,
+            TotalCount: 9,
+            ReturnedCount: 1,
+            Truncated: true,
+            [
+                new SearchHit(
+                    "App.WorkspaceSession.ReloadAsync",
+                    "method",
+                    new SourceRange("src/App/WorkspaceSession.cs", 18, 20, 18, 31),
+                    "M:App.WorkspaceSession.ReloadAsync",
+                    "Reloads the workspace after tracked files change."),
+            ],
+            [],
+            Compact: true);
+
+        var rendered = MarkdownProjection.Render(result);
+
+        Assert.Equal(
+            "results: 1/9\n"
+            + "- 1 method `App.WorkspaceSession.ReloadAsync` `src/App/WorkspaceSession.cs:18:20-18:31`\n"
+            + "  `Reloads the workspace after tracked files change.`",
+            rendered);
+        Assert.DoesNotContain("target:", rendered, StringComparison.Ordinal);
+        Assert.DoesNotContain("id:", rendered, StringComparison.Ordinal);
+        Assert.DoesNotContain("excerpt-source:", rendered, StringComparison.Ordinal);
     }
 }

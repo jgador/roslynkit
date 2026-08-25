@@ -6,7 +6,7 @@ Use one source of truth per topic:
 
 - [README.md](README.md): user-facing overview, output format, packaging, and quick-start commands.
 - [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md): canonical stable RoslynKit skill bundle source and `roslynkit init` scaffold input.
-- [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md): generated runtime command reference from `BuiltinCommandRegistry`; regenerate with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --write`.
+- [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md): generated runtime command reference from `BuiltinCommandRegistry`; regenerate with `dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --write`.
 - [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md): shared command output contract for humans, scripts, tests, and agents.
 - [docs/daemon.md](docs/daemon.md): canonical lifecycle, consistency, IPC, fallback, and supported-workspace contract for the optional workspace daemon.
 - [docs/dev-install.md](docs/dev-install.md): semi-manual side-by-side prerelease installation for RoslynKit development.
@@ -15,7 +15,7 @@ Use one source of truth per topic:
 - [docs/agents/skill-maintenance.md](docs/agents/skill-maintenance.md): ownership and synchronization rules for checked-in RoslynKit skill files.
 - [docs/local-repository-reference.md](docs/local-repository-reference.md): user-owned local repository reference map; use only when explicitly named or tagged by the user.
 - [docs/roslyn-lsp-commands.md](docs/roslyn-lsp-commands.md): human-facing Roslyn language-server inventory and RoslynKit planning coverage; do not use for current command routing.
-- [docs/token-efficiency-benchmark.md](docs/token-efficiency-benchmark.md): manual benchmark procedure; use only when the user asks to measure token efficiency.
+- [docs/benchmark.md](docs/benchmark.md): native raw-text versus RoslynKit text-only token benchmark; use only when the user asks to measure token efficiency.
 - [AGENTS.md](AGENTS.md): active coding-agent rules, safety rules, and repo workflow expectations.
 
 Keep this file focused on the rules agents need during execution. Put longer repo-maintenance agent guidance under `docs/agents/`, put reusable RoslynKit skill references under [.agents/skills/roslynkit/references/](.agents/skills/roslynkit/references/), and do not restate full command reference material here.
@@ -26,12 +26,12 @@ RoslynKit is a .NET 10 command-line tool. Production code lives under `src/Rosly
 
 ## Build, Test, and Development Commands
 
-- `dotnet restore .\RoslynKit.slnx` restores packages for the solution.
-- `dotnet build .\RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"` builds the CLI and tests with concise output.
-- `dotnet test .\RoslynKit.slnx` runs the xUnit test suite through Microsoft Testing Platform.
-- `dotnet run --project .\src\RoslynKit -- help` runs the CLI locally.
-- `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --check` verifies the generated command reference is in sync with runtime command metadata.
-- `dotnet pack .\src\RoslynKit\RoslynKit.csproj` creates the .NET tool package.
+- `dotnet restore ./RoslynKit.slnx` restores packages for the solution.
+- `dotnet build ./RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"` builds the CLI and tests with concise output.
+- `dotnet test ./RoslynKit.slnx` runs the xUnit test suite through Microsoft Testing Platform.
+- `dotnet run --project ./src/RoslynKit -- help` runs the CLI locally.
+- `dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --check` verifies the generated command reference is in sync with runtime command metadata.
+- `dotnet pack ./src/RoslynKit/RoslynKit.csproj` creates the .NET tool package.
 
 ## Agent Workflow
 
@@ -57,7 +57,7 @@ When changing the stable RoslynKit skill bundle, keep [.agents/skills/roslynkit/
 
 For longer agent-only guidance, start at [docs/agents/README.md](docs/agents/README.md).
 
-Do not read [docs/local-repository-reference.md](docs/local-repository-reference.md), [docs/roslyn-lsp-commands.md](docs/roslyn-lsp-commands.md), or [docs/token-efficiency-benchmark.md](docs/token-efficiency-benchmark.md) by default. Use those docs only when the user explicitly names or tags them, or when the task is specifically about local reference repositories, RoslynKit roadmap coverage, or token-efficiency measurement.
+Do not read [docs/local-repository-reference.md](docs/local-repository-reference.md), [docs/roslyn-lsp-commands.md](docs/roslyn-lsp-commands.md), or [docs/benchmark.md](docs/benchmark.md) by default. Use those docs only when the user explicitly names or tags them, or when the task is specifically about local reference repositories, RoslynKit roadmap coverage, or token-efficiency measurement.
 
 Do not use Repository Synapse in this repository. Do not run `synapse ensure`, `synapse recall`, `synapse tests`, or any other command that creates `.synapse/` repo-local cache files. Use Atlas, RoslynKit, scout agents, and direct file/test inspection instead.
 
@@ -69,6 +69,7 @@ For file discovery and literal text search, invoke the globally available `rg` (
 
 - Use `rg --files` for file discovery and `rg -n "pattern"` for literal text search.
 - Prefer global `rg` over recursive PowerShell file enumeration or `Select-String`.
+- When a coding-agent command runs from Bash or another non-PowerShell shell on Windows Subsystem for Linux (WSL) or Linux, do not invoke PowerShell cmdlets as bare commands. Invoke them through `pwsh -Command`, for example `pwsh -Command 'Get-Content AGENTS.md'`. Bare cmdlets are allowed only after PowerShell is explicitly selected as the execution shell.
 - Fall back to the terminal-native search tool for the current platform only when global `rg` is unavailable.
 - This search-tool rule does not replace the RoslynKit-first C# semantic-inspection rules below.
 
@@ -79,6 +80,10 @@ When the task is ordinary C# semantic inspection inside this RoslynKit repo, use
 Use [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md) only when the task is explicitly about the stable global tool behavior or the released stable workflow.
 
 For literal search, prose inspection, non-C# files, or RoslynKit workspace-load failures, fall back to the terminal-native tool for the current platform instead of forcing RoslynKit.
+
+### Intent-Based C# Search
+
+When an English-oriented question describes a C# responsibility but no declaration name is known, follow the intent-based symbol discovery workflow in [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). For this repository, always pass `--target ./RoslynKit.slnx` and `--index-path ./artifacts/roslynkit.db`; `artifacts/` is Git-ignored, so the repository-local SQLite database and its write-ahead logging (WAL) sidecars remain local. `search` creates, validates, and refreshes the index automatically. Use `index` only to prepare it deliberately, and use `--rebuild` only when the selected target partition must be recreated. See [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md) for exact runtime syntax and options.
 
 ### No-Primer C# Tool Gate
 
@@ -167,14 +172,14 @@ Navigation comments should help RoslynKit documentation-enabled navigation outpu
 - Keep command execution separate from argument parsing.
 - Keep the markdown output contract ([.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md)) stable, deterministic, and covered by parser/renderer tests when changed.
 - Pass `CancellationToken` through async Roslyn operations when available.
-- If a public CLI option, command, output shape, package surface, or documented workflow changes, update [README.md](README.md) or the relevant docs in the same change. When command metadata changes, regenerate [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md) and verify it with `dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --check`.
+- If a public CLI option, command, output shape, package surface, or documented workflow changes, update [README.md](README.md) or the relevant docs in the same change. When command metadata changes, regenerate [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md) and verify it with `dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --check`.
 
 ## Post-Change Formatting
 
 After C# coding work, run these commands before final build/test verification:
 
-- `dotnet format whitespace .\RoslynKit.slnx --no-restore --verbosity minimal`
-- `dotnet format style .\RoslynKit.slnx --no-restore --severity warn --verbosity minimal`
+- `dotnet format whitespace ./RoslynKit.slnx --no-restore --verbosity minimal`
+- `dotnet format style ./RoslynKit.slnx --no-restore --severity warn --verbosity minimal`
 
 ## End-of-Session Commit Context
 
@@ -184,7 +189,7 @@ Run this like the post-change formatting step: do it near the end of the session
 
 ## Testing Guidelines
 
-Tests use xUnit through Microsoft Testing Platform in `tests/RoslynKit.Tests`. Name test methods as behavior statements, for example `Parse_RejectsDuplicateOption`. Add parser/renderer tests for CLI contract changes and focused Roslyn execution tests when command behavior changes. Run `dotnet test .\RoslynKit.slnx` before publishing changes.
+Tests use xUnit through Microsoft Testing Platform in `tests/RoslynKit.Tests`. Name test methods as behavior statements, for example `Parse_RejectsDuplicateOption`. Add parser/renderer tests for CLI contract changes and focused Roslyn execution tests when command behavior changes. Run `dotnet test ./RoslynKit.slnx` before publishing changes.
 
 ## Commit & Pull Request Guidelines
 
@@ -200,5 +205,7 @@ Recent history uses short imperative subjects and conventional prefixes such as 
 ## Security & Configuration Tips
 
 Do not commit secrets, local credentials, generated caches, package outputs, or accidental binaries.
+
+When accessing the Windows user-profile directory, use `%USERPROFILE%` in Command Prompt-style paths or `$env:USERPROFILE` in PowerShell. Do not hard-code a user-specific path such as `C:\Users\<name>`.
 
 If the task explicitly uses [docs/local-repository-reference.md](docs/local-repository-reference.md), treat every repository listed there as a strict read-only reference while working in RoslynKit. Never suggest making changes in any of those reference repositories as part of a RoslynKit task, even when issues, gaps, or possible improvements are noticed there. Keep all recommended changes scoped to RoslynKit unless the user explicitly changes the task to one of those repositories.

@@ -26,6 +26,20 @@ public sealed class SearchCommandTests
     }
 
     [Fact]
+    public async Task Search_ReturnsThePrimaryDeclarationWithinThreeResultsForAResponsibilityQuery()
+    {
+        await using var area = SearchCommandTestArea.Create();
+
+        var result = await ExecuteSearchAsync(
+            area,
+            "where does application validate configuration snapshot",
+            "--max-results", "3");
+
+        Assert.Equal(3, result.ReturnedCount);
+        Assert.Contains(result.Hits, hit => hit.DisplayName == ConfigurationMethodDisplayName);
+    }
+
+    [Fact]
     public async Task Index_ReusesAnUnchangedTargetWithoutRebuilding()
     {
         await using var area = SearchCommandTestArea.Create();

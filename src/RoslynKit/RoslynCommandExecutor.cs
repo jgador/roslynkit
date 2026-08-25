@@ -61,6 +61,7 @@ public static partial class RoslynCommandExecutor
             "references" => await ReferencesAsync(command, loaded, cancellationToken).ConfigureAwait(false),
             "search" => await SearchCommandService.SearchAsync(command, loaded, cancellationToken).ConfigureAwait(false),
             "signature-help" => await SignatureHelpAsync(command, loaded, cancellationToken).ConfigureAwait(false),
+            "symbol-context" => await SymbolContextAsync(command, loaded, cancellationToken).ConfigureAwait(false),
             "symbol-source" => await SymbolSourceAsync(command, loaded, cancellationToken).ConfigureAwait(false),
             "symbols" => await SymbolsAsync(command, loaded, cancellationToken).ConfigureAwait(false),
             "type-definition" => await TypeDefinitionAsync(command, loaded, cancellationToken).ConfigureAwait(false),
@@ -89,6 +90,11 @@ public static partial class RoslynCommandExecutor
                 _ = command.Required("query");
                 _ = command.OptionalInt("max-results", 20, 1);
                 _ = GetSymbolFilter(command.Name, command.Optional("kind"));
+                if (command.Flag("text-only") && command.Optional("project") is not null)
+                {
+                    throw new CliUsageException(command.Name, "Option '--project' is not supported with '--text-only'.");
+                }
+
                 break;
             case "document-lines":
                 var startLine = command.OptionalInt("start-line", 1, 1);
@@ -102,6 +108,10 @@ public static partial class RoslynCommandExecutor
             case "references":
             case "implementations":
                 _ = command.OptionalInt("max-results", 200, 1);
+                break;
+            case "symbol-context":
+                _ = command.OptionalInt("max-results", 20, 1);
+                _ = command.OptionalInt("max-comments", 3, 1);
                 break;
             case "symbol-source":
                 _ = command.Required("symbol");

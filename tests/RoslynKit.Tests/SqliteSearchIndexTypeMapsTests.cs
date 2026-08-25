@@ -12,13 +12,11 @@ public sealed class SqliteSearchIndexTypeMapsTests
     public void MetadataRow_HydratesSqlColumnNamesCaseInsensitively()
     {
         var row = ParseRow<SqliteSearchIndexMetadataRow>(
-            ("SCHEMA_VERSION", typeof(int), 7),
             ("target_identity", typeof(string), "RoslynKit.slnx"),
             ("FiNgErPrInT", typeof(string), "fingerprint"),
             ("INDEXED_AT_UTC", typeof(string), "2026-08-03T12:34:56.0000000+00:00"),
             ("symbol_count", typeof(int), 42));
 
-        Assert.Equal(7, row.SchemaVersion);
         Assert.Equal("RoslynKit.slnx", row.TargetIdentity);
         Assert.Equal("fingerprint", row.Fingerprint);
         Assert.Equal("2026-08-03T12:34:56.0000000+00:00", row.IndexedAtUtc);

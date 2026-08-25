@@ -119,6 +119,12 @@ internal sealed class DaemonClient
         {
             throw new DaemonClientInfrastructureException(CommandInfrastructureFailureMessage, exception);
         }
+        catch (ArgumentOutOfRangeException exception) when (
+            !OperatingSystem.IsWindows()
+            && string.Equals(exception.ParamName, "path", StringComparison.Ordinal))
+        {
+            throw new DaemonClientInfrastructureException(CommandInfrastructureFailureMessage, exception);
+        }
         catch (Exception exception) when (exception is
             IOException or
             TimeoutException or
@@ -144,9 +150,7 @@ internal sealed class DaemonClient
             return null;
         }
 
-        var request = new DaemonStatusRequest(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
-            Guid.NewGuid());
+        var request = new DaemonStatusRequest(Guid.NewGuid());
         var response = await _sendAsync(
             endpoint.EndpointName,
             request,
@@ -169,9 +173,7 @@ internal sealed class DaemonClient
             return null;
         }
 
-        var request = new DaemonStopRequest(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
-            Guid.NewGuid());
+        var request = new DaemonStopRequest(Guid.NewGuid());
         var response = await _sendAsync(
             endpoint.EndpointName,
             request,
@@ -310,7 +312,6 @@ internal sealed class DaemonClient
 
     private static void EnsureResponse(DaemonResponse response, Guid requestId)
     {
-        DaemonProtocol.EnsureCompatible(response);
         if (response.RequestId != requestId)
         {
             throw new DaemonProtocolException(

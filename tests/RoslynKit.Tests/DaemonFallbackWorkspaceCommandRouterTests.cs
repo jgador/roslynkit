@@ -25,6 +25,35 @@ public sealed class DaemonFallbackWorkspaceCommandRouterTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_TextOnlySearchExecutesStandaloneWithoutCallingDaemon()
+    {
+        var daemonCalls = 0;
+        var standaloneResult = CliProcessResult.Success("compact search");
+
+        var result = await DaemonFallbackWorkspaceCommandRouter.ExecuteAsync(
+            CliParser.Parse(
+                [
+                    "search",
+                    "--target", TestPaths.SolutionPath(),
+                    "--index-path", TestPaths.RepoFile("artifacts", "text-only-router.db"),
+                    "--query", "workspace reload",
+                    "--text-only",
+                    "--compact",
+                ]),
+            (_, _) =>
+            {
+                daemonCalls++;
+                return Task.FromResult(CliProcessResult.Success("daemon"));
+            },
+            (_, _) => Task.FromResult(standaloneResult),
+            TestContext.Current.CancellationToken);
+
+        Assert.Same(standaloneResult, result);
+        Assert.Equal(0, daemonCalls);
+        Assert.Empty(result.Stderr);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_FallsBackOnceAndPrependsWarningToStandaloneStderr()
     {
         var daemonCalls = 0;

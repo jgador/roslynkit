@@ -17,7 +17,7 @@ Keep manual references, roadmap inventories, and benchmark procedures outside th
 
 - [docs/local-repository-reference.md](../local-repository-reference.md): user-owned local reference repository map.
 - [docs/roslyn-lsp-commands.md](../roslyn-lsp-commands.md): Roslyn language-server method inventory and RoslynKit command planning coverage.
-- [docs/token-efficiency-benchmark.md](../token-efficiency-benchmark.md): manual Codex token-efficiency benchmark procedure.
+- [docs/benchmark.md](../benchmark.md): explicit-only Bash-controlled raw-text versus RoslynKit text-only token benchmark.
 
 ## Linked Shared Docs
 
@@ -28,6 +28,6 @@ Do not duplicate shared runtime or workflow facts in hand-written agent docs. Li
 When command metadata changes, regenerate [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md) with:
 
 ```powershell
-dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --write
-dotnet run --file .\tools\RoslynKit.CommandDocs.cs -- --check
+dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --write
+dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --check
 ```

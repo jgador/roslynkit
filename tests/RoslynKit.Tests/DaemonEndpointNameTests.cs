@@ -12,12 +12,9 @@ public sealed class DaemonEndpointNameTests
         var endpointName = DaemonEndpointName.Create(identity);
 
         Assert.Equal(DaemonEndpointName.Length, endpointName.Length);
-        Assert.Matches(new Regex("^roslynkit-v1-[0-9a-f]{64}$", RegexOptions.CultureInvariant), endpointName);
+        Assert.Matches(new Regex("^roslynkit-[0-9a-f]{64}$", RegexOptions.CultureInvariant), endpointName);
         Assert.DoesNotContain(identity.Workspace.WorktreeRoot, endpointName, StringComparison.Ordinal);
         Assert.DoesNotContain(identity.Workspace.TargetPath, endpointName, StringComparison.Ordinal);
-        Assert.Equal(
-            "roslynkit-v1-72ad2dd9269deec8b275bf8cdfdea584c6bbad733c62df726c34efd875edb43c",
-            endpointName);
     }
 
     [Fact]
@@ -51,17 +48,11 @@ public sealed class DaemonEndpointNameTests
             identity with { Workspace = identity.Workspace with { GlobalJson = null } },
             identity with { Workspace = identity.Workspace with { GlobalJson = identity.Workspace.GlobalJson! with { Path = "/other/global.json" } } },
             identity with { Workspace = identity.Workspace with { GlobalJson = identity.Workspace.GlobalJson! with { Sha256 = "other-global-json" } } },
-            identity with { Workspace = identity.Workspace with { DotNetSdk = new DotNetSdkIdentity("10.0.200") } },
             identity with { Workspace = identity.Workspace with { MSBuild = identity.Workspace.MSBuild with { Name = "Other MSBuild" } } },
             identity with { Workspace = identity.Workspace with { MSBuild = identity.Workspace.MSBuild with { DiscoveryType = "Other" } } },
-            identity with { Workspace = identity.Workspace with { MSBuild = identity.Workspace.MSBuild with { InstanceVersion = "18.1.0" } } },
             identity with { Workspace = identity.Workspace with { MSBuild = identity.Workspace.MSBuild with { MSBuildPath = "/other/msbuild" } } },
-            identity with { Workspace = identity.Workspace with { MSBuild = identity.Workspace.MSBuild with { MSBuildAssemblyVersion = null } } },
             identity with { Workspace = identity.Workspace with { BuildEnvironment = new Dictionary<string, string?> { ["ALPHA"] = "two", ["ZETA"] = null } } },
             identity with { Workspace = identity.Workspace with { BuildEnvironment = new Dictionary<string, string?> { ["ALPHA"] = "one", ["ZETA"] = string.Empty } } },
-            identity with { Workspace = identity.Workspace with { RoslynKit = identity.Workspace.RoslynKit with { InformationalVersion = "0.3.0" } } },
-            identity with { Workspace = identity.Workspace with { RoslynKit = identity.Workspace.RoslynKit with { ModuleVersionId = "other-mvid" } } },
-            identity with { Workspace = identity.Workspace with { ProtocolVersion = 2 } },
             identity with { Workspace = identity.Workspace with { ProcessArchitecture = "other-architecture" } },
         };
         var endpointName = DaemonEndpointName.Create(identity);
@@ -129,16 +120,11 @@ public sealed class DaemonEndpointNameTests
             "/private/repository",
             "/private/repository/RoslynKit.slnx",
             new GlobalJsonIdentity("/private/repository/global.json", "global-json-digest"),
-            new DotNetSdkIdentity("10.0.100"),
             new MSBuildInstanceIdentity(
                 ".NET SDK",
                 "DotNetSdk",
-                "18.0.0",
-                "/dotnet/sdk/10.0.100",
-                "18.0.0+build"),
+                "/dotnet/sdk/10.0.100"),
             environment,
-            new RoslynKitBuildIdentity("0.2.0", "build-mvid"),
-            1,
             "X64");
         return new DaemonIdentity(
             new DaemonUserIdentity(DaemonIdentityResolver.UnixEffectiveUserIdKind, "1000"),

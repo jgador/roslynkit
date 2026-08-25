@@ -213,10 +213,8 @@ internal sealed class WorkspaceDaemonHost : IAsyncDisposable
     public DaemonStatusResponse CreateStatusResponse(DaemonStatusRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        DaemonProtocol.EnsureCompatible(request);
         var status = CaptureStatus();
         return new DaemonStatusResponse(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
             request.RequestId,
             Running: status.State != WorkspaceDaemonHostState.Stopped,
             status.TargetPath,
@@ -234,14 +232,12 @@ internal sealed class WorkspaceDaemonHost : IAsyncDisposable
     public DaemonStopResponse BeginStop(DaemonStopRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        DaemonProtocol.EnsureCompatible(request);
         lock (_stateGate)
         {
             _ = EnsureStopStarted(WorkspaceDaemonStopReason.StopRequested);
         }
 
         return new DaemonStopResponse(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
             request.RequestId,
             Stopping: true);
     }

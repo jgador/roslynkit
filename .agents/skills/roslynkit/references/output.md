@@ -236,10 +236,49 @@ truncated: false
 
 - rank: 1 kind: method name: `MyApp.WorkspaceDaemonSession.ReloadAsync` loc: `C:\repo\MyApp\src\MyApp\WorkspaceDaemonSession.cs:398:43-398:54` id: `M:MyApp.WorkspaceDaemonSession.ReloadAsync(System.Threading.CancellationToken)`
   excerpt: `Reloads the workspace generation after the repository source changes.`
+  excerpt-source: documentation
 - rank: 2 kind: class name: `MyApp.WorkspaceDaemonSession` loc: `C:\repo\MyApp\src\MyApp\WorkspaceDaemonSession.cs:112:23-112:45` id: `T:MyApp.WorkspaceDaemonSession`
 ```
 
-Results are ordered by the internal Best Matching 25 (BM25) ranking but do not expose raw scores. `rank:` starts at one. `excerpt:` is optional and is a bounded source-derived excerpt with normalized whitespace; it is never generated or paraphrased. `id:` and `loc:` are navigation inputs for an agent-selected follow-up command, not a standard-input pipeline. Rank is heuristic, so agents compare several excerpts, kinds, identities, and locations before choosing a next navigation target.
+Results are ordered by the internal Best Matching 25 (BM25) ranking but do not expose raw scores. `rank:` starts at one. `excerpt:` is optional and is a bounded source-derived excerpt with normalized whitespace; it is never generated or paraphrased. Whenever `excerpt:` is present, `excerpt-source:` immediately follows it and is one of `documentation`, `comment`, `signature`, or `body`. `id:` and `loc:` are navigation inputs for an agent-selected follow-up command, not a standard-input pipeline. Rank and excerpt provenance are routing metadata, so agents compare several excerpts, kinds, identities, and locations before choosing a next navigation target and verify the selected route with source evidence.
+
+With `--compact`, search emits a judgment-only shape with repository-relative locations:
+
+```markdown
+results: 2/17
+- 1 method `MyApp.WorkspaceDaemonSession.ReloadAsync` `src/MyApp/WorkspaceDaemonSession.cs:398:43-398:54`
+  `Reloads the workspace generation after repository source changes.`
+- 2 method `MyApp.Tests.WorkspaceDaemonSessionTests.ReloadsAfterChange` `tests/MyApp.Tests/WorkspaceDaemonSessionTests.cs:75:23-75:41`
+```
+
+Compact output omits the command header, target and index metadata, stale/fresh state, truncation flag, symbol IDs, and excerpt provenance. Use it when an LLM will judge bounded search evidence directly, not when the next command must chain through `id:`. `--balanced` changes only bounded selection: when both source and test paths match, half of the result capacity is reserved for tests and unused capacity is filled from the original ranking.
+
+### `symbol-context`
+
+`symbol-context` resolves one selector into a local syntax node and its semantic symbol. It accepts exactly one of an emitted documentation-comment ID or qualified symbol selector, or a source position. The header begins with `command:` and `selector:`, followed by the selected-node record and resolved symbol record. A syntax node is source structure, such as `InvocationExpression` or `MethodDeclaration`; a symbol is its compiler-resolved identity. The command re-resolves syntax from the selector for every invocation and does not expose persistent syntax-node IDs.
+
+```markdown
+command: symbol-context
+selector: `M:MyApp.Validator.Validate(MyApp.Configuration)`
+selected-node: kind: MethodDeclaration loc: `src/MyApp/Validator.cs:12:5-30:6` name: `MyApp.Validator.Validate` id: `M:MyApp.Validator.Validate(MyApp.Configuration)`
+symbol: `M:MyApp.Validator.Validate(MyApp.Configuration)` name: `MyApp.Validator.Validate`
+documentation: Validates configuration before startup.
+alternate-declarations: 0
+ancestors: 1
+- kind: ClassDeclaration loc: `src/MyApp/Validator.cs:5:1-45:2` name: `MyApp.Validator` id: `T:MyApp.Validator`
+descendants: 1/3
+descendants-truncated: true
+- relation: invocation depth: 2 kind: InvocationExpression loc: `src/MyApp/Validator.cs:20:9-20:34` target: `MyApp.Configuration.Normalize` target-id: `M:MyApp.Configuration.Normalize`
+comments: 1/2
+comments-truncated: true
+- placement: leading style: line loc: `src/MyApp/Validator.cs:10:1-10:44` text: `Startup validation boundary.`
+```
+
+`selected-node:` has `kind:` and `loc:`, plus optional `name:` and `id:` when the syntax node resolves to a symbol. `symbol:` is the exact `id:` when Roslyn can create one, otherwise the display name; an ID-bearing symbol adds `name:` with its display name. Optional `documentation:` is the plain-text XML summary. `alternate-declarations:` and `ancestors:` always carry counts; alternate declarations are `- loc:` bullets, and ancestors are nearest-first `- kind: ... loc:` bullets with the same optional `name:` and `id:` fields.
+
+Descendants cover declaration, invocation, construction, and member-reference syntax. `descendants:` and `comments:` each use `returned/total` counts and are immediately followed by their respective `*-truncated: true|false` line. Descendant bullets carry `relation:`, `depth:`, `kind:`, and `loc:`, with optional `target:` and `target-id:` when the node resolves to a navigable symbol. Comment bullets carry `placement:` (`leading`, `body`, or `trailing`), `style:` (`line` or `block`), `loc:`, and normalized `text:`. `--max-results` defaults to `20` descendants, and `--max-comments` defaults to `3` comments. An absent optional symbol ID, target ID, or documentation summary is omitted rather than rendered as an empty field.
+
+The output is a deterministic navigation primitive, not an intent-answering planner. `id:`, `target-id:`, and `loc:` identify valid next RoslynKit selectors. Documentation and ordinary comments are routing hints, not proof; an external agent maintains intent, avoids repeated identities or locations, selects the next relationship, and stops only after focused source or test evidence satisfies the intent.
 
 ### `diagnostics`
 

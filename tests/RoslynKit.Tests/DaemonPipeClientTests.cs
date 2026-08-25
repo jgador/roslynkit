@@ -32,7 +32,7 @@ public sealed class DaemonPipeClientTests
     {
         var response = await new DaemonPipeClient().SendAsync(
             $"roslynkit-test-{Guid.NewGuid():N}",
-            new DaemonStatusRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid()),
+            new DaemonStatusRequest(Guid.NewGuid()),
             TimeSpan.FromMilliseconds(25),
             TestContext.Current.CancellationToken);
 
@@ -45,9 +45,7 @@ public sealed class DaemonPipeClientTests
         var endpointName = $"roslynkit-test-{Guid.NewGuid():N}";
         await using var server = DaemonNamedPipe.CreateServer(endpointName);
         var serverTask = ServeCommandAsync(server, Guid.NewGuid());
-        var request = new DaemonStatusRequest(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
-            Guid.NewGuid());
+        var request = new DaemonStatusRequest(Guid.NewGuid());
 
         await Assert.ThrowsAsync<DaemonProtocolException>(() => new DaemonPipeClient().SendAsync(
             endpointName,
@@ -79,9 +77,7 @@ public sealed class DaemonPipeClientTests
     {
         var endpointName = $"roslynkit-test-{Guid.NewGuid():N}";
         await using var server = DaemonNamedPipe.CreateServer(endpointName);
-        var request = new DaemonStatusRequest(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
-            Guid.NewGuid());
+        var request = new DaemonStatusRequest(Guid.NewGuid());
         var clientTask = new DaemonPipeClient().SendAsync(
             endpointName,
             request,
@@ -106,7 +102,6 @@ public sealed class DaemonPipeClientTests
         await DaemonProtocol.WriteResponseAsync(
             server,
             new DaemonHandshakeResponse(
-                RoslynKitBuildInfo.DaemonProtocolVersion,
                 handshake.RequestId,
                 Accepted: true,
                 Diagnostic: null),
@@ -119,7 +114,6 @@ public sealed class DaemonPipeClientTests
                 responseRequestId ?? command.RequestId,
                 CliProcessResult.Success("daemon result")),
             DaemonStatusRequest status => new DaemonStatusResponse(
-                RoslynKitBuildInfo.DaemonProtocolVersion,
                 responseRequestId ?? status.RequestId,
                 Running: true,
                 TargetPath: TestPaths.SolutionPath(),

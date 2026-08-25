@@ -52,7 +52,7 @@ public sealed class SqliteSearchIndexTests
     }
 
     [Fact]
-    public async Task ReplaceTargetAsync_SchemaVersionOneOmitsTargetPathAndPersistsCanonicalRelativeValues()
+    public async Task ReplaceTargetAsync_OmitsTargetPathAndPersistsCanonicalRelativeValues()
     {
         await using var area = SearchIndexTestArea.Create();
         var index = new SqliteSearchIndex(area.DatabasePath);
@@ -76,9 +76,11 @@ public sealed class SqliteSearchIndexTests
 
         var metadata = await index.ReadMetadataAsync(RelativePath(targetIdentity), cancellationToken);
         var targetColumns = await ReadColumnNamesAsync(area.DatabasePath, "search_index_targets", cancellationToken);
+        var tableNames = await ReadTableNamesAsync(area.DatabasePath, cancellationToken);
         var persisted = await ReadPersistedPathValuesAsync(area.DatabasePath, targetIdentity, cancellationToken);
 
-        Assert.Equal(1, metadata!.SchemaVersion);
+        Assert.NotNull(metadata);
+        Assert.DoesNotContain("search_index_schema", tableNames, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("target_path", targetColumns, StringComparer.OrdinalIgnoreCase);
         Assert.Equal(targetIdentity, persisted.TargetIdentity);
         Assert.Equal(projectPath, persisted.ProjectPath);
@@ -95,7 +97,7 @@ public sealed class SqliteSearchIndexTests
     }
 
     [Fact]
-    public async Task ReadMetadataAsync_RejectsVersionOneSchemaWithLegacyTargetPathColumn()
+    public async Task ReadMetadataAsync_RejectsLegacyTargetPathColumn()
     {
         await using var area = SearchIndexTestArea.Create();
         var index = new SqliteSearchIndex(area.DatabasePath);
@@ -206,6 +208,7 @@ public sealed class SqliteSearchIndexTests
 
         var match = Assert.Single(result.Matches);
         Assert.Equal("Refreshes the workspace before searching.", match.Excerpt);
+        Assert.Equal(SearchExcerptSource.Documentation, match.ExcerptSource);
         Assert.Equal(10, match.Line);
         Assert.Equal(5, match.Column);
         Assert.Equal(10, match.EndLine);
@@ -266,6 +269,40 @@ public sealed class SqliteSearchIndexTests
         var excerpt = Assert.IsType<string>(Assert.Single(result.Matches).Excerpt);
         Assert.Contains("workspace", excerpt, StringComparison.OrdinalIgnoreCase);
         Assert.True(excerpt.Length <= 320);
+    }
+
+    [Theory]
+    [InlineData(SearchExcerptSource.Documentation, "documentation needle")]
+    [InlineData(SearchExcerptSource.Comment, "comment needle")]
+    [InlineData(SearchExcerptSource.Signature, "void SearchTarget(needle value)")]
+    [InlineData(SearchExcerptSource.Body, "needle body")]
+    public async Task SearchAsync_ReportsExcerptSourceForEachIndexedField(
+        SearchExcerptSource expectedSource,
+        string expectedExcerpt)
+    {
+        await using var area = SearchIndexTestArea.Create();
+        var index = new SqliteSearchIndex(area.DatabasePath);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        const string matchToken = "needle";
+        await index.ReplaceTargetAsync(
+            new SqliteSearchIndexTarget(RelativePath("target"), "fingerprint"),
+            [CreateSymbol(
+                "match",
+                "SearchTarget",
+                matchToken,
+                documentation: expectedSource == SearchExcerptSource.Documentation ? expectedExcerpt : null,
+                comments: expectedSource == SearchExcerptSource.Comment ? expectedExcerpt : null,
+                signature: expectedSource == SearchExcerptSource.Signature ? expectedExcerpt : null,
+                body: expectedSource == SearchExcerptSource.Body ? expectedExcerpt : null)],
+            cancellationToken);
+
+        var result = await index.SearchAsync(
+            new SqliteSearchIndexQuery(RelativePath("target"), [matchToken], MaxResults: 20),
+            cancellationToken);
+
+        var match = Assert.Single(result.Matches);
+        Assert.Equal(expectedSource, match.ExcerptSource);
+        Assert.Equal(expectedExcerpt, match.Excerpt);
     }
 
     [Fact]
@@ -357,29 +394,6 @@ public sealed class SqliteSearchIndexTests
 
         Assert.Contains("search_index_fts", exception.Message, StringComparison.Ordinal);
         Assert.Contains("incomplete", exception.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task ReadMetadataAsync_RejectsSchemaVersionMismatchWithRebuildGuidance()
-    {
-        await using var area = SearchIndexTestArea.Create();
-        var index = new SqliteSearchIndex(area.DatabasePath);
-        var cancellationToken = TestContext.Current.CancellationToken;
-        await index.ReplaceTargetAsync(
-            new SqliteSearchIndexTarget(RelativePath("target"), "fingerprint"),
-            [CreateSymbol("existing", "ExistingWorkspace", "existing workspace")],
-            cancellationToken);
-        await ExecuteSqlAsync(
-            area.DatabasePath,
-            "UPDATE search_index_schema SET schema_version = 999 WHERE schema_key = 1;",
-            cancellationToken);
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => index.ReadMetadataAsync(
-            RelativePath("target"),
-            cancellationToken));
-
-        Assert.Contains("schema version 999", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("Delete the index database", exception.Message, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -564,6 +578,88 @@ public sealed class SqliteSearchIndexTests
     }
 
     [Fact]
+    public async Task SearchAsync_PrioritizesNavigableMembersBeforeNamespaces()
+    {
+        await using var area = SearchIndexTestArea.Create();
+        var index = new SqliteSearchIndex(area.DatabasePath);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await index.ReplaceTargetAsync(
+            new SqliteSearchIndexTarget(RelativePath("target"), "fingerprint"),
+            [
+                CreateSymbol("namespace", "RoslynKit", "workspace daemon reload", kind: "Namespace"),
+                CreateSymbol("method", "ReloadAsync", "reload", kind: "Method"),
+            ],
+            cancellationToken);
+
+        var results = await index.SearchAsync(
+            new SqliteSearchIndexQuery(RelativePath("target"), ["workspace", "daemon", "reload"], MaxResults: 2),
+            cancellationToken);
+
+        Assert.Equal(["ReloadAsync", "RoslynKit"], results.Matches.Select(static match => match.Name));
+    }
+
+    [Fact]
+    public async Task SearchAsync_PrioritizesProductionMembersBeforeTestMembers()
+    {
+        await using var area = SearchIndexTestArea.Create();
+        var index = new SqliteSearchIndex(area.DatabasePath);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await index.ReplaceTargetAsync(
+            new SqliteSearchIndexTarget(RelativePath("target"), "fingerprint"),
+            [
+                CreateSymbol("test", "ReloadAsync", "workspace daemon reload", path: "tests/RoslynKit.Tests/WorkspaceDaemonSessionTests.cs"),
+                CreateSymbol("production", "ReloadAsync", "workspace daemon reload", path: "src/RoslynKit/WorkspaceDaemonSession.cs"),
+            ],
+            cancellationToken);
+
+        var results = await index.SearchAsync(
+            new SqliteSearchIndexQuery(RelativePath("target"), ["workspace", "daemon", "reload"], MaxResults: 2),
+            cancellationToken);
+
+        Assert.Equal(
+            ["src/RoslynKit/WorkspaceDaemonSession.cs", "tests/RoslynKit.Tests/WorkspaceDaemonSessionTests.cs"],
+            results.Matches.Select(static match => match.Path.Value));
+    }
+
+    [Fact]
+    public async Task SearchAsync_PrioritizesMoreRelevantTestEvidenceBeforeLessRelevantProductionMembers()
+    {
+        await using var area = SearchIndexTestArea.Create();
+        var index = new SqliteSearchIndex(area.DatabasePath);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await index.ReplaceTargetAsync(
+            new SqliteSearchIndexTarget(RelativePath("target"), "fingerprint"),
+            [
+                CreateSymbol(
+                    "production",
+                    "RefreshConfiguration",
+                    "configuration refresh",
+                    path: "src/Product/RefreshConfiguration.cs"),
+                CreateSymbol(
+                    "test",
+                    "RefreshConfiguration_WhenSettingsChange",
+                    "configuration snapshot refresh settings change",
+                    path: "tests/Product.Tests/RefreshConfigurationTests.cs"),
+            ],
+            cancellationToken);
+
+        var results = await index.SearchAsync(
+            new SqliteSearchIndexQuery(
+                RelativePath("target"),
+                ["configuration", "snapshot", "refresh", "settings", "change"],
+                MaxResults: 2),
+            cancellationToken);
+
+        Assert.Equal(
+            [
+                "tests/Product.Tests/RefreshConfigurationTests.cs",
+                "src/Product/RefreshConfiguration.cs",
+            ],
+            results.Matches.Select(static match => match.Path.Value));
+        Assert.Equal([5, 2], results.Matches.Select(static match => match.QueryTermCoverage));
+    }
+
+    [Fact]
     public async Task SearchAsync_DoesNotUseSubstringOnlyDocumentationForExcerpt()
     {
         await using var area = SearchIndexTestArea.Create();
@@ -594,6 +690,7 @@ public sealed class SqliteSearchIndexTests
         string? path = null,
         string? documentation = null,
         string? comments = null,
+        string? signature = null,
         string? body = null,
         string projectPath = "App.csproj",
         string kind = "Method",
@@ -619,7 +716,7 @@ public sealed class SqliteSearchIndexTests
             10,
             20,
             documentation,
-            $"void {name}()",
+            signature ?? $"void {name}()",
             comments,
             body,
             name,
@@ -653,6 +750,29 @@ public sealed class SqliteSearchIndexTests
         while (await reader.ReadAsync(cancellationToken))
         {
             names.Add(reader.GetString(1));
+        }
+
+        return names;
+    }
+
+    private static async Task<IReadOnlySet<string>> ReadTableNamesAsync(
+        string databasePath,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = databasePath,
+            Mode = SqliteOpenMode.ReadOnly,
+            Pooling = false,
+        }.ToString());
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table';";
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            names.Add(reader.GetString(0));
         }
 
         return names;

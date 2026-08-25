@@ -147,21 +147,12 @@ internal sealed class GitWorkspaceIdentityResolver
             }
 
             var globalJson = await ResolveGlobalJsonAsync(targetDirectory, cancellationToken).ConfigureAwait(false);
-            var dotnetSdkResult = await RunDotNetAsync(targetDirectory, ["--version"], cancellationToken).ConfigureAwait(false);
-            if (dotnetSdkResult.ExitCode != 0 || string.IsNullOrWhiteSpace(dotnetSdkResult.StandardOutput))
-            {
-                return Infrastructure("The .NET SDK selected for the target could not be resolved.", dotnetSdkResult);
-            }
-
             var identity = new GitWorkspaceIdentity(
                 worktreeRoot,
                 canonicalTarget,
                 globalJson,
-                new DotNetSdkIdentity(dotnetSdkResult.StandardOutput.Trim()),
                 _resolveMSBuildIdentity(targetDirectory),
                 CaptureBuildEnvironment(),
-                RoslynKitBuildInfo.Identity,
-                RoslynKitBuildInfo.DaemonProtocolVersion,
                 RuntimeInformation.ProcessArchitecture.ToString());
 
             return GitWorkspaceIdentityResolution.Supported(identity);
@@ -270,17 +261,10 @@ internal sealed class GitWorkspaceIdentityResolver
         };
         var instance = MSBuildLocator.QueryVisualStudioInstances(options).FirstOrDefault()
             ?? throw new InvalidOperationException("No compatible MSBuild instance was found for the target.");
-        var msbuildAssemblyPath = Path.Combine(instance.MSBuildPath, "MSBuild.dll");
-        var assemblyVersion = File.Exists(msbuildAssemblyPath)
-            ? FileVersionInfo.GetVersionInfo(msbuildAssemblyPath).ProductVersion
-            : null;
-
         return new MSBuildInstanceIdentity(
             instance.Name,
             instance.DiscoveryType.ToString(),
-            instance.Version.ToString(),
-            NormalizeDirectoryPath(instance.MSBuildPath),
-            assemblyVersion);
+            NormalizeDirectoryPath(instance.MSBuildPath));
     }
 
     private Task<ProcessCommandResult> RunGitAsync(

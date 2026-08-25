@@ -20,14 +20,13 @@ public sealed class NamedPipeDaemonTransportTests
         Assert.True(server.IsAsync);
         Assert.True(client.IsAsync);
 
-        var request = new DaemonHandshakeRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid());
+        var request = new DaemonHandshakeRequest(Guid.NewGuid());
         var readingRequest = DaemonProtocol.ReadRequestAsync(server, timeout.Token);
         await DaemonProtocol.WriteRequestAsync(client, request, timeout.Token);
         var receivedRequest = await readingRequest;
         Assert.Equal(request, receivedRequest);
 
         var response = new DaemonHandshakeResponse(
-            RoslynKitBuildInfo.DaemonProtocolVersion,
             request.RequestId,
             Accepted: true,
             Diagnostic: null);

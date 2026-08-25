@@ -147,11 +147,13 @@ public sealed class SearchCliContractTests
     public void DaemonCommandRequest_CanonicalizesIndexPathAndRoundTripsSearch()
     {
         var repositoryRoot = TestPaths.RepositoryRoot();
+        var solutionPath = Path.Combine(".", "RoslynKit.slnx");
+        var indexPath = Path.Combine(".", "artifacts", "search-cli-contract", "not-created", "roslynkit.db");
         var parsed = CliParser.Parse(
         [
             "search",
-            "--target", ".\\RoslynKit.slnx",
-            "--index-path", ".\\artifacts\\search-cli-contract\\not-created\\roslynkit.db",
+            "--target", solutionPath,
+            "--index-path", indexPath,
             "--query", "workspace daemon session",
             "--max-results", "20",
         ]);

@@ -12,7 +12,6 @@ internal static class SqliteSearchIndexTypeMaps
     static SqliteSearchIndexTypeMaps()
     {
         Register<SqliteSearchIndexMetadataRow>(
-            ("schema_version", row => row.SchemaVersion),
             ("target_identity", row => row.TargetIdentity),
             ("fingerprint", row => row.Fingerprint),
             ("indexed_at_utc", row => row.IndexedAtUtc),
@@ -109,8 +108,6 @@ internal static class SqliteSearchIndexTypeMaps
 /// </summary>
 internal sealed class SqliteSearchIndexMetadataRow
 {
-    public int SchemaVersion { get; set; }
-
     public string TargetIdentity { get; set; } = string.Empty;
 
     public string? Fingerprint { get; set; }

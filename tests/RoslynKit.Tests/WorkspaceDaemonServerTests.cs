@@ -9,7 +9,7 @@ public sealed class WorkspaceDaemonServerTests
     {
         await using var context = TestServerContext.Start();
         await using var client = await context.ConnectAndHandshakeAsync();
-        var request = new DaemonStatusRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid());
+        var request = new DaemonStatusRequest(Guid.NewGuid());
 
         await DaemonProtocol.WriteRequestAsync(client, request, context.CancellationToken);
         var response = Assert.IsType<DaemonStatusResponse>(
@@ -38,7 +38,7 @@ public sealed class WorkspaceDaemonServerTests
         await executionStarted.Task.WaitAsync(context.CancellationToken);
 
         await using var statusClient = await context.ConnectAndHandshakeAsync();
-        var statusRequest = new DaemonStatusRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid());
+        var statusRequest = new DaemonStatusRequest(Guid.NewGuid());
         await DaemonProtocol.WriteRequestAsync(statusClient, statusRequest, context.CancellationToken);
         var statusResponse = Assert.IsType<DaemonStatusResponse>(
             await DaemonProtocol.ReadResponseAsync(statusClient, context.CancellationToken));
@@ -79,7 +79,7 @@ public sealed class WorkspaceDaemonServerTests
 
         await executionCanceled.Task.WaitAsync(context.CancellationToken);
         await using var statusClient = await context.ConnectAndHandshakeAsync();
-        var statusRequest = new DaemonStatusRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid());
+        var statusRequest = new DaemonStatusRequest(Guid.NewGuid());
         await DaemonProtocol.WriteRequestAsync(statusClient, statusRequest, context.CancellationToken);
         Assert.IsType<DaemonStatusResponse>(
             await DaemonProtocol.ReadResponseAsync(statusClient, context.CancellationToken));
@@ -119,31 +119,6 @@ public sealed class WorkspaceDaemonServerTests
     }
 
     [Fact]
-    public async Task RunAsync_IncompatibleHandshakeIsRejectedWithoutStoppingListener()
-    {
-        await using var context = TestServerContext.Start();
-        await using (var incompatibleClient = await context.ConnectAsync())
-        {
-            var request = new DaemonHandshakeRequest(
-                RoslynKitBuildInfo.DaemonProtocolVersion + 1,
-                Guid.NewGuid());
-            await DaemonProtocol.WriteRequestAsync(incompatibleClient, request, context.CancellationToken);
-            var response = Assert.IsType<DaemonHandshakeResponse>(
-                await DaemonProtocol.ReadResponseAsync(incompatibleClient, context.CancellationToken));
-
-            Assert.Equal(request.RequestId, response.RequestId);
-            Assert.False(response.Accepted);
-            Assert.NotNull(response.Diagnostic);
-        }
-
-        await using var validClient = await context.ConnectAndHandshakeAsync();
-        var status = new DaemonStatusRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid());
-        await DaemonProtocol.WriteRequestAsync(validClient, status, context.CancellationToken);
-        Assert.IsType<DaemonStatusResponse>(
-            await DaemonProtocol.ReadResponseAsync(validClient, context.CancellationToken));
-    }
-
-    [Fact]
     public async Task RunAsync_RejectsOperationBeforeHandshakeWithoutStoppingListener()
     {
         await using var context = TestServerContext.Start();
@@ -151,7 +126,7 @@ public sealed class WorkspaceDaemonServerTests
         {
             await DaemonProtocol.WriteRequestAsync(
                 invalidClient,
-                new DaemonStatusRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid()),
+                new DaemonStatusRequest(Guid.NewGuid()),
                 context.CancellationToken);
             var exception = await Assert.ThrowsAsync<DaemonProtocolException>(
                 () => DaemonProtocol.ReadResponseAsync(invalidClient, context.CancellationToken));
@@ -159,7 +134,7 @@ public sealed class WorkspaceDaemonServerTests
         }
 
         await using var validClient = await context.ConnectAndHandshakeAsync();
-        var request = new DaemonStatusRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid());
+        var request = new DaemonStatusRequest(Guid.NewGuid());
         await DaemonProtocol.WriteRequestAsync(validClient, request, context.CancellationToken);
         Assert.IsType<DaemonStatusResponse>(
             await DaemonProtocol.ReadResponseAsync(validClient, context.CancellationToken));
@@ -206,7 +181,7 @@ public sealed class WorkspaceDaemonServerTests
         Assert.Equal(DaemonProtocolError.EndOfStream, exception.Error);
 
         await using var statusClient = await context.ConnectAndHandshakeAsync();
-        var status = new DaemonStatusRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid());
+        var status = new DaemonStatusRequest(Guid.NewGuid());
         await DaemonProtocol.WriteRequestAsync(statusClient, status, context.CancellationToken);
         Assert.IsType<DaemonStatusResponse>(
             await DaemonProtocol.ReadResponseAsync(statusClient, context.CancellationToken));
@@ -231,7 +206,7 @@ public sealed class WorkspaceDaemonServerTests
         var commandResponse = DaemonProtocol.ReadResponseAsync(commandClient, context.CancellationToken);
         await executionStarted.Task.WaitAsync(context.CancellationToken);
         await using var client = await context.ConnectAndHandshakeAsync();
-        var request = new DaemonStopRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid());
+        var request = new DaemonStopRequest(Guid.NewGuid());
 
         await DaemonProtocol.WriteRequestAsync(client, request, context.CancellationToken);
         var response = Assert.IsType<DaemonStopResponse>(
@@ -272,7 +247,7 @@ public sealed class WorkspaceDaemonServerTests
             context.CancellationToken);
         await executionStarted.Task.WaitAsync(context.CancellationToken);
         await using var stopClient = await context.ConnectAndHandshakeAsync();
-        var stop = new DaemonStopRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid());
+        var stop = new DaemonStopRequest(Guid.NewGuid());
         await DaemonProtocol.WriteRequestAsync(stopClient, stop, context.CancellationToken);
         Assert.IsType<DaemonStopResponse>(
             await DaemonProtocol.ReadResponseAsync(stopClient, context.CancellationToken));
@@ -370,9 +345,7 @@ public sealed class WorkspaceDaemonServerTests
         public async Task<NamedPipeClientStream> ConnectAndHandshakeAsync()
         {
             var client = await ConnectAsync();
-            var request = new DaemonHandshakeRequest(
-                RoslynKitBuildInfo.DaemonProtocolVersion,
-                Guid.NewGuid());
+            var request = new DaemonHandshakeRequest(Guid.NewGuid());
             await DaemonProtocol.WriteRequestAsync(client, request, CancellationToken);
             var response = Assert.IsType<DaemonHandshakeResponse>(
                 await DaemonProtocol.ReadResponseAsync(client, CancellationToken));
@@ -386,7 +359,7 @@ public sealed class WorkspaceDaemonServerTests
             if (!ServerTask.IsCompleted)
             {
                 _ = _host.BeginStop(
-                    new DaemonStopRequest(RoslynKitBuildInfo.DaemonProtocolVersion, Guid.NewGuid()));
+                    new DaemonStopRequest(Guid.NewGuid()));
             }
 
             try

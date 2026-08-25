@@ -4,7 +4,9 @@ using System.Text;
 
 using Microsoft.Build.Locator;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.MSBuild;
+using Microsoft.CodeAnalysis.Text;
 
 namespace RoslynKit;
 
@@ -20,7 +22,7 @@ public sealed class RoslynWorkspaceLoader : IDisposable
     private readonly IReadOnlyDictionary<ProjectId, string?> _projectTargetFrameworks;
 
     private RoslynWorkspaceLoader(
-        MSBuildWorkspace workspace,
+        Workspace workspace,
         Solution solution,
         string targetPath,
         string targetKind,
@@ -38,9 +40,9 @@ public sealed class RoslynWorkspaceLoader : IDisposable
     }
 
     /// <summary>
-    /// Active MSBuild workspace used by Roslyn semantic APIs after target load.
+    /// Active Roslyn workspace used by semantic APIs after target load.
     /// </summary>
-    public MSBuildWorkspace Workspace { get; }
+    public Workspace Workspace { get; }
 
     /// <summary>
     /// Loaded solution graph, whether the original target was a solution or a project.
@@ -126,6 +128,70 @@ public sealed class RoslynWorkspaceLoader : IDisposable
 
         workspace.Dispose();
         throw new CliUsageException("unknown", "Target must be a .sln, .slnx, or .csproj file.");
+    }
+
+    /// <summary>
+    /// Builds one in-process syntax workspace from repository C# files without evaluating MSBuild projects.
+    /// </summary>
+    public static async Task<RoslynWorkspaceLoader> LoadTextOnlyAsync(
+        string targetPath,
+        CancellationToken cancellationToken)
+    {
+        var fullTargetPath = Path.GetFullPath(targetPath);
+        if (!File.Exists(fullTargetPath))
+        {
+            throw new CliUsageException("unknown", $"Target file '{fullTargetPath}' does not exist.");
+        }
+
+        var extension = Path.GetExtension(fullTargetPath);
+        if (!extension.Equals(".sln", StringComparison.OrdinalIgnoreCase)
+            && !extension.Equals(".slnx", StringComparison.OrdinalIgnoreCase)
+            && !extension.Equals(".csproj", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new CliUsageException("unknown", "Target must be a .sln, .slnx, or .csproj file.");
+        }
+
+        var rootPath = ResolveRootPath(fullTargetPath);
+        var workspace = new AdhocWorkspace();
+        var projectId = ProjectId.CreateNewId(debugName: "RoslynKit text-only search");
+        var projectInfo = ProjectInfo.Create(
+            projectId,
+            VersionStamp.Create(),
+            $"{Path.GetFileNameWithoutExtension(fullTargetPath)} (text-only)",
+            "RoslynKit.TextOnlySearch",
+            LanguageNames.CSharp,
+            filePath: fullTargetPath,
+            outputFilePath: null,
+            compilationOptions: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary),
+            parseOptions: new CSharpParseOptions(LanguageVersion.Preview, DocumentationMode.Parse),
+            metadataReferences: GetTrustedPlatformReferences());
+        var solution = workspace.CurrentSolution.AddProject(projectInfo);
+
+        foreach (var filePath in EnumerateTextOnlySourceFiles(rootPath))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var source = await File.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
+            solution = solution.AddDocument(
+                DocumentId.CreateNewId(projectId, debugName: filePath),
+                Path.GetFileName(filePath),
+                SourceText.From(source, Encoding.UTF8),
+                filePath: filePath);
+        }
+
+        if (!workspace.TryApplyChanges(solution))
+        {
+            workspace.Dispose();
+            throw new InvalidOperationException("Could not create the in-process text-only search workspace.");
+        }
+
+        return new RoslynWorkspaceLoader(
+            workspace,
+            workspace.CurrentSolution,
+            fullTargetPath,
+            $"{extension[1..]}-text-only",
+            rootPath,
+            new Dictionary<ProjectId, string?> { [projectId] = null },
+            []);
     }
 
     internal void SetLoadedWorktreeFingerprint(GitWorktreeFingerprint fingerprint)
@@ -368,6 +434,44 @@ public sealed class RoslynWorkspaceLoader : IDisposable
         }
 
         return Path.GetDirectoryName(targetPath) ?? Environment.CurrentDirectory;
+    }
+
+    private static IEnumerable<string> EnumerateTextOnlySourceFiles(string rootPath)
+    {
+        var excludedSegments = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".git",
+            ".vs",
+            "artifacts",
+            "bin",
+            "node_modules",
+            "obj",
+            "TestResults",
+        };
+        var options = new EnumerationOptions
+        {
+            AttributesToSkip = FileAttributes.ReparsePoint,
+            IgnoreInaccessible = true,
+            RecurseSubdirectories = true,
+        };
+
+        return Directory.EnumerateFiles(rootPath, "*.cs", options)
+            .Where(filePath => !Path.GetRelativePath(rootPath, filePath)
+                .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Any(excludedSegments.Contains))
+            .Order(StringComparer.Ordinal);
+    }
+
+    private static IReadOnlyList<MetadataReference> GetTrustedPlatformReferences()
+    {
+        var trustedPlatformAssemblies = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string;
+        return string.IsNullOrWhiteSpace(trustedPlatformAssemblies)
+            ? []
+            : trustedPlatformAssemblies
+                .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+                .Order(StringComparer.Ordinal)
+                .Select(path => MetadataReference.CreateFromFile(path))
+                .ToArray();
     }
 
     private string CreateDocumentContextHint(IReadOnlyList<WorkspaceDocumentContext> matches)

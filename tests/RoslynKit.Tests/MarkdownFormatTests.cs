@@ -235,6 +235,53 @@ public sealed class MarkdownFormatTests
     }
 
     [Fact]
+    public void Render_EmitsBoundedSymbolContextWithNodeIdentityAndCommentMetadata()
+    {
+        var selectedLocation = new SourceRange(SourcePath, 7, 5, 12, 6);
+        var alternateLocation = new SourceRange(SourcePath, 20, 1, 24, 2);
+        var invocationLocation = new SourceRange(SourcePath, 10, 16, 10, 32);
+        var commentLocation = new SourceRange(SourcePath, 6, 5, 6, 32);
+        var result = new SymbolContextResult(
+            document: null,
+            line: null,
+            column: null,
+            selector: "M:App.Widget.Run",
+            selectedNode: new SyntaxContextNode("MethodDeclaration", selectedLocation, "Run", "M:App.Widget.Run"),
+            symbol: CreateSymbol("Runs application work for the current request."),
+            documentation: "Runs application work for the current request.",
+            alternateDeclarations: [alternateLocation],
+            ancestors: [new SyntaxContextNode("ClassDeclaration", new SourceRange(SourcePath, 3, 1, 15, 2), "Widget", "T:App.Widget")],
+            totalDescendantCount: 2,
+            returnedDescendantCount: 1,
+            descendantsTruncated: true,
+            descendants: [new SymbolContextDescendant("invocation", 2, "InvocationExpression", invocationLocation, "App.Worker.Run", "M:App.Worker.Run")],
+            totalCommentCount: 2,
+            returnedCommentCount: 1,
+            commentsTruncated: true,
+            comments: [new SymbolContextComment("leading", "line", commentLocation, "Routes to the worker.")],
+            workspaceDiagnostics: []);
+
+        var rendered = MarkdownProjection.Render(result);
+
+        var expected = "command: symbol-context\n"
+            + "selector: `M:App.Widget.Run`\n"
+            + "selected-node: kind: MethodDeclaration loc: `" + SourcePath + ":7:5-12:6` name: `Run` id: `M:App.Widget.Run`\n"
+            + "symbol: `T:App.Widget` name: `App.Widget`\n"
+            + "documentation: Runs application work for the current request.\n"
+            + "alternate-declarations: 1\n"
+            + "- loc: `" + SourcePath + ":20:1-24:2`\n"
+            + "ancestors: 1\n"
+            + "- kind: ClassDeclaration loc: `" + SourcePath + ":3:1-15:2` name: `Widget` id: `T:App.Widget`\n"
+            + "descendants: 1/2\n"
+            + "descendants-truncated: true\n"
+            + "- relation: invocation depth: 2 kind: InvocationExpression loc: `" + SourcePath + ":10:16-10:32` target: `App.Worker.Run` target-id: `M:App.Worker.Run`\n"
+            + "comments: 1/2\n"
+            + "comments-truncated: true\n"
+            + "- placement: leading style: line loc: `" + SourcePath + ":6:5-6:32` text: `Routes to the worker.`";
+        Assert.Equal(expected, rendered);
+    }
+
+    [Fact]
     public void Render_EmitsTextFence_ForNonSourceDocumentText()
     {
         var descriptor = new DocumentDescriptor(

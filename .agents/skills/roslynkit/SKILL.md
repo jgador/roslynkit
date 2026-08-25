@@ -1,257 +1,97 @@
 ---
 name: roslynkit
-description: Use the stable global RoslynKit tool first for ordinary C# semantic inspection; for literal search, prose, non-C# files, or RoslynKit workspace-load failures, let Codex CLI choose the terminal-native fallback for the current platform.
+description: Use the stable global RoslynKit tool first for ordinary C# semantic inspection; for literal search, prose, non-C# files, or RoslynKit workspace-load failures, use the terminal-native fallback.
 ---
 
 # RoslynKit
 
-## Hard Limits (read first)
+RoslynKit is a compact, read-only semantic navigator for C# declarations, source locations, and compiler-backed relationships. Use it for symbol questions; use the terminal-native tool for prose, literal text, non-C# files, or a workspace-load failure.
 
-These override every other section when they conflict. They exist because reading whole files and re-reading files is the dominant token cost.
+## Non-negotiable limits
 
-- Never read a whole `.cs` file when a position-based command (`quick-info`, `definition`, `references`) answers the question.
-- Never read the same file twice. Capture needed context the first time.
-- Resolve positions with RoslynKit instead of falling back to `Read`/grep on `.cs` source once the file is loaded.
-- Prefer single-target commands (`definition`, `quick-info`, `type-definition`) over `symbols`; `symbols` returns verbose arrays. When `symbols` or `references` are required, always cap output with the smallest useful `--max-results` (often `--max-results 1` to confirm one known declaration).
-- Stop once enough evidence is available. Do not gather extra members, siblings, or confirmation reads.
+- Treat the investigation budget as hard: use at most 8 RoslynKit invocations total, including discovery and source/test reads; aim to finish in six. Stop and synthesize once the requested implementation and focused-test evidence is complete.
+- Never read an entire C# file or type when a declaration or position command can answer the question.
+- Never read the same file twice. Capture the useful source and test evidence on the first pass.
+- Never use `symbol-source` on a namespace or type. Select a method, property, field, or event instead.
+- Never request more than 80 inclusive lines with `document-lines`; choose the smallest window around the relevant location.
+- Never use `document-symbols` merely to turn a known declaration identity into coordinates. Use its fully qualified, unambiguous name or emitted `id:` directly.
+- When output provides an `id:`, pass that exact documentation-comment ID to the next `--symbol` command. Never shorten it or replace it with the adjacent display name.
+- Once the RoslynKit route starts, do not read C# source with `rg`, `grep`, `sed`, `cat`, or another shell text command. Use one bounded RoslynKit source or line-window command per implementation/test file instead.
+- Run no more than three `search` commands and no symbol-enumeration command after a useful method or location has been returned. Follow the bounded `10` -> refined `10` -> final `20`/`50` workflow below; never run a fourth search.
+- Stop after the source and focused-test evidence answers the question. A normal investigation needs one discovery search and at most a handful of follow-up reads.
 
-Use this skill for ordinary C# semantic inspection when the stable global `roslynkit` command is available.
+## Bounded evidence workflow
 
-## Routing Rule
+For an English-oriented C# question with no declaration name:
 
-- Use RoslynKit first for C# semantic inspection.
-- For literal text search, comments or prose, non-C# files, or RoslynKit workspace-load failures, let Codex CLI choose the terminal-native fallback for the current platform.
+Before the first command, turn the requested behaviors into a short evidence checklist. Each clause must be supported by an emitted implementation or focused-test location before the investigation stops; a documentation summary or a neighboring helper is only a routing hint.
 
-Do not default to `Get-Content`, `Select-String`, or grep-style file reads for questions that are really about C# declarations, symbol structure, definitions, references, implementations, types, signatures, or generated documents.
+1. Run one `search` with `--target`, `--index-path`, a focused natural-language query containing the central type or behavior nouns, and `--max-results 10`. This is normally the only search. If it has no useful method or location, refine the query and/or add `--kind method` while keeping `--max-results 10`. If that refinement still leaves no reliable jump target, run one third and final search with `--max-results 20`; use `--max-results 50` instead only when the first two rankings show many plausible near-ties that a 20-result window may truncate. When the first result is a test method, include its containing production type in the refined query instead of switching to broad symbol enumeration.
+2. Prefer returned method or test-method hits over namespace, type, and field hits. Compare `excerpt-source:` values with excerpts, kinds, identities, and locations; copy every returned `id:` or `loc:` verbatim.
+3. Run `symbol-context` for the most promising returned `id:` or `loc:` before reading source when syntax structure, declaration comments, or the next semantic relation is still unclear. Use its selected symbol, ancestors, descendants, and `target-id:` values to choose one focused hop.
+4. Read only the method bodies that carry the requested control-flow branches. Prefer `document-lines` around returned locations (at most 80 lines); use `symbol-source` only when a method body cannot be captured by that window. For reload/generation questions, cover both the reader/reload hand-off and the retry/mismatch branch rather than reading only the final installation helper. If the first search returns only a type, use one narrower search for its behavior in place of one source read.
+5. Read at most two focused test methods, using test method IDs already returned whenever possible. Do not enumerate an entire test file or spend a command finding every related test.
+6. Compare the returned evidence with the checklist. Use the final optional invocation only for one uncovered clause through a small line window or one exact test method. Use `document-symbols` only when no useful method identity is available.
+7. Before stopping, account for every clause in the question, including numeric limits, wait/retry timing, precedence, and failure/reuse state when those are requested. Cite the implementation and test paths/locations already emitted, then stop. Extra searches, sibling members, and whole-file confirmation reads spend tokens without adding proof.
 
-## Intent-Based Symbol Discovery
+When a declaration identity is already known, skip discovery and call `definition`, `references`, `implementations`, or `symbol-source` with an exact emitted `id:` or a fully qualified, unambiguous name. Never substitute a shortened display name for an emitted ID. When only a simple or display name is known, resolve it with `search` or `symbols` first. For a known source location, use the position form directly. `signature-help` and mid-expression `quick-info` always require a position.
 
-Use `search` when an English-oriented question describes a C# responsibility but no declared symbol name is known. The command requires both `--target` and `--index-path`; use a Git-ignored repository-local database such as `./artifacts/roslynkit.db`.
+## Search and indexing
 
-```powershell
-roslynkit search --target .\SomeSolution.slnx --index-path .\artifacts\roslynkit.db --query "how does workspace daemon reload after source changes"
-```
-
-`search` validates and refreshes the index automatically. Use `index` to prepare the index deliberately, and add `--rebuild` only when the selected target partition must be recreated.
-
-```powershell
-roslynkit index --target .\SomeSolution.slnx --index-path .\artifacts\roslynkit.db
-```
-
-Search ranking is heuristic. Inspect several top results and compare excerpts, symbol kinds, identities, and locations before selecting a navigation target; do not assume rank 1 is correct. Follow up through existing commands with a returned `id:` or `loc:` value. RoslynKit has no standard-input pipeline for search hits; the coding agent selects the appropriate next command.
-
-Search requires projects with one target framework and repository-local physical project and non-generated source paths; missing paths, external projects, and external linked non-generated source paths are rejected. It skips generated source documents, including source-generated documents, paths below `bin` or `obj`, and sources with standard generated-code markers injected from extracted NuGet packages outside the worktree. Use `--project`, `--kind`, or `--max-results` only when a narrower target, symbol kind, or result limit is needed. The generated [references/commands.md](references/commands.md) file contains the exact options.
-
-## Selector Choice
-
-`definition`, `references`, and `implementations` accept either `--symbol <selector>` or a position (`--file` plus `--line --column`), never both. Pick by the evidence already available:
-
-- Known declared name (type, method, property, field, event): use `--symbol` directly. Do not run `symbols` first just to obtain line and column numbers.
-- Known position from prior RoslynKit output (a reference location, a declaration location, a diagnostic) or from the user's cursor: use the position selector for the next hop at that spot.
-- The target has no global name (local variable, parameter, lambda parameter): position mode is the only way to address it.
-- `signature-help` and mid-expression `quick-info` are always position-based: they answer questions about a spot in the code, not about a declaration.
-
-`--symbol` takes a documentation-comment ID from RoslynKit `id:` output or a qualified name such as `SomeNamespace.SomeType.SomeMethod`. Prefix meanings for documentation-comment IDs are defined in [references/output.md](references/output.md). An ambiguous qualified name (for example method overloads) fails with the candidate documentation-comment IDs; retry with the exact ID. Constructors need the emitted `M:...#ctor(...)` ID form.
-
-Hard rule: coordinates must come from tool output, a diagnostic, or the user. If reading or searching a file would be required to find a line number, use `--symbol` instead.
-
-When a coordinate usage error includes a `hint:` line, do not retry the same `--line`/`--column`. Use the valid range in `hint:` and pick a new coordinate with `document-lines` or `document-symbols` before retrying semantic commands.
-
-Chain by identity when possible: symbol bullets carry documentation-comment IDs as `id:` when Roslyn can provide them. Pass that value straight to the next `--symbol` command. After editing a file, cached line and column values are stale; the ID stays valid.
-
-## Default File Scope
-
-RoslynKit is C#-only by default.
-
-- For any RoslynKit command that accepts `--file`, always pass a path that ends in `.cs`.
-- Treat `.cs` as the default and required file scope. Generated C# documents are still selected by the generated `path` emitted from `workspace --include-generated`.
-- Do not run RoslynKit with `--file` values that point to `.md`, `.json`, `.xml`, `.yml`, `.yaml`, `.props`, `.targets`, `.editorconfig`, `.sln`, `.slnx`, `.csproj`, or other non-C# files.
-- If the task is prose inspection, comment wording, XML documentation wording, TODO scanning, or literal text matching, let Codex CLI choose the terminal-native fallback even when the text appears inside a `.cs` file.
-- A `.cs` file may still be inspected with RoslynKit when the primary task is semantic C# analysis or source inspection. Returned ranges may include comments, but comment text is not itself a RoslynKit search target. Because `document-text` returns whole documents only, prefer position-based commands, `quick-info`, targeted cross-references, and `document-lines` first. Use `document-symbols` only when the file is already known and local structure is needed. Use `document-lines` when a resolved path and small line window are enough; an oversized `--end-line` is capped at EOF, but `--start-line` still must be inside the document. Use `document-text` only when a full document read is justified after the symbol or file is already resolved.
-
-## Command
-
-Use the stable global command:
+Use the stable global command and always pass an explicit target:
 
 ```powershell
-roslynkit <command> --target <solution.slnx|solution.sln|project.csproj>
+roslynkit search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit.db --query "workspace daemon reload after source changes" --max-results 10
 ```
 
-Always pass `--target` explicitly. RoslynKit does not infer a solution or project path automatically.
-When a command accepts `--file`, pass a `.cs` path by default.
-Use `roslynkit help <command>` for exact runtime syntax and options. For the bundled command reference, read [references/commands.md](references/commands.md).
+`search` validates and refreshes the selected target automatically. The first request waits when no coherent partition exists; a coherent partition may answer `stale` while a writer refreshes. Use `index` for deliberate preparation and `--rebuild` only when a target partition must be recreated. The generated [references/commands.md](references/commands.md) file is authoritative for options and usage.
 
-## When To Start With `workspace`
+Search supports repository-local physical C# projects and non-generated source documents with one target framework. It skips source-generated documents, `bin`/`obj` paths, standard generated-code markers, external projects, and external linked non-generated files. Narrow with `--project`, `--kind`, or `--max-results` only when needed.
 
-Run `workspace` first when any of these are true:
-
-- a generated document path is needed;
-- the same file may appear in multiple target-framework or project contexts;
-- additional files or analyzer config documents need inspection.
-
-Example:
+For a search-only judgment on a host where daemon or MSBuild build-host sockets are unavailable, add `--text-only --compact --balanced`. `--text-only` bypasses the daemon and MSBuild, scans repository C# files into a separate synthetic partition, and cannot be combined with `--project`. `--compact` keeps only ranked declarations, repository-relative locations, and excerpts; it omits `id:` and `excerpt-source:`, so do not use it when the next step must chain into semantic navigation. `--balanced` reserves half of the bounded result set for focused tests when both production and test paths match.
 
 ```powershell
-roslynkit workspace --target .\SomeSolution.slnx --include-generated --include-additional --include-analyzer-config
+roslynkit search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit-text.db --query "daemon disconnect buffered response fallback" --max-results 10 --text-only --compact --balanced
 ```
 
-If a document command reports multiple document contexts for the same path, retry with the concrete context from the error hint. Use `--project <path>` for linked files, `--tfm <framework>` for multi-targeted projects, and `--document-kind <source|sourceGenerated|additional|analyzerConfig>` only when the same path still maps to multiple document kinds.
+`excerpt-source:` follows `excerpt:` when an excerpt is available. Its value is `documentation`, `comment`, `signature`, or `body`. An excerpt and its provenance help rank navigation candidates, but neither proves that a candidate satisfies the requested intent.
 
-## Cursor Choice
+## Symbol context and metadata
 
-This section applies only to position mode (see Selector Choice).
-
-When a line contains more than one semantic target, choose the cursor deliberately before jumping:
-
-- Prefer the most flow-bearing symbol on the current line.
-- If the current `.cs` file and cursor are already known, start with a position-based command on that location before reaching for `symbols`.
-- For chained expressions such as `new SomeType(...).RunAsync(args)`, probe the rightmost invoked method or property first with `quick-info`, then use `definition` on that same position if the jump still looks useful.
-- Treat the constructor token or enclosing type name as an opt-in target only when object construction or type identity is the actual question.
-- If the question changes to "what is this type?", resolve the class with `symbols --exact --kind class` and then use `quick-info` at the class declaration before reading the file body.
-- Keep semantic cursor coordinates strict for `definition`, `quick-info`, `signature-help`, `type-definition`, `references`, and `implementations`; do not overshoot line or column bounds or retry an out-of-range coordinate for those commands.
-
-## Cheap-First Semantic Workflow
-
-When the task is a semantic C# question, prefer this order and stop once enough evidence is available:
-
-1. If the declaration name is known, run `definition`, `references`, or `implementations` with `--symbol`, or `symbol-source` for the declaration body, in one command.
-2. If the current `.cs` file and cursor are already known, pick the most flow-bearing symbol on the current line and start with a position-based `definition`, `references`, `implementations`, or `quick-info` on that location. For chained invocations, start with the rightmost invoked method or property, not the constructor or enclosing type, unless construction is the question.
-3. Use `symbols` only for discovery: fuzzy name search, kind-filtered listing, or checking whether a declaration exists. Do not use it to convert a known name into coordinates.
-4. Use `quick-info` at the resolved position or location before reading source text when signature, type, or documentation context is needed.
-5. If only a small source snippet is needed after semantic resolution, use `document-lines` with the smallest useful inclusive line range instead of pulling the whole document through RoslynKit.
-6. Use `document-symbols` only when the file is already known and local structure is still needed to choose a member or range.
-7. Use `document-text` only when a full document read is still justified after the symbol or file is already resolved.
-8. Use `symbol-source` when exactly one declaration body is needed; read larger source regions only when symbol locations, quick info, document structure, and targeted cross-references are still insufficient.
-
-## Documentation Hints
-
-- Treat `documentation:` lines in RoslynKit output as routing hints, not as proof that a route is complete.
-- In `references`, a header-level `documentation:` line describes the searched symbol; it does not describe each `- loc:` usage.
-- In `symbols`, `document-symbols`, `definition`, `type-definition`, and `implementations`, an indented `documentation:` line describes the symbol bullet directly above it.
-- Do not run `quick-info` just to retrieve documentation already present in the current command output.
-- Use documentation to choose the next semantic hop, then verify with `definition`, `references`, `symbol-source`, or a narrow `document-lines` read.
-
-## Token Discipline
-
-- Do not read an entire `.cs` file through `document-text` by default.
-- Do not read a whole class body by default.
-- Chain follow-up lookups with the `id:` value from previous output when it is present instead of re-resolving the same symbol through `symbols` or a fresh position lookup.
-- Prefer `symbol-source` over `document-text` or shell reads when exactly one declaration body is needed.
-- Use `symbols` for name discovery inside the loaded target, not to convert a known name into coordinates and not to inspect external Roslyn APIs or other non-declared implementation details.
-- Do not start with `document-symbols` unless the file is already known and local structure is still needed to choose a member or range.
-- Prefer a `definition` hop from a known call site over broad declaration search when tracing control flow.
-- Prefer `definition` plus `quick-info` over `document-symbols` or `document-text` when the next useful hop is already on the current line.
-- After RoslynKit resolves the relevant file and position, use `document-lines` for the smallest useful source window instead of pulling the whole document through RoslynKit.
-- Prefer `document-lines` over `symbol-source` when only a few lines around a call site, switch arm, option declaration, or assertion are needed.
-- Keep `references` narrow with the smallest useful `--max-results` when the goal is routing or nearest-test discovery.
-- Once enough evidence is available, stop instead of gathering extra member bodies or sibling declarations.
-
-## Agent-Facing Operations
-
-### Follow the active call
+A syntax node is source structure, such as an `InvocationExpression` or `MethodDeclaration`; a symbol is the compiler-resolved identity connected to that structure. `symbol-context` bridges those views from exactly one selector: `--symbol <selector>`, or `--file` with `--line --column`. Use the same emitted `id:` and `loc:` values from a search result rather than reconstructing a selector.
 
 ```powershell
-roslynkit definition --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
-roslynkit quick-info --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
+roslynkit symbol-context --target ./SomeSolution.slnx --symbol "M:SomeNamespace.SomeType.Execute(System.String)"
 ```
 
-### Find a named type
+The output identifies the selected node and symbol, alternate declarations, nearest-first syntax ancestors, and bounded descendants for declarations, invocations, constructions, and member references. Selected-node and ancestor entries carry syntax kind, location, and available `name:` or `id:` values. Descendants carry relationship, depth, syntax kind, location, and available `target-id:` values. It also returns XML documentation separately from structured declaration comments: each ordinary comment has placement (`leading`, `body`, or `trailing`), style (`line` or `block`), source location, and normalized text.
+
+`--max-results` bounds descendants and defaults to `20`; `--max-comments` bounds ordinary comments and defaults to `3`. Each bounded collection reports its count and truncation state. Comments and XML documentation are routing hints, not proof. Use an emitted identity to select `definition`, `references`, `implementations`, `symbol-source`, or a narrow `document-lines` read for source-backed evidence.
+
+The coding agent maintains the intent and chooses each next relationship: `search` -> `symbol-context` -> semantic navigation -> source or focused-test evidence -> decision. Track visited IDs and locations to prevent cycles, and stop when focused evidence meets the intent. RoslynKit does not embed an LLM planner or infer that a comment establishes behavior.
+
+## Selectors and source ranges
+
+`definition`, `references`, `implementations`, and `symbol-context` accept either `--symbol <selector>` or `--file` with `--line --column`, never both. A documentation-comment ID from output is opaque: preserve its complete prefix, containing name, and signature. Prefixes are `N:` namespace, `T:` type, `M:` method-like member (including `#ctor`), `P:` property/indexer, `F:` field, and `E:` event.
+
+Coordinates must come from RoslynKit output, a diagnostic, or the user. If a command reports a range hint, select a fresh valid coordinate with a bounded `document-lines` call; do not retry the invalid coordinate. After source edits, line positions can be stale but symbol IDs remain the preferred chain.
+
+For a source slice, use the smallest inclusive range:
 
 ```powershell
-roslynkit symbols --target .\SomeSolution.slnx --query SomeType --exact --kind class
+roslynkit document-lines --target ./SomeSolution.slnx --file ./src/App/Service.cs --start-line 40 --end-line 58
 ```
 
-### Inspect type context
+`--file` paths for RoslynKit document commands must end in `.cs`. Generated documents require `workspace --include-generated` first and the emitted generated path. Use `workspace` first only when generated/additional/analyzer-config documents or multiple document contexts are actually needed.
 
-```powershell
-roslynkit quick-info --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 11 --column 21
-```
+## Cheap semantic commands
 
-### List file members
+Use `symbol-context`, `definition`, `type-definition`, `references`, `implementations`, `quick-info`, and `signature-help` for position-based navigation. Use `symbols` only for discovery when a declaration name is unknown; cap it with the smallest useful `--max-results` and prefer `--exact`/`--kind`. Use `symbol-source` for one known declaration body, never a whole class. Use `document-text` only when a complete document is genuinely required after narrower evidence failed.
 
-```powershell
-roslynkit document-symbols --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs
-```
+Every command returns deterministic markdown. Read [references/output.md](references/output.md) for location formatting, failure shape, documentation IDs, and the shared output contract. A successful command exits `0`; failures use `error:` and `message:` lines with exit code `2`, `130`, or `1` as specified there.
 
-### Read a resolved document
+## Workspace and fallback boundaries
 
-```powershell
-roslynkit document-text --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs
-```
+`workspace` lists loaded projects/documents and is not a substitute for a focused source read. Add `--include-generated`, `--include-additional`, or `--include-analyzer-config` only for the requested document kind. RoslynKit is C#-only by default.
 
-### Read resolved source lines
-
-```powershell
-roslynkit document-lines --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --start-line 40 --end-line 52
-```
-
-### Jump to a definition
-
-```powershell
-roslynkit definition --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
-```
-
-### Find references by declared name
-
-```powershell
-roslynkit references --target .\SomeSolution.slnx --symbol SomeNamespace.SomeType.SomeMethod --max-results 3
-```
-
-### Find references from a usage site
-
-```powershell
-roslynkit references --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 32 --column 17 --max-results 3
-```
-
-### Find implementations by declared name
-
-```powershell
-roslynkit implementations --target .\SomeSolution.slnx --symbol SomeNamespace.ISomeService --max-results 20
-```
-
-### Find implementations from a usage site
-
-```powershell
-roslynkit implementations --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 12 --column 9 --max-results 20
-```
-
-### Read a declaration body
-
-```powershell
-roslynkit symbol-source --target .\SomeSolution.slnx --symbol "M:SomeNamespace.SomeType.SomeMethod(System.String)"
-```
-
-### Read quick info
-
-```powershell
-roslynkit quick-info --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 27
-```
-
-### Jump to a type definition
-
-```powershell
-roslynkit type-definition --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 18 --column 13
-```
-
-### Inspect call-site signature help
-
-```powershell
-roslynkit signature-help --target .\SomeSolution.slnx --file .\src\SomeProject\SomeFile.cs --line 24 --column 17
-```
-
-### Generated-document reads
-
-Use the generated path surfaced by `workspace --include-generated`.
-
-1. Run `workspace --include-generated`.
-2. Copy the generated document `path`.
-3. Read it with `document-text --file`; add `--document-kind sourceGenerated` if the same path is ambiguous.
-
-```powershell
-roslynkit document-text --target .\SomeProject.csproj --file .\obj\Debug\net10.0\Generated.g.cs --document-kind sourceGenerated
-```
-
-## Fallbacks
-
-- Do not prescribe a specific fallback command in this skill.
-- If the task is literal search, prose inspection, a non-C# file, or a RoslynKit workspace-load failure, state that RoslynKit is not the right tool for that step and let Codex CLI choose the terminal-native fallback for the current platform, such as PowerShell on Windows or the default shell on macOS and Linux.
+For literal search, comments/prose, or non-C# files, state that RoslynKit is not the right route for that step and let the terminal-native tool perform the bounded inspection. For a normal Roslyn workspace-load failure, use the text-only search workflow only when ranked declaration evidence is sufficient; otherwise use the terminal-native fallback. Do not shell out to editors, language servers, or a web service.

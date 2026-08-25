@@ -9,7 +9,6 @@ namespace RoslynKit;
 /// </summary>
 internal sealed class SqliteSearchIndex
 {
-    private const int CurrentSchemaVersion = 1;
     private const int BusyTimeoutMilliseconds = 5_000;
     private const int NameWeight = 12;
     private const int ContainingWeight = 6;
@@ -22,7 +21,6 @@ internal sealed class SqliteSearchIndex
         "fingerprint",
         "indexed_at_utc",
         "symbol_count",
-        "schema_version",
     ];
     private static readonly string[] SymbolColumns =
     [
@@ -210,8 +208,7 @@ internal sealed class SqliteSearchIndex
         parameters.Add("targetIdentity", targetIdentity.Value);
         var command = new CommandDefinition(
             """
-            SELECT schema_version,
-                   target_identity,
+            SELECT target_identity,
                    fingerprint,
                    indexed_at_utc,
                    symbol_count
@@ -229,7 +226,6 @@ internal sealed class SqliteSearchIndex
         }
 
         return new SqliteSearchIndexMetadata(
-            row.SchemaVersion,
             RepositoryRelativePath.FromStoredValue(row.TargetIdentity, "Persisted target identity"),
             row.Fingerprint,
             DateTimeOffset.Parse(row.IndexedAtUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
@@ -304,6 +300,12 @@ internal sealed class SqliteSearchIndex
             var projectPath = RepositoryRelativePath.FromStoredValue(row.ProjectPath, "Persisted project path");
             var sourcePath = RepositoryRelativePath.FromStoredValue(row.Path, "Persisted source path");
             ValidateSymbolKey(row.SymbolKey, query.TargetIdentity, projectPath, sourcePath);
+            var excerpt = SelectExcerpt(
+                row.Documentation,
+                row.Comments,
+                row.Signature,
+                row.Body,
+                query.Tokens);
             results.Add(new SqliteSearchIndexMatch(
                 row.SymbolKey,
                 projectPath,
@@ -319,12 +321,8 @@ internal sealed class SqliteSearchIndex
                 row.EndColumn,
                 row.Documentation,
                 row.Signature,
-                SelectExcerpt(
-                    row.Documentation,
-                    row.Comments,
-                    row.Signature,
-                    row.Body,
-                    query.Tokens),
+                excerpt?.Text,
+                excerpt?.Source,
                 row.QueryTermCoverage,
                 row.RawBm25Score));
         }
@@ -392,22 +390,14 @@ internal sealed class SqliteSearchIndex
         try
         {
             connection = await OpenReadConnectionAsync(cancellationToken);
-            await ValidateSchemaAsync(connection, null, cancellationToken);
-            return connection;
-        }
-        catch (SqliteException exception) when (IsMissingSchema(exception))
-        {
-            if (connection is not null)
+            if (await IsDatabaseEmptyAsync(connection, cancellationToken))
             {
-                var isEmpty = await IsDatabaseEmptyAsync(connection, cancellationToken);
                 await connection.DisposeAsync();
-                if (isEmpty)
-                {
-                    return null;
-                }
+                return null;
             }
 
-            throw CreateIncompleteSchemaException("search_index_schema", exception);
+            await ValidateSchemaAsync(connection, null, cancellationToken);
+            return connection;
         }
         catch (SqliteException exception) when (IsInvalidDatabase(exception))
         {
@@ -436,20 +426,7 @@ internal sealed class SqliteSearchIndex
 
     private static async Task<bool> HasSchemaAsync(SqliteConnection connection, CancellationToken cancellationToken)
     {
-        try
-        {
-            await ValidateSchemaAsync(connection, null, cancellationToken);
-            return true;
-        }
-        catch (SqliteException exception) when (IsMissingSchema(exception))
-        {
-            if (await IsDatabaseEmptyAsync(connection, cancellationToken))
-            {
-                return false;
-            }
-
-            throw CreateIncompleteSchemaException("search_index_schema", exception);
-        }
+        return !await IsDatabaseEmptyAsync(connection, cancellationToken);
     }
 
     private static async Task ConfigureWriteConnectionAsync(
@@ -473,21 +450,12 @@ internal sealed class SqliteSearchIndex
         SqliteTransaction transaction,
         CancellationToken cancellationToken)
     {
-        await ExecuteNonQueryAsync(connection, transaction, $"""
-            CREATE TABLE IF NOT EXISTS search_index_schema (
-                schema_key INTEGER PRIMARY KEY CHECK (schema_key = 1),
-                schema_version INTEGER NOT NULL
-            );
-
-            INSERT OR IGNORE INTO search_index_schema (schema_key, schema_version)
-            VALUES (1, {CurrentSchemaVersion});
-
+        await ExecuteNonQueryAsync(connection, transaction, """
             CREATE TABLE IF NOT EXISTS search_index_targets (
                 target_identity TEXT PRIMARY KEY,
                 fingerprint TEXT NULL,
                 indexed_at_utc TEXT NOT NULL,
-                symbol_count INTEGER NOT NULL CHECK (symbol_count >= 0),
-                schema_version INTEGER NOT NULL
+                symbol_count INTEGER NOT NULL CHECK (symbol_count >= 0)
             );
 
             CREATE TABLE IF NOT EXISTS search_index_symbols (
@@ -533,22 +501,6 @@ internal sealed class SqliteSearchIndex
         SqliteTransaction? transaction,
         CancellationToken cancellationToken)
     {
-        await using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT schema_version FROM search_index_schema WHERE schema_key = 1;";
-        var value = await command.ExecuteScalarAsync(cancellationToken);
-        if (value is null || value is DBNull)
-        {
-            throw new InvalidOperationException("The SQLite search index schema metadata is missing.");
-        }
-
-        var schemaVersion = Convert.ToInt32(value, CultureInfo.InvariantCulture);
-        if (schemaVersion != CurrentSchemaVersion)
-        {
-            throw new InvalidOperationException(
-                $"The SQLite search index uses schema version {schemaVersion}, but RoslynKit requires version {CurrentSchemaVersion}. Delete the index database and run index again.");
-        }
-
         await ValidateSchemaObjectAsync(connection, transaction, "search_index_targets", false, TargetColumns, cancellationToken);
         await ValidateSchemaObjectAsync(connection, transaction, "search_index_symbols", false, SymbolColumns, cancellationToken);
         await ValidateSchemaObjectAsync(connection, transaction, "search_index_fts", true, FtsColumns, cancellationToken);
@@ -881,25 +833,21 @@ internal sealed class SqliteSearchIndex
                 target_identity,
                 fingerprint,
                 indexed_at_utc,
-                symbol_count,
-                schema_version)
+                symbol_count)
             VALUES (
                 $targetIdentity,
                 $fingerprint,
                 $indexedAtUtc,
-                $symbolCount,
-                $schemaVersion)
+                $symbolCount)
             ON CONFLICT (target_identity) DO UPDATE SET
                 fingerprint = excluded.fingerprint,
                 indexed_at_utc = excluded.indexed_at_utc,
-                symbol_count = excluded.symbol_count,
-                schema_version = excluded.schema_version;
+                symbol_count = excluded.symbol_count;
             """;
         command.Parameters.AddWithValue("$targetIdentity", target.TargetIdentity.Value);
         command.Parameters.AddWithValue("$fingerprint", ToDatabaseValue(target.Fingerprint));
         command.Parameters.AddWithValue("$indexedAtUtc", DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$symbolCount", symbolCount);
-        command.Parameters.AddWithValue("$schemaVersion", CurrentSchemaVersion);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -976,8 +924,24 @@ internal sealed class SqliteSearchIndex
             FROM search_index_fts
             INNER JOIN search_index_symbols AS symbols ON symbols.id = search_index_fts.rowid
             WHERE {BuildSearchFilters(query, parameters)}
-            ORDER BY query_term_coverage DESC,
+            ORDER BY CASE lower(symbols.kind)
+                         WHEN 'method' THEN 0
+                         WHEN 'property' THEN 1
+                         WHEN 'field' THEN 2
+                         WHEN 'event' THEN 3
+                         WHEN 'class' THEN 4
+                         WHEN 'interface' THEN 4
+                         WHEN 'struct' THEN 4
+                         WHEN 'enum' THEN 4
+                         WHEN 'delegate' THEN 4
+                         WHEN 'namespace' THEN 5
+                         ELSE 6
+                     END ASC,
+                     query_term_coverage DESC,
                      bm25_score ASC,
+                     CASE WHEN lower(symbols.path) LIKE 'tests/%'
+                                OR lower(symbols.path) LIKE '%/tests/%'
+                          THEN 1 ELSE 0 END ASC,
                      symbols.display_name COLLATE BINARY ASC,
                      symbols.path COLLATE BINARY ASC,
                      symbols.line ASC,
@@ -1125,7 +1089,7 @@ internal sealed class SqliteSearchIndex
             .ToArray();
     }
 
-    private static string? SelectExcerpt(
+    private static SearchExcerptSelection? SelectExcerpt(
         string? documentation,
         string? comments,
         string? signature,
@@ -1138,23 +1102,35 @@ internal sealed class SqliteSearchIndex
             return null;
         }
 
-        foreach (var candidate in new[] { documentation, comments, signature, body })
+        foreach (var candidate in new[]
+                 {
+                     new SearchExcerptCandidate(documentation, SearchExcerptSource.Documentation),
+                     new SearchExcerptCandidate(comments, SearchExcerptSource.Comment),
+                     new SearchExcerptCandidate(signature, SearchExcerptSource.Signature),
+                     new SearchExcerptCandidate(body, SearchExcerptSource.Body),
+                 })
         {
-            if (string.IsNullOrWhiteSpace(candidate))
+            if (string.IsNullOrWhiteSpace(candidate.Text))
             {
                 continue;
             }
 
-            var normalizedCandidate = NormalizeExcerptWhitespace(candidate);
+            var normalizedCandidate = NormalizeExcerptWhitespace(candidate.Text);
             var matchIndex = FindFirstMatchIndex(normalizedCandidate, normalizedTokens);
             if (matchIndex >= 0)
             {
-                return BoundExcerptAroundMatch(normalizedCandidate, matchIndex);
+                return new SearchExcerptSelection(
+                    BoundExcerptAroundMatch(normalizedCandidate, matchIndex),
+                    candidate.Source);
             }
         }
 
         return null;
     }
+
+    private sealed record SearchExcerptCandidate(string? Text, SearchExcerptSource Source);
+
+    private sealed record SearchExcerptSelection(string Text, SearchExcerptSource Source);
 
     private static int FindFirstMatchIndex(string value, IReadOnlyList<string> tokens)
     {
@@ -1375,12 +1351,6 @@ internal sealed class SqliteSearchIndex
     private static bool IsWriterContention(SqliteException exception)
     {
         return exception.SqliteErrorCode is 5 or 6;
-    }
-
-    private static bool IsMissingSchema(SqliteException exception)
-    {
-        return exception.SqliteErrorCode == 1
-            && exception.Message.Contains("no such table: search_index_schema", StringComparison.Ordinal);
     }
 
     private static bool IsInvalidDatabase(SqliteException exception)

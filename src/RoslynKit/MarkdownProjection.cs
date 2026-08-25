@@ -25,6 +25,7 @@ public static class MarkdownProjection
             TypeDefinitionResult result => RenderTypeDefinition(result),
             ReferencesResult result => RenderReferences(result),
             ImplementationsResult result => RenderImplementations(result),
+            SymbolContextResult result => RenderSymbolContext(result),
             QuickInfoResult result => RenderQuickInfo(result),
             SignatureHelpResult result => RenderSignatureHelp(result),
             SymbolSourceResult result => RenderSymbolSource(result),
@@ -131,6 +132,11 @@ public static class MarkdownProjection
 
     private static string RenderSearch(SearchResult result)
     {
+        if (result.Compact)
+        {
+            return RenderCompactSearch(result);
+        }
+
         var builder = new StringBuilder();
         builder.Append("command: search");
         builder.Append("\ntarget: ").Append(CodeSpan(result.TargetPath));
@@ -156,11 +162,35 @@ public static class MarkdownProjection
                 if (hit.Excerpt is { Length: > 0 } excerpt)
                 {
                     builder.Append("\n  excerpt: ").Append(CodeSpan(excerpt));
+                    if (hit.ExcerptSource is { } excerptSource)
+                    {
+                        builder.Append("\n  excerpt-source: ").Append(excerptSource.ToString().ToLowerInvariant());
+                    }
                 }
             }
         }
 
         AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
+        return builder.ToString();
+    }
+
+    private static string RenderCompactSearch(SearchResult result)
+    {
+        var builder = new StringBuilder();
+        builder.Append("results: ").Append(result.ReturnedCount).Append('/').Append(result.TotalCount);
+        for (var index = 0; index < result.Hits.Count; index++)
+        {
+            var hit = result.Hits[index];
+            builder.Append("\n- ").Append(index + 1)
+                .Append(' ').Append(hit.Kind)
+                .Append(' ').Append(CodeSpan(hit.DisplayName))
+                .Append(' ').Append(CodeSpan(Location(hit.Location)));
+            if (hit.Excerpt is { Length: > 0 } excerpt)
+            {
+                builder.Append("\n  ").Append(CodeSpan(excerpt));
+            }
+        }
+
         return builder.ToString();
     }
 
@@ -236,6 +266,85 @@ public static class MarkdownProjection
         AppendSymbolBullets(builder, result.Symbols, includeDocumentation: true);
         AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
         return builder.ToString();
+    }
+
+    private static string RenderSymbolContext(SymbolContextResult result)
+    {
+        var builder = new StringBuilder();
+        builder.Append("command: symbol-context");
+        AppendSelector(builder, result.Selector, result.Document, result.Line, result.Column);
+        builder.Append("\nselected-node: kind: ").Append(result.SelectedNode.Kind)
+            .Append(" loc: ").Append(CodeSpan(Location(result.SelectedNode.Location)));
+        AppendSyntaxNodeSymbol(builder, result.SelectedNode);
+        builder.Append("\nsymbol: ").Append(CodeSpan(result.Symbol.SymbolId ?? result.Symbol.DisplayName));
+        if (result.Symbol.SymbolId is { Length: > 0 })
+        {
+            builder.Append(" name: ").Append(CodeSpan(result.Symbol.DisplayName));
+        }
+
+        if (result.Documentation is { Length: > 0 } documentation)
+        {
+            builder.Append("\ndocumentation: ").Append(documentation);
+        }
+
+        builder.Append("\nalternate-declarations: ").Append(result.AlternateDeclarations.Count);
+        foreach (var declaration in result.AlternateDeclarations)
+        {
+            builder.Append("\n- loc: ").Append(CodeSpan(Location(declaration)));
+        }
+
+        builder.Append("\nancestors: ").Append(result.Ancestors.Count);
+        foreach (var ancestor in result.Ancestors)
+        {
+            builder.Append("\n- kind: ").Append(ancestor.Kind)
+                .Append(" loc: ").Append(CodeSpan(Location(ancestor.Location)));
+            AppendSyntaxNodeSymbol(builder, ancestor);
+        }
+
+        builder.Append("\ndescendants: ").Append(result.ReturnedDescendantCount).Append('/').Append(result.TotalDescendantCount);
+        builder.Append("\ndescendants-truncated: ").Append(result.DescendantsTruncated ? "true" : "false");
+        foreach (var descendant in result.Descendants)
+        {
+            builder.Append("\n- relation: ").Append(descendant.Relation)
+                .Append(" depth: ").Append(descendant.Depth)
+                .Append(" kind: ").Append(descendant.SyntaxKind)
+                .Append(" loc: ").Append(CodeSpan(Location(descendant.Location)));
+            if (descendant.TargetDisplayName is { Length: > 0 } targetDisplayName)
+            {
+                builder.Append(" target: ").Append(CodeSpan(targetDisplayName));
+            }
+
+            if (descendant.TargetSymbolId is { Length: > 0 } targetSymbolId)
+            {
+                builder.Append(" target-id: ").Append(CodeSpan(targetSymbolId));
+            }
+        }
+
+        builder.Append("\ncomments: ").Append(result.ReturnedCommentCount).Append('/').Append(result.TotalCommentCount);
+        builder.Append("\ncomments-truncated: ").Append(result.CommentsTruncated ? "true" : "false");
+        foreach (var comment in result.Comments)
+        {
+            builder.Append("\n- placement: ").Append(comment.Placement)
+                .Append(" style: ").Append(comment.Style)
+                .Append(" loc: ").Append(CodeSpan(Location(comment.Location)))
+                .Append(" text: ").Append(CodeSpan(comment.Text));
+        }
+
+        AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
+        return builder.ToString();
+    }
+
+    private static void AppendSyntaxNodeSymbol(StringBuilder builder, SyntaxContextNode node)
+    {
+        if (node.SymbolDisplayName is { Length: > 0 } symbolDisplayName)
+        {
+            builder.Append(" name: ").Append(CodeSpan(symbolDisplayName));
+        }
+
+        if (node.SymbolId is { Length: > 0 } symbolId)
+        {
+            builder.Append(" id: ").Append(CodeSpan(symbolId));
+        }
     }
 
     private static string RenderQuickInfo(QuickInfoResult result)

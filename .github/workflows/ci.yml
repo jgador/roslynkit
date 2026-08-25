@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.301
+      - run: dotnet restore ./RoslynKit.slnx
+      - run: dotnet build ./RoslynKit.slnx --no-restore --tl:off --nologo "-clp:ErrorsOnly;NoSummary"
+      - run: dotnet test ./RoslynKit.slnx --no-build --no-restore
+      - run: dotnet build ./tests/FixtureWorkspace/IntentNavigation/IntentNavigation.csproj --tl:off --nologo "-clp:ErrorsOnly;NoSummary"
+      - run: pwsh -NoProfile -File ./tests/PowerShell/PortabilityRegressionTests.ps1
+      - shell: bash
+        run: |
+          bash -n ./scripts/benchmark.sh
+          bash ./tests/bash/benchmark-regression-tests.sh
