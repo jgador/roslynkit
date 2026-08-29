@@ -8,7 +8,6 @@ Use one source of truth per topic:
 - [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md): canonical stable RoslynKit skill bundle source and `roslynkit init` scaffold input.
 - [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md): generated runtime command reference from `BuiltinCommandRegistry`; regenerate with `dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --write`.
 - [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md): shared command output contract for humans, scripts, tests, and agents.
-- [docs/daemon.md](docs/daemon.md): canonical lifecycle, consistency, IPC, fallback, and supported-workspace contract for the optional workspace daemon.
 - [docs/dev-install.md](docs/dev-install.md): semi-manual side-by-side prerelease installation for RoslynKit development.
 - [docs/dotnet-tool-release.md](docs/dotnet-tool-release.md): maintainer packaging and release workflow.
 - [docs/agents/README.md](docs/agents/README.md): index for repo-maintenance coding-agent workflow docs that agents may discover and apply on their own.
@@ -83,7 +82,7 @@ For literal search, prose inspection, non-C# files, or RoslynKit workspace-load 
 
 ### Intent-Based C# Search
 
-When an English-oriented question describes a C# responsibility but no declaration name is known, follow the intent-based symbol discovery workflow in [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). For this repository, always pass `--target ./RoslynKit.slnx` and `--index-path ./artifacts/roslynkit.db`; `artifacts/` is Git-ignored, so the repository-local SQLite database and its write-ahead logging (WAL) sidecars remain local. `search` creates, validates, and refreshes the index automatically. Use `index` only to prepare it deliberately, and use `--rebuild` only when the selected target partition must be recreated. See [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md) for exact runtime syntax and options.
+When an English-oriented question describes a C# responsibility but no declaration name is known, follow the intent-based symbol discovery workflow in [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). In this repository, let RoslynKit infer the Git repository project forest and the `.roslynkit/roslynkit.db` catalog by default. Pass `--target ./RoslynKit.slnx` only when solution-specific evaluation is required, and pass `--index-path` only for explicit override testing. `search` creates, validates, and refreshes the index automatically. Use `index` only to prepare it deliberately, and use `--rebuild` only when the selected target partition must be recreated. See [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md) for exact runtime syntax and options.
 
 ### No-Primer C# Tool Gate
 
@@ -165,7 +164,7 @@ Follow the existing style in touched files. Prefer clear names and structure ove
 Navigation comments should help RoslynKit documentation-enabled navigation output guide the next hop. Add or refine public-method summaries only for entrypoints, orchestration points, cross-boundary adapters, Roslyn workspace/symbol/position resolution boundaries, or helpers whose name alone does not explain when to jump there. Keep summaries architectural and specific; avoid generic comments such as "Executes the method" and avoid documenting every public member for coverage.
 
 - Keep C# files under 1000 lines of code when practical. This is guidance, not a hard rule: when a `.cs` file grows beyond 1000 lines, consider whether it mixes concerns or has a natural refactor seam before splitting it.
-- Preserve the CLI-first architecture: no MCP server, no LSP client, and no editor-specific protocol coupling. An on-demand, same-user workspace daemon is allowed only as a transparent performance optimization with standalone fallback and idle shutdown; follow [docs/daemon.md](docs/daemon.md).
+- Preserve the short-lived CLI-first architecture: no background daemon, Model Context Protocol (MCP) server, Language Server Protocol (LSP) client, named-pipe transport, or editor-specific protocol coupling. Persist reusable semantic state in the repository-local SQLite catalog.
 - Prefer direct Roslyn/MSBuild APIs over shelling out to editors, language servers, or IDEs.
 - Prioritize read-only Roslyn intelligence: inspect, navigate, understand, and verify C# code before edit-producing workflows.
 - If formatting, rename, or code-action features are added, return deterministic proposed edits before adding any source-mutating apply mode.

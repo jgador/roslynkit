@@ -27,15 +27,12 @@ public sealed class CommandReferenceMarkdownTests
 
         Assert.Contains("roslynkit init [--agent <codex|claude|copilot|all>] [--overwrite]", rendered, StringComparison.Ordinal);
         Assert.Contains("- `--agent` `<agent>`: agent target: codex, claude, copilot, or all", rendered, StringComparison.Ordinal);
-        Assert.Contains("## `daemon status`\n\nReport the compatible workspace daemon state without starting it.", rendered, StringComparison.Ordinal);
-        Assert.Contains("roslynkit daemon status --target <target>", rendered, StringComparison.Ordinal);
-        Assert.Contains("## `daemon stop`\n\nStop the compatible workspace daemon if it is running, without starting one.", rendered, StringComparison.Ordinal);
-        Assert.Contains("roslynkit daemon stop --target <target>", rendered, StringComparison.Ordinal);
-        Assert.Contains("roslynkit symbols --target <target> --query <text>", rendered, StringComparison.Ordinal);
+        Assert.DoesNotContain("daemon", rendered, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("roslynkit symbols --query <text> [--target <target>]", rendered, StringComparison.Ordinal);
         Assert.Contains("- `--query` / `-q` `<text>` (required): symbol name text to search for", rendered, StringComparison.Ordinal);
-        Assert.Contains("roslynkit definition --target <target> --symbol <selector>", rendered, StringComparison.Ordinal);
+        Assert.Contains("roslynkit definition --symbol <selector> [--target <target>]", rendered, StringComparison.Ordinal);
         Assert.Contains("- `--symbol` `<selector>` (required): documentation-comment ID", rendered, StringComparison.Ordinal);
-        Assert.Contains("roslynkit document-lines --target <target> --file <path>", rendered, StringComparison.Ordinal);
+        Assert.Contains("roslynkit document-lines --file <path> --start-line <n> --end-line <n> [--target <target>]", rendered, StringComparison.Ordinal);
         Assert.Contains("## `version`\n\nPrint the installed RoslynKit version.", rendered, StringComparison.Ordinal);
         Assert.Contains("No options.", rendered, StringComparison.Ordinal);
     }

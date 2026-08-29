@@ -6,12 +6,10 @@ This reference lists command names, usage strings, and options exposed by the in
 
 - `version`: Print the installed RoslynKit version.
 - `init`: Scaffold the RoslynKit coding-agent skill bundle into the current Git repository.
-- `daemon status`: Report the compatible workspace daemon state without starting it.
-- `daemon stop`: Stop the compatible workspace daemon if it is running, without starting one.
-- `workspace`: List projects and repo-relevant documents loaded from a solution or project.
+- `workspace`: List projects and repository-relevant documents in the inferred repository or explicit target.
 - `diagnostics`: Return source compiler diagnostics for the loaded target.
-- `index`: Build or refresh a repository-local full-text search index for the loaded target.
-- `search`: Search indexed C# symbols using English-oriented text matching and ranking.
+- `index`: Build or refresh the repository-local search and semantic catalog.
+- `search`: Search the repository-local C# catalog using English-oriented text matching and ranking.
 - `symbols`: Search source declarations by symbol name.
 - `document-text`: Read the full text of one resolved document.
 - `document-lines`: Read a bounded one-based line range from one resolved document.
@@ -55,47 +53,19 @@ roslynkit init [--agent <codex|claude|copilot|all>] [--overwrite]
 - `--agent` `<agent>`: agent target: codex, claude, copilot, or all
 - `--overwrite`: replace existing scaffolded skill files when content differs
 
-## `daemon status`
-
-Report the compatible workspace daemon state without starting it.
-
-### Usage
-
-```powershell
-roslynkit daemon status --target <target>
-```
-
-### Options
-
-- `--target` / `-t` `<target>` (required): solution or project file identifying the compatible daemon
-
-## `daemon stop`
-
-Stop the compatible workspace daemon if it is running, without starting one.
-
-### Usage
-
-```powershell
-roslynkit daemon stop --target <target>
-```
-
-### Options
-
-- `--target` / `-t` `<target>` (required): solution or project file identifying the compatible daemon
-
 ## `workspace`
 
-List projects and repo-relevant documents loaded from a solution or project.
+List projects and repository-relevant documents in the inferred repository or explicit target.
 
 ### Usage
 
 ```powershell
-roslynkit workspace --target <solution.slnx|solution.sln|project.csproj> [--include-generated] [--include-additional] [--include-analyzer-config]
+roslynkit workspace [--target <solution.slnx|solution.sln|solution.slnf|project.csproj|repository>] [--include-generated] [--include-additional] [--include-analyzer-config]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--include-generated`: include source-generated and generated source documents
 - `--include-additional`: include additional files
 - `--include-analyzer-config`: include analyzer config documents such as .editorconfig
@@ -107,52 +77,52 @@ Return source compiler diagnostics for the loaded target.
 ### Usage
 
 ```powershell
-roslynkit diagnostics --target <target> [--max-results <n>] [--include-hidden] [--include-generated]
+roslynkit diagnostics [--target <target>] [--max-results <n>] [--include-hidden] [--include-generated]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--max-results` `<n>`: maximum results to return
 - `--include-hidden`: include hidden diagnostics
 - `--include-generated`: include diagnostics from generated, bin, and obj documents
 
 ## `index`
 
-Build or refresh a repository-local full-text search index for the loaded target.
+Build or refresh the repository-local search and semantic catalog.
 
 ### Usage
 
 ```powershell
-roslynkit index --target <target> --index-path <path> [--rebuild] [--text-only]
+roslynkit index [--target <target>] [--index-path <path>] [--rebuild] [--text-only]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
-- `--index-path` `<path>` (required): Git-ignored repository-local SQLite database file path
-- `--rebuild`: discard the selected target's existing index records before indexing
-- `--text-only`: index repository C# source in-process without loading MSBuild or using the daemon
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
+- `--index-path` `<path>`: optional SQLite database override; defaults to .roslynkit/roslynkit.db
+- `--rebuild`: discard the selected partition before indexing
+- `--text-only`: index repository C# source in-process without loading MSBuild
 
 ## `search`
 
-Search indexed C# symbols using English-oriented text matching and ranking.
+Search the repository-local C# catalog using English-oriented text matching and ranking.
 
 ### Usage
 
 ```powershell
-roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>] [--text-only] [--compact] [--balanced]
+roslynkit search --query <text> [--target <target>] [--index-path <path>] [--project <path>] [--kind <kind>] [--max-results <n>] [--text-only] [--compact] [--balanced]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
-- `--index-path` `<path>` (required): Git-ignored repository-local SQLite database file path
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
+- `--index-path` `<path>`: optional SQLite database override; defaults to .roslynkit/roslynkit.db
 - `--query` / `-q` `<text>` (required): English-oriented text to search for
 - `--project` `<path>`: limit search to one project file within the loaded target
 - `--kind` `<kind>`: filter symbols by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate
 - `--max-results` `<n>`: maximum results to return (default: 20)
-- `--text-only`: search repository C# source in-process without loading MSBuild or using the daemon
+- `--text-only`: search repository C# source in-process without loading MSBuild
 - `--compact`: emit concise ranked evidence with repository-relative locations
 - `--balanced`: reserve half of bounded results for focused test declarations when both source and tests match
 
@@ -163,12 +133,12 @@ Search source declarations by symbol name.
 ### Usage
 
 ```powershell
-roslynkit symbols --target <target> --query <text> [--max-results <n>] [--case-sensitive] [--exact] [--kind <kind>]
+roslynkit symbols --query <text> [--target <target>] [--max-results <n>] [--case-sensitive] [--exact] [--kind <kind>]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--query` / `-q` `<text>` (required): symbol name text to search for
 - `--max-results` `<n>`: maximum results to return
 - `--case-sensitive`: match query text case-sensitively
@@ -182,12 +152,12 @@ Read the full text of one resolved document.
 ### Usage
 
 ```powershell
-roslynkit document-text --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>]
+roslynkit document-text --file <path> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -200,12 +170,12 @@ Read a bounded one-based line range from one resolved document.
 ### Usage
 
 ```powershell
-roslynkit document-lines --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --start-line <n> --end-line <n>
+roslynkit document-lines --file <path> --start-line <n> --end-line <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -220,12 +190,12 @@ List declared symbols in one source or source-generated C# document.
 ### Usage
 
 ```powershell
-roslynkit document-symbols --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>]
+roslynkit document-symbols --file <path> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -238,13 +208,13 @@ Resolve a symbol selector or the symbol at a one-based line and column to source
 ### Usage
 
 ```powershell
-roslynkit definition --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>
-roslynkit definition --target <target> --symbol <selector>
+roslynkit definition --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
+roslynkit definition --symbol <selector> [--target <target>]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -260,12 +230,12 @@ Resolve the type of the symbol at a one-based line and column to source definiti
 ### Usage
 
 ```powershell
-roslynkit type-definition --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>
+roslynkit type-definition --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -280,13 +250,13 @@ Find source references for a symbol selector or the symbol at a one-based line a
 ### Usage
 
 ```powershell
-roslynkit references --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n> [--max-results <n>]
-roslynkit references --target <target> --symbol <selector> [--max-results <n>]
+roslynkit references --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--max-results <n>]
+roslynkit references --symbol <selector> [--target <target>] [--max-results <n>]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -303,13 +273,13 @@ Find implementations for a symbol selector or the symbol at a one-based line and
 ### Usage
 
 ```powershell
-roslynkit implementations --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n> [--max-results <n>]
-roslynkit implementations --target <target> --symbol <selector> [--max-results <n>]
+roslynkit implementations --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--max-results <n>]
+roslynkit implementations --symbol <selector> [--target <target>] [--max-results <n>]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -326,13 +296,13 @@ Return the local syntax node, resolved symbol, ordinary comments, and bounded se
 ### Usage
 
 ```powershell
-roslynkit symbol-context --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n> [--max-results <n>] [--max-comments <n>]
-roslynkit symbol-context --target <target> --symbol <selector> [--max-results <n>] [--max-comments <n>]
+roslynkit symbol-context --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--max-results <n>] [--max-comments <n>]
+roslynkit symbol-context --symbol <selector> [--target <target>] [--max-results <n>] [--max-comments <n>]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -350,12 +320,12 @@ Return Roslyn quick info for the symbol at a one-based line and column.
 ### Usage
 
 ```powershell
-roslynkit quick-info --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>
+roslynkit quick-info --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -370,12 +340,12 @@ Return Roslyn signature help for the position at a one-based line and column.
 ### Usage
 
 ```powershell
-roslynkit signature-help --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>
+roslynkit signature-help --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--file` / `-f` `<path>`: document file path in the loaded target
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
@@ -390,10 +360,10 @@ Return the full declaration source text for a symbol selector.
 ### Usage
 
 ```powershell
-roslynkit symbol-source --target <target> --symbol <selector>
+roslynkit symbol-source --symbol <selector> [--target <target>]
 ```
 
 ### Options
 
-- `--target` / `-t` `<target>` (required): solution or project file to load
+- `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--symbol` `<selector>` (required): documentation-comment ID or qualified symbol name

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 using Microsoft.Build.Locator;
 using Microsoft.CodeAnalysis;
@@ -76,9 +77,32 @@ public sealed class RoslynWorkspaceLoader : IDisposable
     /// </summary>
     public static async Task<RoslynWorkspaceLoader> LoadAsync(string targetPath, CancellationToken cancellationToken)
     {
+        return await LoadAsync(targetPath, filePath: null, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Opens an explicit target or discovers every C# project in the containing repository.
+    /// </summary>
+    public static async Task<RoslynWorkspaceLoader> LoadAsync(
+        string? targetPath,
+        string? filePath,
+        CancellationToken cancellationToken)
+    {
         RegisterMSBuild();
 
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            var repository = RepositoryContextResolver.Resolve(filePath);
+            return await LoadRepositoryAsync(repository.RootPath, cancellationToken).ConfigureAwait(false);
+        }
+
         var fullTargetPath = Path.GetFullPath(targetPath);
+        if (Directory.Exists(fullTargetPath))
+        {
+            var repository = RepositoryContextResolver.Resolve(fullTargetPath);
+            return await LoadRepositoryAsync(repository.RootPath, cancellationToken).ConfigureAwait(false);
+        }
+
         if (!File.Exists(fullTargetPath))
         {
             throw new CliUsageException("unknown", $"Target file '{fullTargetPath}' does not exist.");
@@ -87,17 +111,7 @@ public sealed class RoslynWorkspaceLoader : IDisposable
         var diagnostics = new List<WorkspaceLoadDiagnostic>();
         var progressEvents = new ConcurrentQueue<ProjectLoadProgress>();
         var progress = new Progress<ProjectLoadProgress>(entry => progressEvents.Enqueue(entry));
-        var workspace = MSBuildWorkspace.Create(new Dictionary<string, string>
-        {
-            ["DesignTimeBuild"] = "true",
-            ["BuildProjectReferences"] = "false",
-            ["SkipCompilerExecution"] = "true",
-        });
-
-        workspace.RegisterWorkspaceFailedHandler(args =>
-        {
-            diagnostics.Add(new WorkspaceLoadDiagnostic(args.Diagnostic.Kind.ToString(), args.Diagnostic.Message));
-        });
+        var workspace = CreateMSBuildWorkspace(diagnostics);
 
         var extension = Path.GetExtension(fullTargetPath);
         if (extension.Equals(".sln", StringComparison.OrdinalIgnoreCase) || extension.Equals(".slnx", StringComparison.OrdinalIgnoreCase))
@@ -126,8 +140,37 @@ public sealed class RoslynWorkspaceLoader : IDisposable
                 diagnostics);
         }
 
+        if (extension.Equals(".slnf", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var projectPaths = await ReadSolutionFilterProjectsAsync(
+                    fullTargetPath,
+                    cancellationToken).ConfigureAwait(false);
+                await OpenProjectsAsync(
+                    workspace,
+                    projectPaths,
+                    progress,
+                    cancellationToken).ConfigureAwait(false);
+                var solution = workspace.CurrentSolution;
+                return new RoslynWorkspaceLoader(
+                    workspace,
+                    solution,
+                    fullTargetPath,
+                    "slnf",
+                    ResolveRootPath(fullTargetPath),
+                    ResolveProjectTargetFrameworks(solution, progressEvents.ToArray()),
+                    diagnostics);
+            }
+            catch
+            {
+                workspace.Dispose();
+                throw;
+            }
+        }
+
         workspace.Dispose();
-        throw new CliUsageException("unknown", "Target must be a .sln, .slnx, or .csproj file.");
+        throw new CliUsageException("unknown", "Target must be a .sln, .slnx, .slnf, or .csproj file.");
     }
 
     /// <summary>
@@ -138,20 +181,28 @@ public sealed class RoslynWorkspaceLoader : IDisposable
         CancellationToken cancellationToken)
     {
         var fullTargetPath = Path.GetFullPath(targetPath);
-        if (!File.Exists(fullTargetPath))
+        var isRepository = Directory.Exists(fullTargetPath);
+        if (!isRepository && !File.Exists(fullTargetPath))
         {
             throw new CliUsageException("unknown", $"Target file '{fullTargetPath}' does not exist.");
         }
 
         var extension = Path.GetExtension(fullTargetPath);
-        if (!extension.Equals(".sln", StringComparison.OrdinalIgnoreCase)
+        if (!isRepository
+            && !extension.Equals(".sln", StringComparison.OrdinalIgnoreCase)
             && !extension.Equals(".slnx", StringComparison.OrdinalIgnoreCase)
+            && !extension.Equals(".slnf", StringComparison.OrdinalIgnoreCase)
             && !extension.Equals(".csproj", StringComparison.OrdinalIgnoreCase))
         {
-            throw new CliUsageException("unknown", "Target must be a .sln, .slnx, or .csproj file.");
+            throw new CliUsageException("unknown", "Target must be a repository directory or a .sln, .slnx, .slnf, or .csproj file.");
         }
 
-        var rootPath = ResolveRootPath(fullTargetPath);
+        var rootPath = isRepository
+            ? RepositoryContextResolver.Resolve(fullTargetPath).RootPath
+            : ResolveRootPath(fullTargetPath);
+        var syntheticProjectPath = isRepository
+            ? (await RepositoryProjectDiscovery.DiscoverAsync(rootPath, cancellationToken).ConfigureAwait(false))[0]
+            : fullTargetPath;
         var workspace = new AdhocWorkspace();
         var projectId = ProjectId.CreateNewId(debugName: "RoslynKit text-only search");
         var projectInfo = ProjectInfo.Create(
@@ -160,7 +211,7 @@ public sealed class RoslynWorkspaceLoader : IDisposable
             $"{Path.GetFileNameWithoutExtension(fullTargetPath)} (text-only)",
             "RoslynKit.TextOnlySearch",
             LanguageNames.CSharp,
-            filePath: fullTargetPath,
+            filePath: syntheticProjectPath,
             outputFilePath: null,
             compilationOptions: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary),
             parseOptions: new CSharpParseOptions(LanguageVersion.Preview, DocumentationMode.Parse),
@@ -188,10 +239,134 @@ public sealed class RoslynWorkspaceLoader : IDisposable
             workspace,
             workspace.CurrentSolution,
             fullTargetPath,
-            $"{extension[1..]}-text-only",
+            isRepository ? "repository-text-only" : $"{extension[1..]}-text-only",
             rootPath,
             new Dictionary<ProjectId, string?> { [projectId] = null },
             []);
+    }
+
+    private static async Task<RoslynWorkspaceLoader> LoadRepositoryAsync(
+        string repositoryRoot,
+        CancellationToken cancellationToken)
+    {
+        var projectPaths = await RepositoryProjectDiscovery.DiscoverAsync(
+            repositoryRoot,
+            cancellationToken).ConfigureAwait(false);
+        var diagnostics = new List<WorkspaceLoadDiagnostic>();
+        var progressEvents = new ConcurrentQueue<ProjectLoadProgress>();
+        var progress = new Progress<ProjectLoadProgress>(entry => progressEvents.Enqueue(entry));
+        var workspace = CreateMSBuildWorkspace(diagnostics);
+
+        try
+        {
+            await OpenProjectsAsync(
+                workspace,
+                projectPaths,
+                progress,
+                cancellationToken).ConfigureAwait(false);
+            var solution = workspace.CurrentSolution;
+            return new RoslynWorkspaceLoader(
+                workspace,
+                solution,
+                repositoryRoot,
+                "repository",
+                repositoryRoot,
+                ResolveProjectTargetFrameworks(solution, progressEvents.ToArray()),
+                diagnostics);
+        }
+        catch
+        {
+            workspace.Dispose();
+            throw;
+        }
+    }
+
+    private static MSBuildWorkspace CreateMSBuildWorkspace(
+        ICollection<WorkspaceLoadDiagnostic> diagnostics)
+    {
+        var workspace = MSBuildWorkspace.Create(new Dictionary<string, string>
+        {
+            ["DesignTimeBuild"] = "true",
+            ["BuildProjectReferences"] = "false",
+            ["SkipCompilerExecution"] = "true",
+        });
+        workspace.RegisterWorkspaceFailedHandler(args =>
+        {
+            diagnostics.Add(new WorkspaceLoadDiagnostic(args.Diagnostic.Kind.ToString(), args.Diagnostic.Message));
+        });
+        return workspace;
+    }
+
+    private static async Task OpenProjectsAsync(
+        MSBuildWorkspace workspace,
+        IReadOnlyList<string> projectPaths,
+        IProgress<ProjectLoadProgress> progress,
+        CancellationToken cancellationToken)
+    {
+        foreach (var projectPath in projectPaths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (workspace.CurrentSolution.Projects.Any(project =>
+                    !string.IsNullOrWhiteSpace(project.FilePath)
+                    && PathComparer.Equals(Path.GetFullPath(project.FilePath), projectPath)))
+            {
+                continue;
+            }
+
+            _ = await workspace.OpenProjectAsync(
+                projectPath,
+                progress,
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task<IReadOnlyList<string>> ReadSolutionFilterProjectsAsync(
+        string solutionFilterPath,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = File.OpenRead(solutionFilterPath);
+        using var document = await JsonDocument.ParseAsync(
+            stream,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!document.RootElement.TryGetProperty("solution", out var solution)
+            || !solution.TryGetProperty("path", out var solutionPathElement)
+            || solutionPathElement.ValueKind != JsonValueKind.String
+            || !solution.TryGetProperty("projects", out var projects)
+            || projects.ValueKind != JsonValueKind.Array)
+        {
+            throw new CliUsageException(
+                "unknown",
+                $"Solution filter '{solutionFilterPath}' does not contain a valid solution path and project list.");
+        }
+
+        var filterDirectory = Path.GetDirectoryName(solutionFilterPath)!;
+        var solutionPath = ResolvePortableRelativePath(
+            filterDirectory,
+            solutionPathElement.GetString()!);
+        var solutionDirectory = Path.GetDirectoryName(solutionPath)!;
+        var projectPaths = projects
+            .EnumerateArray()
+            .Where(static project => project.ValueKind == JsonValueKind.String)
+            .Select(project => ResolvePortableRelativePath(solutionDirectory, project.GetString()!))
+            .Distinct(PathComparer)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (projectPaths.Length == 0 || projectPaths.Any(path => !File.Exists(path)))
+        {
+            throw new CliUsageException(
+                "unknown",
+                $"Solution filter '{solutionFilterPath}' references no existing C# projects.");
+        }
+
+        return projectPaths;
+    }
+
+    private static string ResolvePortableRelativePath(string baseDirectory, string path)
+    {
+        var portablePath = path
+            .Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar);
+        return Path.GetFullPath(portablePath, baseDirectory);
     }
 
     internal void SetLoadedWorktreeFingerprint(GitWorktreeFingerprint fingerprint)

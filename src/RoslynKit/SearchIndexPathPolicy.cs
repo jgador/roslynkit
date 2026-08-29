@@ -5,6 +5,8 @@ namespace RoslynKit;
 /// </summary>
 internal sealed class SearchIndexPathPolicy
 {
+    private const string DefaultCacheIgnoreContent = "/.gitignore\n/roslynkit.db\n/roslynkit.db-*\n";
+
     private static readonly TimeSpan DefaultDeadline = TimeSpan.FromSeconds(5);
     private readonly Func<string, string, IReadOnlyList<string>, CancellationToken, Task<ProcessCommandResult>> _runProcessAsync;
     private readonly TimeSpan _deadline;
@@ -32,9 +34,10 @@ internal sealed class SearchIndexPathPolicy
     /// Resolves an index path from the invoking process and verifies that Git ignores it.
     /// </summary>
     public async Task<SearchIndexPathResolution> ResolveAsync(
-        string targetPath,
-        string indexPath,
-        CancellationToken cancellationToken)
+        string? targetPath,
+        string? indexPath,
+        CancellationToken cancellationToken,
+        string? baseDirectory = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -45,14 +48,18 @@ internal sealed class SearchIndexPathPolicy
 
         try
         {
-            var canonicalTarget = ResolveTargetPath(targetPath);
-            var targetDirectory = Directory.Exists(canonicalTarget)
-                ? canonicalTarget
-                : Path.GetDirectoryName(canonicalTarget)!;
-            var repositoryRoot = await ResolveRepositoryRootAsync(
-                targetDirectory,
-                linkedCancellation.Token).ConfigureAwait(false);
-            var databasePath = ResolveDatabasePath(indexPath);
+            var targetIsImplicit = string.IsNullOrWhiteSpace(targetPath);
+            var canonicalTarget = ResolveTargetPath(targetPath, baseDirectory);
+            var repository = RepositoryContextResolver.Resolve(canonicalTarget, baseDirectory);
+            var repositoryRoot = repository.RootPath;
+            if (targetIsImplicit)
+            {
+                canonicalTarget = repositoryRoot;
+            }
+
+            var databasePath = string.IsNullOrWhiteSpace(indexPath)
+                ? await ResolveDefaultDatabasePathAsync(repository, linkedCancellation.Token).ConfigureAwait(false)
+                : ResolveDatabasePath(indexPath, baseDirectory);
 
             if (Directory.Exists(databasePath))
             {
@@ -98,7 +105,7 @@ internal sealed class SearchIndexPathPolicy
                     return SearchIndexPathResolution.Failed(
                         ignored.FailureKind ?? SearchIndexPathFailureKind.NotIgnored,
                         ignored.Diagnostic ??
-                        $"Git does not ignore '{requiredPath}'. Add an ignore rule for the search database and its SQLite sidecar files before running this command.");
+                        $"Git does not ignore '{requiredPath}'. Add an ignore rule for the RoslynKit database and its SQLite sidecar files before running this command.");
                 }
             }
 
@@ -123,6 +130,12 @@ internal sealed class SearchIndexPathPolicy
         {
             return SearchIndexPathResolution.Failed(exception.FailureKind, exception.Message);
         }
+        catch (RepositoryContextException exception)
+        {
+            return SearchIndexPathResolution.Failed(
+                SearchIndexPathFailureKind.GitFailure,
+                exception.Message);
+        }
         catch (Exception exception)
         {
             return SearchIndexPathResolution.Failed(
@@ -131,16 +144,16 @@ internal sealed class SearchIndexPathPolicy
         }
     }
 
-    private static string ResolveTargetPath(string targetPath)
+    private static string ResolveTargetPath(string? targetPath, string? baseDirectory)
     {
         if (string.IsNullOrWhiteSpace(targetPath))
         {
-            throw new SearchIndexPathException(
-                SearchIndexPathFailureKind.InvalidTarget,
-                "The '--target' value is required to locate the repository for the search index.");
+            return Path.GetFullPath(baseDirectory ?? Directory.GetCurrentDirectory());
         }
 
-        var fullTarget = Path.GetFullPath(targetPath);
+        var fullTarget = Path.GetFullPath(
+            targetPath,
+            Path.GetFullPath(baseDirectory ?? Directory.GetCurrentDirectory()));
         if (!File.Exists(fullTarget) && !Directory.Exists(fullTarget))
         {
             throw new SearchIndexPathException(
@@ -151,7 +164,7 @@ internal sealed class SearchIndexPathPolicy
         return PathCanonicalizer.ResolveExistingPath(fullTarget);
     }
 
-    private static string ResolveDatabasePath(string indexPath)
+    private static string ResolveDatabasePath(string indexPath, string? baseDirectory)
     {
         if (string.IsNullOrWhiteSpace(indexPath))
         {
@@ -160,39 +173,27 @@ internal sealed class SearchIndexPathPolicy
                 "The '--index-path' value is required. Pass a Git-ignored database file path, such as 'artifacts/roslynkit.db'.");
         }
 
-        var fullDatabasePath = Path.GetFullPath(indexPath);
+        var fullDatabasePath = Path.GetFullPath(
+            indexPath,
+            Path.GetFullPath(baseDirectory ?? Directory.GetCurrentDirectory()));
         return ResolvePathWithExistingAncestor(fullDatabasePath);
     }
 
-    private async Task<string> ResolveRepositoryRootAsync(
-        string targetDirectory,
+    private static async Task<string> ResolveDefaultDatabasePathAsync(
+        RepositoryContext repository,
         CancellationToken cancellationToken)
     {
-        var result = await _runProcessAsync(
-            "git",
-            targetDirectory,
-            ["-C", targetDirectory, "rev-parse", "--show-toplevel"],
-            cancellationToken).ConfigureAwait(false);
-        if (result.ExitCode != 0)
+        Directory.CreateDirectory(repository.CacheDirectoryPath);
+        var ignorePath = Path.Combine(repository.CacheDirectoryPath, ".gitignore");
+        if (!File.Exists(ignorePath))
         {
-            var detail = result.StandardError.Trim();
-            var suffix = detail.Length == 0 ? string.Empty : $": {detail}";
-            throw new SearchIndexPathException(
-                SearchIndexPathFailureKind.GitFailure,
-                $"Could not locate a Git worktree for '--target' '{targetDirectory}' (git exit code {result.ExitCode}){suffix}. Search indexes require a Git repository so their storage can be verified as ignored.");
+            await File.WriteAllTextAsync(
+                ignorePath,
+                DefaultCacheIgnoreContent,
+                cancellationToken).ConfigureAwait(false);
         }
 
-        var lines = result.StandardOutput.Split(
-            ['\r', '\n'],
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (lines.Length != 1 || !Directory.Exists(lines[0]))
-        {
-            throw new SearchIndexPathException(
-                SearchIndexPathFailureKind.GitFailure,
-                "Git returned an invalid worktree root while validating '--index-path'.");
-        }
-
-        return Path.TrimEndingDirectorySeparator(PathCanonicalizer.ResolveExistingPath(lines[0]));
+        return repository.DatabasePath;
     }
 
     private async Task<SearchIndexIgnoreCheck> IsIgnoredAsync(
@@ -209,7 +210,7 @@ internal sealed class SearchIndexPathPolicy
         {
             0 => SearchIndexIgnoreCheck.Ignored(),
             1 => SearchIndexIgnoreCheck.NotIgnored(
-                $"Git does not ignore '{relativePath}'. Add an ignore rule for the search database and its SQLite sidecar files before running this command."),
+                $"Git does not ignore '{relativePath}'. Add an ignore rule for the RoslynKit database and its SQLite sidecar files before running this command."),
             _ => SearchIndexIgnoreCheck.Failed(
                 $"Git could not check whether '{relativePath}' is ignored (exit code {result.ExitCode}){FormatGitError(result.StandardError)}."),
         };

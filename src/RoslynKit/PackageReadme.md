@@ -73,27 +73,29 @@ Existing generated files are preserved when content is identical and rejected wh
 
 ## First commands
 
-Confirm RoslynKit can load the repository solution or project:
+Confirm RoslynKit can discover and load the repository project forest:
 
 ```powershell
-roslynkit workspace --target ./MySolution.slnx
-roslynkit diagnostics --target ./MySolution.slnx
+roslynkit workspace
+roslynkit diagnostics
 ```
 
-Targets can be `.slnx`, `.sln`, or `.csproj` files.
+RoslynKit finds the nearest standard `.git/` directory and loads every tracked or unignored `.csproj`. Use optional `--target` to narrow a command to a `.slnx`, `.sln`, `.slnf`, `.csproj`, or repository-directory scope.
 
 ## Search by code intent
 
 `search` finds C# declarations from an English-oriented question. It uses SQLite Full-Text Search 5 (FTS5) with internal Best Matching 25 (BM25) ranking. `index` prepares the same persistent index explicitly.
 
-Both commands require `--target` and `--index-path`. Keep the database inside the Git repository and ignore it, for example:
+The repository and database are implicit:
 
 ```powershell
-roslynkit index --target ./MySolution.slnx --index-path ./artifacts/roslynkit.db
-roslynkit search --target ./MySolution.slnx --index-path ./artifacts/roslynkit.db --query "where is request validation"
+roslynkit index
+roslynkit search --query "where is request validation"
 ```
 
-The database has one partition per target. It persists target identities, project paths, and declaration source paths relative to the repository, then reconstructs absolute target and declaration locations from the resolved repository root for public output. `search` refreshes stale records automatically; `index --rebuild` forces a selected target rebuild. SQLite write-ahead logging (WAL) can create adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files while the database is active. The index supports projects with one target framework and requires every indexed project and non-generated source document to have an existing physical path inside the target's Git worktree. It rejects missing project or non-generated source paths, external projects, and external linked non-generated source files. Generated source documents are skipped, including source-generated documents, generated paths below `bin` or `obj`, and sources with standard generated-code markers injected from extracted NuGet packages outside the worktree.
+The catalog lives at `.roslynkit/roslynkit.db`; RoslynKit creates `.roslynkit/.gitignore` for the database and its SQLite write-ahead logging (WAL) sidecars. The database stores separate repository and explicit-target partitions, project paths, declaration source paths, exact symbol metadata, comments, project references, and key semantic relationships. `search` refreshes stale records automatically; `index --rebuild` forces a selected partition rebuild. The index supports projects with one target framework and requires every indexed project and non-generated source document to have an existing physical path inside the repository. It rejects missing or external project and source paths. Generated source documents are skipped, including source-generated documents, generated paths below `bin` or `obj`, and sources with standard generated-code markers injected from extracted NuGet packages outside the worktree.
+
+Fresh catalog data can answer exact symbol listing, symbol definitions, declaration source, and implementations without loading an MSBuild workspace. The first exact references query uses Roslyn and stores its bounded result for identical later requests. Other compiler-context operations continue to load Roslyn in the short-lived command process.
 
 Search output is for agent-mediated follow-up. Inspect several ranked results, then pass a returned `id:` or `loc:` to an existing navigation command. RoslynKit does not read search results from standard input.
 

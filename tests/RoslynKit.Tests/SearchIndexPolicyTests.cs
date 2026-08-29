@@ -5,6 +5,45 @@ namespace RoslynKit.Tests;
 public sealed class SearchIndexPolicyTests
 {
     [Fact]
+    public async Task ResolveAsync_DefaultsToRepositoryRoslynKitDatabase()
+    {
+        await using var repository = await GitRepository.CreateAsync(string.Empty);
+
+        var result = await new SearchIndexPathPolicy().ResolveAsync(
+            repository.GetPath("src/App.csproj"),
+            indexPath: null,
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccessful, result.Diagnostic);
+        Assert.Equal(repository.RootPath, result.Path!.RepositoryRoot);
+        Assert.Equal(".roslynkit/roslynkit.db", result.Path.RelativeDatabasePath);
+        Assert.Equal(
+            repository.GetPath(".roslynkit/roslynkit.db"),
+            result.Path.DatabasePath);
+        Assert.Equal(
+            $"/.gitignore{Environment.NewLine}/roslynkit.db{Environment.NewLine}/roslynkit.db-*{Environment.NewLine}",
+            await File.ReadAllTextAsync(
+                repository.GetPath(".roslynkit/.gitignore"),
+                TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ResolveAsync_DefaultsTargetToRepositoryFromBaseDirectory()
+    {
+        await using var repository = await GitRepository.CreateAsync(string.Empty);
+
+        var result = await new SearchIndexPathPolicy().ResolveAsync(
+            targetPath: null,
+            indexPath: null,
+            TestContext.Current.CancellationToken,
+            repository.GetPath("src"));
+
+        Assert.True(result.IsSuccessful, result.Diagnostic);
+        Assert.Equal(repository.RootPath, result.Path!.TargetPath);
+        Assert.Equal(repository.GetPath(".roslynkit/roslynkit.db"), result.Path.DatabasePath);
+    }
+
+    [Fact]
     public async Task ResolveAsync_ResolvesRelativeDatabasePathFromProcessDirectory()
     {
         await using var repository = await GitRepository.CreateAsync("artifacts/\n");

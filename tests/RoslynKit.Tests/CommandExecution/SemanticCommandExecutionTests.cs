@@ -117,9 +117,9 @@ public sealed partial class CommandExecutionTests
             "--file", programPath);
 
         var programSymbol = Assert.Single(result.Symbols, symbol => symbol.Name == "Program");
-        Assert.Contains("Routes hidden daemon mode before forwarding ordinary arguments", programSymbol.Documentation!, StringComparison.Ordinal);
+        Assert.Contains("Runs the ordinary RoslynKit command-line application", programSymbol.Documentation!, StringComparison.Ordinal);
         Assert.Contains(
-            "\n  documentation: Routes hidden daemon mode before forwarding ordinary arguments",
+            "\n  documentation: Runs the ordinary RoslynKit command-line application",
             MarkdownProjection.Render(result).Replace("\r\n", "\n", StringComparison.Ordinal),
             StringComparison.Ordinal);
     }

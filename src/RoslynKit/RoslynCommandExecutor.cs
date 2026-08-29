@@ -32,10 +32,44 @@ public static partial class RoslynCommandExecutor
     public static async Task<object> ExecuteAsync(ParsedCommand command, CancellationToken cancellationToken)
     {
         ValidateBeforeWorkspaceLoad(command);
-        using var loaded = command.Name is "index" or "search"
+        if (command.Name == "index")
+        {
+            return await SearchCommandService.IndexAsync(command, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (command.Name == "search")
+        {
+            return await SearchCommandService.SearchAsync(command, cancellationToken).ConfigureAwait(false);
+        }
+
+        var maintainsCatalog = CatalogCommandService.MaintainsCatalog(command);
+        if (maintainsCatalog)
+        {
+            var cached = await CatalogCommandService.TryExecuteAsync(
+                command,
+                cancellationToken).ConfigureAwait(false);
+            if (cached is not null)
+            {
+                return cached;
+            }
+        }
+
+        using var loaded = maintainsCatalog
             ? await SearchCommandService.LoadStableWorkspaceAsync(command, cancellationToken).ConfigureAwait(false)
-            : await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
-        return await ExecuteAsync(command, loaded, cancellationToken).ConfigureAwait(false);
+            : await RoslynWorkspaceLoader.LoadAsync(
+                command.Optional("target"),
+                command.Optional("file"),
+                cancellationToken).ConfigureAwait(false);
+        var result = await ExecuteAsync(command, loaded, cancellationToken).ConfigureAwait(false);
+        if (maintainsCatalog)
+        {
+            await CatalogCommandService.StoreLiveResultAsync(
+                command,
+                result,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -83,10 +117,8 @@ public static partial class RoslynCommandExecutor
                 _ = GetSymbolFilter(command.Name, command.Optional("kind"));
                 break;
             case "index":
-                _ = command.Required("index-path");
                 break;
             case "search":
-                _ = command.Required("index-path");
                 _ = command.Required("query");
                 _ = command.OptionalInt("max-results", 20, 1);
                 _ = GetSymbolFilter(command.Name, command.Optional("kind"));

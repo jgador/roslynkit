@@ -6,6 +6,18 @@ namespace RoslynKit.Tests;
 public sealed partial class CommandExecutionTests
 {
     [Fact]
+    public async Task Workspace_WithoutTarget_LoadsRepositoryProjectForest()
+    {
+        var result = await TestPaths.ExecuteCommandAsync<WorkspaceResult>("workspace");
+
+        Assert.Equal(TestPaths.RepositoryRoot(), result.TargetPath);
+        Assert.Equal("repository", result.TargetKind);
+        Assert.Contains(result.Projects, project => project.Path == TestPaths.RepoFile("src", "RoslynKit", "RoslynKit.csproj"));
+        Assert.Contains(result.Projects, project => project.Path == TestPaths.RepoFile("tests", "RoslynKit.Tests", "RoslynKit.Tests.csproj"));
+        Assert.Contains(result.Projects, project => project.Path == TestPaths.RepoFile("tests", "Integration", "Benchmarking", "RoslynKit.Benchmarking.csproj"));
+    }
+
+    [Fact]
     public async Task Workspace_DefaultOutput_ListsRepoRelevantSourceDocumentsOnly()
     {
         var result = await TestPaths.ExecuteCommandAsync<WorkspaceResult>(

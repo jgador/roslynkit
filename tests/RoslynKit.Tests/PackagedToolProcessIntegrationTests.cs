@@ -6,7 +6,6 @@ namespace RoslynKit.Tests;
 /// <summary>
 /// Exercises workspace and search commands through a tool installed from the current package output.
 /// </summary>
-[Collection(DaemonProcessIntegrationCollection.Name)]
 public sealed class PackagedToolProcessIntegrationTests
 {
     private const string PackageId = "roslynkit";
@@ -17,17 +16,12 @@ public sealed class PackagedToolProcessIntegrationTests
     public async Task PackagedTool_WorkspaceAndSearchCommandsUseInstalledPackage()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        await using var area = await DaemonProcessTestArea.CreateAsync(cancellationToken);
-        var indexPath = Path.Combine(area.RootPath, "artifacts", "packaged-search", "roslynkit.db");
+        await using var area = await RepositoryProcessTestArea.CreateAsync(cancellationToken);
         var packagingPath = Path.Combine(area.RootPath, ".dotnet-cli", "packaged-tool");
         var packageSourcePath = Path.Combine(packagingPath, "packages");
         var toolPath = Path.Combine(packagingPath, "tool");
         var nugetConfigPath = Path.Combine(packagingPath, "NuGet.Config");
 
-        await File.AppendAllTextAsync(
-            Path.Combine(area.RootPath, ".gitignore"),
-            "artifacts/\n",
-            cancellationToken);
         await area.WriteSourceAsync(
             """
             namespace PackagedToolFixture;
@@ -102,7 +96,7 @@ public sealed class PackagedToolProcessIntegrationTests
         var workspace = await RunProcessAsync(
             executablePath,
             area.RootPath,
-            ["workspace", "--target", area.TargetPath],
+            ["workspace"],
             cancellationToken);
         workspace.EnsureSuccess("installed roslynkit workspace");
         Assert.StartsWith("command: workspace", workspace.StandardOutput, StringComparison.Ordinal);
@@ -110,42 +104,34 @@ public sealed class PackagedToolProcessIntegrationTests
         var index = await RunProcessAsync(
             executablePath,
             area.RootPath,
-            ["index", "--target", area.TargetPath, "--index-path", indexPath],
+            ["index"],
             cancellationToken);
         index.EnsureSuccess("installed roslynkit index");
         Assert.StartsWith("command: index", index.StandardOutput, StringComparison.Ordinal);
         Assert.Contains("index-state: fresh", index.StandardOutput, StringComparison.Ordinal);
+        var indexPath = Path.Combine(area.RootPath, ".roslynkit", "roslynkit.db");
         Assert.True(File.Exists(indexPath), $"Expected search index at '{indexPath}'.");
 
         var search = await RunProcessAsync(
             executablePath,
             area.RootPath,
-            ["search", "--target", area.TargetPath, "--index-path", indexPath, "--query", "packaged search fixture"],
+            ["search", "--query", "packaged search fixture"],
             cancellationToken);
         search.EnsureSuccess("installed roslynkit search");
         Assert.StartsWith("command: search", search.StandardOutput, StringComparison.Ordinal);
         Assert.Contains("index-state: fresh", search.StandardOutput, StringComparison.Ordinal);
         Assert.Contains("PackagedToolFixture.PackagedSearchFixture", search.StandardOutput, StringComparison.Ordinal);
 
-        var status = await RunProcessAsync(
+        var definition = await RunProcessAsync(
             executablePath,
             area.RootPath,
-            ["daemon", "status", "--target", area.TargetPath],
+            ["definition", "--symbol", "T:PackagedToolFixture.PackagedSearchFixture"],
             cancellationToken);
-        var runningStatus = DaemonProcessTestArea.ParseDaemonStatus(status);
-        Assert.Equal("running", runningStatus.State);
-        Assert.NotNull(runningStatus.ProcessId);
-
-        await area.GetDaemonStatusAsync(cancellationToken);
-
-        var stop = await RunProcessAsync(
-            executablePath,
-            area.RootPath,
-            ["daemon", "stop", "--target", area.TargetPath],
-            cancellationToken);
-        stop.EnsureSuccess("installed roslynkit daemon stop");
-        Assert.Contains("state: stopping", stop.StandardOutput, StringComparison.Ordinal);
-        await area.WaitForNotRunningStatusAsync(cancellationToken);
+        definition.EnsureSuccess("installed roslynkit definition");
+        Assert.Contains(
+            "name: `PackagedToolFixture.PackagedSearchFixture`",
+            definition.StandardOutput,
+            StringComparison.Ordinal);
     }
 
     private static async Task<ProcessResult> RunProcessAsync(

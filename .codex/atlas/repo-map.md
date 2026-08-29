@@ -1,156 +1,138 @@
-# RoslynKit Map
+# Repository Map
 
-Resident architecture context for first-pass navigation. Atlas stores durable routing facts only; use `git ls-files`, `rg`, RoslynKit live commands, tests, and direct file reads for current facts.
+Last verified: 2026-04-03
 
-## Shape
+RoslynKit is a .NET 10 command-line tool for deterministic, read-only C# inspection. Each invocation is a short-lived process. Reusable state lives in a repository-local SQLite semantic catalog rather than a daemon, named pipe, socket, or Model Context Protocol (MCP) server.
 
-- Solution: `RoslynKit.slnx`
-- Product: `src/RoslynKit/`
-- Tests: `tests/RoslynKit.Tests/`
-- Test utility: `tests/RoslynKit.WorkspaceGraphDump/`
-- Fixture input: `tests/FixtureWorkspace/App/`
-- Docs and packaging: [README.md](../../README.md), [docs/](../../docs/), [docs/daemon.md](../../docs/daemon.md), [docs/benchmark.md](../../docs/benchmark.md), [docs/agents/](../../docs/agents/), `scripts/`
-- Continuous integration: [.github/workflows/ci.yml](../../.github/workflows/ci.yml) validates Ubuntu and Windows solution builds and tests, the standalone IntentNavigation fixture build, and PowerShell packaging portability checks.
-- Agent assets: [AGENTS.md](../../AGENTS.md), [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/), [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md), [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md), [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md), [.agents/skills/benchmark/SKILL.md](../../.agents/skills/benchmark/SKILL.md), [.agents/skills/grill-me/SKILL.md](../../.agents/skills/grill-me/SKILL.md), `.agents/skills/commit-context/`, `.agents/skills/git-commit-push/`, [.codex/atlas/repo-map.md](repo-map.md)
+## Navigation Strategy
 
-## Runtime Flow
+- Start with [AGENTS.md](../../AGENTS.md) for active repository rules.
+- Use this map to choose a domain and first read order.
+- Read tests before implementation when coverage exists.
+- Prefer RoslynKit semantic commands for C# symbols and narrow line-range reads after a path is resolved.
+- Use literal search for Markdown, configuration, scripts, and exact text.
+- Stop after five source files and state a hypothesis before expanding the read set.
 
-- `Program.Main` converts console cancellation plus Unix `SIGINT`, `SIGTERM`, and `SIGHUP` into a process-lifetime cancellation token, then routes the exact hidden daemon token through `DaemonServerRunner` before public parsing; `Program.CreateCliApplication` creates the ordinary `CliApplication` with separate stdout and stderr writers and injects `DaemonFallbackWorkspaceCommandRouter` for workspace commands.
-- `CliApplication.ExecuteAsync` parses args and returns an exact buffered `CliProcessResult`; `RunAsync` writes that result to the configured process streams.
-- Help, version, and init execute entirely locally. Daemon lifecycle controls parse locally and use a non-starting client exchange; workspace-backed commands cross the injected `DaemonFallbackWorkspaceCommandRouter` boundary.
-- `DaemonFallbackWorkspaceCommandRouter` delegates workspace commands to `DaemonClient`, falls back only on its typed daemon infrastructure failure, prefixes buffered stderr with one exact warning, and invokes `WorkspaceCommandRouter` once. Text-only `index` and `search` explicitly bypass daemon contact and invoke that standalone route directly. `WorkspaceCommandRouter` supplies the standalone function, calls `RoslynCommandExecutor.ExecuteAsync`, and renders through `MarkdownProjection` without writing directly to process streams.
-- `CliParser` resolves the longest registered command-token path, then validates selector/option combinations against `BuiltinCommandRegistry`; this supports leaf commands such as `daemon status` while preserving canonical string command names.
-- `DaemonCommandExecutor` handles `daemon status` and `daemon stop` through `DaemonClient` without loading a workspace or starting a daemon; absence reports `state: not-running`, running status renders the host snapshot, and an acknowledged stop reports `state: stopping`.
-- `GitWorkspaceIdentityResolver` validates the committed Git worktree boundary and captures the target, `global.json`, MSBuild, build environment, and architecture compatibility inputs. Both `DaemonClient` and `DaemonServerRunner` consume the same resolution before deriving the endpoint.
-- `DaemonIdentityResolver` adds the Windows SID or Unix effective UID and canonical local IPC runtime directory, while `DaemonEndpointName` canonicalizes the complete compatibility identity and emits a fixed opaque SHA-256 endpoint name. `DaemonServerRunner` uses the endpoint for the lifetime lease and listener.
-- `DaemonProtocol` reads and writes bounded four-byte little-endian strict UTF-8 JSON frames over any stream, while typed handshake, command, status, and stop messages carry request IDs. `DaemonNamedPipe` supplies local asynchronous current-user-only byte-mode streams consumed by `WorkspaceDaemonServer`.
-- `PathCanonicalizer` is the shared reparse-point-aware absolute path boundary used by Git workspace identity and daemon command path options.
-- `GitWorktreeFingerprintService` performs the request-time stable `HEAD` / raw porcelain / per-file `hash-object --no-filters` capture, coalesces concurrent callers, and returns deterministic structural fingerprints or typed cache-reuse failures.
-- `WorkspaceDaemonSession` owns disposable workspace generations, reconciles fingerprints before leasing an immutable snapshot, drains active readers before full reload, admits at most three clean readers, gives pending reloads priority, and performs the single quiet-period retry. The hidden server owns it through `WorkspaceDaemonHost`; public workspace commands reach it through `DaemonClient`.
-- `WorkspaceDaemonHost` is the transport-independent lifecycle owner around one session. `WorkspaceDaemonServer` adds the bounded concurrent named-pipe accept loop, required handshake, single-operation dispatch, target revalidation, and prompt disconnect cancellation. `DaemonServerRunner` resolves the hidden process identity, holds the per-endpoint lifetime lease, and constructs the server.
-- `DaemonPipeClient` owns connect, handshake, single-operation exchange, and response correlation. `DaemonClient` resolves endpoints, normalizes command-path infrastructure and protocol failures, including an overlong Unix named-pipe path, into the typed fallback signal, sends directly to running servers, or uses the distinct `DaemonBootstrapLease` to serialize recheck, `DaemonProcessStarter` self-launch, and handshake readiness. The Windows starter mirrors Roslyn's compiler-server `CreateProcess` boundary with no window, no inherited handles, and invalid standard handles; other platforms use non-waiting `Process.Start` with redirected streams and remain in the initiating Unix session and process group. `DaemonFallbackWorkspaceCommandRouter` owns the strict typed fallback boundary, buffered-stderr warning, and one standalone retry. Public lifecycle commands reuse the exchange without startup and never use fallback.
-- `ProcessCommandRunner` is the argument-list-only, buffered child-process boundary used by workspace identity and fingerprint probes; its byte-output path preserves NUL-delimited Git status records without invoking a shell.
-- `RoslynCommandExecutor.ExecuteAsync(command, cancellationToken)` owns standalone workspace loading and delegates to the caller-owned workspace overload; the overload resolves documents or symbols, invokes Roslyn APIs, and returns result models without disposing the workspace. `symbol-context` joins either selector form to a local syntax node, the resolved source symbol, syntax ancestors with optional symbol identities, bounded semantic descendants, declaration alternatives, XML summary documentation, and declaration-owned ordinary comments; cross-file expansion remains in `definition`, `references`, `implementations`, and `type-definition`.
-- `SearchCommandService` coordinates the `index` and `search` commands around an explicit repository-local SQLite index path. The database stores separate target partitions, repository-relative target identities, project paths, and declaration source paths, full-text search with internal Best Matching 25 ranking, and write-ahead logging; public target and declaration locations are reconstructed as absolute paths from the resolved repository root. Normal search loads MSBuild; `--text-only` uses `RoslynWorkspaceLoader.LoadTextOnlyAsync` to build one socket-free `AdhocWorkspace` from repository C# files and stores it under a separate synthetic partition. `--compact` projects repository-relative judgment evidence without IDs or index metadata. `--balanced` over-fetches and reserves half of a bounded result set for test paths when both source and tests match. `search` validates and incrementally refreshes a target automatically; `index` is the strict explicit refresh boundary and `--rebuild` forces that target's full rebuild. A prior coherent partition may answer concurrent searches as `stale` while a refresh runs.
-- `MarkdownProjection` is the deterministic markdown output renderer for successful commands.
+## Architecture Spine
 
-```mermaid
-flowchart TD
-    A["Command-line args<br/>string[] args"] --> B["Program.Main<br/>src/RoslynKit/Program.cs"]
-    B --> BM{"Hidden daemon token?"}
-    BM -->|No| C["CliApplication.RunAsync<br/>write buffered stdout + stderr"]
-    BM -->|Yes| DSR["DaemonServerRunner.RunAsync<br/>resolve identity + lifetime lease"]
-    DSR --> DSS["WorkspaceDaemonServer.RunAsync<br/>handshake + one-operation pipe dispatch"]
-    DSS --> DSH["WorkspaceDaemonHost<br/>session lifecycle + idle/stop"]
-    C --> C1["CliApplication.ExecuteAsync<br/>src/RoslynKit/CliApplication.cs"]
-
-    C1 --> D["CliParser.Parse(args)<br/>src/RoslynKit/CliParser.cs"]
-    D --> E["BuiltinCommandRegistry<br/>command metadata, options, usage"]
-    E --> F["ParsedCommand<br/>name + options + selectors"]
-
-    F --> G{"Top-level route"}
-    G -->|help| H["MarkdownProjection.RenderHelp<br/>help overview or command help"]
-    G -->|version| I["VersionText"]
-    G -->|init| IA["InitCommandExecutor.Execute<br/>embedded skill-bundle scaffold"]
-    G -->|daemon status / daemon stop| DC["DaemonCommandExecutor.ExecuteAsync<br/>non-starting lifecycle control"]
-    G -->|semantic command| JR["Injected workspace-command function"]
-    DC --> DCL["DaemonClient<br/>identity + pipe exchange"]
-    JR --> DCL
-    DCL -->|absent workspace command| DBL["DaemonBootstrapLease<br/>recheck + self-start"]
-    DBL --> DPS["DaemonProcessStarter<br/>same apphost or dotnet + DLL"]
-    DCL --> DSS
-    DPS --> DSR
-    DSH --> R["WorkspaceDaemonSession<br/>load or reuse generation"]
-    R --> J2["RoslynCommandExecutor.ExecuteAsync<br/>caller-owned workspace overload"]
-    J2 --> K{"Command dispatch switch"}
-    K --> L["workspace / diagnostics"]
-    K --> M["symbols / document-symbols"]
-    K --> N["definition / type-definition"]
-    K --> O["references / implementations"]
-    K --> P["quick-info / signature-help"]
-    K --> Q["document-text / document-lines / symbol-source / symbol-context"]
-
-    L --> S{"Resolution path"}
-    M --> S
-    N --> S
-    O --> S
-    P --> S
-    Q --> S
-    S -->|target/project/documents| T["Workspace + Solution + Projects + Documents"]
-    S -->|--file + --line + --column| U["FindTextDocumentAsync<br/>PositionResolver.GetPositionAsync"]
-    S -->|--symbol| V["ResolveCommandSymbolAsync<br/>RoslynSymbolResolver"]
-
-    U --> W["SemanticModel / SyntaxTree / SourceText"]
-    V --> W
-    T --> W
-
-    W --> X["Roslyn APIs<br/>SymbolFinder, QuickInfoService,<br/>compilation diagnostics, document symbols"]
-    X --> Y["Result models<br/>Output/*.cs"]
-    Y --> Z["MarkdownProjection.Render(data)<br/>command-specific markdown renderer"]
-    Z --> PR["CliProcessResult<br/>exit code + exact stdout + stderr"]
-
-    H --> PR
-    I --> PR
-    IA --> Y
-    DC --> PR
-    PR --> OUT["CliApplication.RunAsync<br/>writes stdout + stderr; returns exit code"]
-
-    C1 --> ERR{"Exception handling"}
-    ERR -->|CliUsageException| E2["CliProcessResult stdout error:<br/>error: usage<br/>message<br/>hint<br/>exit 2"]
-    ERR -->|OperationCanceledException| E3["CliProcessResult stdout error:<br/>error: canceled<br/>exit 130"]
-    ERR -->|Exception| E4["CliProcessResult stdout error:<br/>exception type<br/>message<br/>exit 1"]
-    E2 --> PR
-    E3 --> PR
-    E4 --> PR
+```text
+args
+  -> Program
+  -> CliParser
+  -> CliApplication
+  -> RoslynCommandExecutor
+       -> index/search
+            -> RepositoryContext
+            -> RepositoryProjectDiscovery
+            -> SearchCommandService
+            -> RoslynWorkspaceLoader or TextOnlySearchCorpusBuilder
+            -> RoslynSearchCorpusBuilder
+            -> SqliteSearchIndex
+       -> semantic navigation
+            -> RepositoryContext
+            -> CatalogCommandService
+                 -> fresh SQLite answer when supported
+                 -> otherwise fall through
+            -> RoslynWorkspaceLoader
+            -> PositionResolver / SymbolResolver
+            -> Roslyn operation
+            -> optional lazy operation-cache write
+       -> MarkdownProjection
 ```
 
-## Domains
+The default scope is the nearest standard `.git/` directory. RoslynKit discovers every tracked or unignored `.csproj` and loads the resulting repository project forest, including disconnected components. The default catalog path is `.roslynkit/roslynkit.db`; `.roslynkit/.gitignore` excludes the database and SQLite sidecars without modifying the root `.gitignore`.
 
-- CLI routing: [Program.cs](../../src/RoslynKit/Program.cs), [CliApplication.cs](../../src/RoslynKit/CliApplication.cs), [CliProcessResult.cs](../../src/RoslynKit/CliProcessResult.cs), [DaemonFallbackWorkspaceCommandRouter.cs](../../src/RoslynKit/DaemonFallbackWorkspaceCommandRouter.cs), [WorkspaceCommandRouter.cs](../../src/RoslynKit/WorkspaceCommandRouter.cs), [DaemonCommandExecutor.cs](../../src/RoslynKit/DaemonCommandExecutor.cs), [CliParser.cs](../../src/RoslynKit/CliParser.cs), [BuiltinCommandRegistry.cs](../../src/RoslynKit/BuiltinCommandRegistry.cs), [RoslynCommandExecutor.cs](../../src/RoslynKit/RoslynCommandExecutor.cs), [InitCommandExecutor.cs](../../src/RoslynKit/InitCommandExecutor.cs); start symbols `Program.Main`, `Program.CreateCliApplication`, `CliApplication.RunAsync`, `CliApplication.ExecuteAsync`, `DaemonFallbackWorkspaceCommandRouter.ExecuteAsync`, `WorkspaceCommandRouter.ExecuteAsync`, `DaemonCommandExecutor.ExecuteAsync`, `CliParser.Parse`, `RoslynCommandExecutor.ExecuteAsync`, `InitCommandExecutor.Execute`; tests [ProgramTests.cs](../../tests/RoslynKit.Tests/ProgramTests.cs), [CliParserTests.cs](../../tests/RoslynKit.Tests/CliParserTests.cs), [CliOutputTests.cs](../../tests/RoslynKit.Tests/CliOutputTests.cs), [DaemonFallbackWorkspaceCommandRouterTests.cs](../../tests/RoslynKit.Tests/DaemonFallbackWorkspaceCommandRouterTests.cs), [InitCommandExecutorTests.cs](../../tests/RoslynKit.Tests/InitCommandExecutorTests.cs), [CommandExecution/](../../tests/RoslynKit.Tests/CommandExecution/), [MarkdownFormatTests.cs](../../tests/RoslynKit.Tests/MarkdownFormatTests.cs).
-- Workspace/navigation: `RoslynCommandExecutor.cs`, `RoslynCommandExecutor.SymbolContext.cs`, `Output/SymbolContextResults.cs`, `RoslynWorkspaceLoader.cs`, `PositionResolver.cs`, `RoslynSymbolResolver.cs`, `RoslynDocumentFilters.cs`, `RoslynSymbolSearch.cs`, `RoslynSignatureHelpService.cs`; start symbols `RoslynWorkspaceLoader.LoadAsync`, `RoslynWorkspaceLoader.LoadTextOnlyAsync`, `PositionResolver.GetPositionAsync`, `RoslynSymbolResolver.ResolveAsync`, `RoslynSymbolSearch.EnumerateSourceSymbols`, `RoslynCommandExecutor.SymbolContextAsync`; tests `CommandExecution/`, `TextOnlyWorkspaceLoaderTests.cs`, `SymbolsCommandTests.cs`, `CliOutputTests.cs`, `MarkdownFormatTests.cs`.
-- Intent-based symbol search: [SearchCommandService.cs](../../src/RoslynKit/SearchCommandService.cs), [SearchQueryTokenizer.cs](../../src/RoslynKit/SearchQueryTokenizer.cs), [SearchIndexPathPolicy.cs](../../src/RoslynKit/SearchIndexPathPolicy.cs), [SearchIndexFingerprint.cs](../../src/RoslynKit/SearchIndexFingerprint.cs), [RoslynSearchCorpusBuilder.cs](../../src/RoslynKit/RoslynSearchCorpusBuilder.cs), [SqliteSearchIndex.cs](../../src/RoslynKit/SqliteSearchIndex.cs), [SqliteSearchIndexModels.cs](../../src/RoslynKit/SqliteSearchIndexModels.cs), [SqliteSearchIndexTypeMaps.cs](../../src/RoslynKit/SqliteSearchIndexTypeMaps.cs), [RoslynCommandExecutor.cs](../../src/RoslynKit/RoslynCommandExecutor.cs), and [MarkdownProjection.cs](../../src/RoslynKit/MarkdownProjection.cs); start symbols `SearchCommandService.IndexAsync`, `SearchCommandService.SearchAsync`, `SearchQueryTokenizer.Tokenize*`, `SearchIndexPathPolicy.ResolveAsync`, `SearchIndexFingerprintService.CaptureAsync`, `RoslynSearchCorpusBuilder.BuildAsync`, `SqliteSearchIndex.ReplaceTargetAsync`, and `SqliteSearchIndex.SearchAsync`; tests [SearchCommandTests.cs](../../tests/RoslynKit.Tests/SearchCommandTests.cs), [TextOnlyWorkspaceLoaderTests.cs](../../tests/RoslynKit.Tests/TextOnlyWorkspaceLoaderTests.cs), [SearchQueryTokenizerTests.cs](../../tests/RoslynKit.Tests/SearchQueryTokenizerTests.cs), [SearchIndexPolicyTests.cs](../../tests/RoslynKit.Tests/SearchIndexPolicyTests.cs), [RoslynSearchCorpusBuilderTests.cs](../../tests/RoslynKit.Tests/RoslynSearchCorpusBuilderTests.cs), [SearchMarkdownFormatTests.cs](../../tests/RoslynKit.Tests/SearchMarkdownFormatTests.cs), [SqliteSearchIndexTests.cs](../../tests/RoslynKit.Tests/SqliteSearchIndexTests.cs), [SqliteSearchIndexTypeMapsTests.cs](../../tests/RoslynKit.Tests/SqliteSearchIndexTypeMapsTests.cs), parser/command-execution coverage, and packaged-tool SQLite coverage. Normal search is English-oriented over navigable repository-local declarations from one-target-framework projects. Text-only search instead uses a synthetic single project, excludes repository infrastructure/output directories, and disallows `--project`. Dapper hydrates SQLite read rows through strict explicit column maps whose lookup is case-insensitive; Microsoft.Data.Sqlite owns provider connections, writer transactions, and schema operations.
-- Daemon identity foundation: [GitWorkspaceIdentityResolver.cs](../../src/RoslynKit/GitWorkspaceIdentityResolver.cs), [GitWorkspaceIdentity.cs](../../src/RoslynKit/GitWorkspaceIdentity.cs), [PathCanonicalizer.cs](../../src/RoslynKit/PathCanonicalizer.cs), [ProcessCommandRunner.cs](../../src/RoslynKit/ProcessCommandRunner.cs); start symbols `GitWorkspaceIdentityResolver.ResolveAsync`, `PathCanonicalizer.ResolveExistingPath`; tests [GitWorkspaceIdentityResolverTests.cs](../../tests/RoslynKit.Tests/GitWorkspaceIdentityResolverTests.cs). Public client and hidden server routing both consume this seam.
-- Daemon endpoint identity: [DaemonIdentity.cs](../../src/RoslynKit/DaemonIdentity.cs), [DaemonEndpointName.cs](../../src/RoslynKit/DaemonEndpointName.cs), [GitWorkspaceIdentity.cs](../../src/RoslynKit/GitWorkspaceIdentity.cs); start symbols `DaemonIdentityResolver.Resolve`, `DaemonEndpointName.Create`; tests [DaemonEndpointNameTests.cs](../../tests/RoslynKit.Tests/DaemonEndpointNameTests.cs) and [GitWorkspaceIdentityResolverTests.cs](../../tests/RoslynKit.Tests/GitWorkspaceIdentityResolverTests.cs). Mutable Git `HEAD` and worktree fingerprints remain outside endpoint selection.
-- Daemon framed transport: [DaemonProtocol.cs](../../src/RoslynKit/DaemonProtocol.cs), [DaemonProtocolMessages.cs](../../src/RoslynKit/DaemonProtocolMessages.cs), [DaemonNamedPipe.cs](../../src/RoslynKit/DaemonNamedPipe.cs), [PathCanonicalizer.cs](../../src/RoslynKit/PathCanonicalizer.cs); start symbols `DaemonProtocol.ReadRequestAsync`, `DaemonProtocol.WriteResponseAsync`, `DaemonCommandRequest.Create`, `DaemonNamedPipe.CreateServer`; tests [DaemonProtocolFramingTests.cs](../../tests/RoslynKit.Tests/DaemonProtocolFramingTests.cs), [DaemonProtocolMessageTests.cs](../../tests/RoslynKit.Tests/DaemonProtocolMessageTests.cs), and [NamedPipeDaemonTransportTests.cs](../../tests/RoslynKit.Tests/NamedPipeDaemonTransportTests.cs). This seam owns framing, read-only command validation, and local pipe construction, not daemon hosting, dispatch, process lifecycle, or CLI fallback.
-- Git worktree fingerprinting: [GitWorktreeFingerprintService.cs](../../src/RoslynKit/GitWorktreeFingerprintService.cs), [GitWorktreeFingerprint.cs](../../src/RoslynKit/GitWorktreeFingerprint.cs), [GitPorcelainParser.cs](../../src/RoslynKit/GitPorcelainParser.cs), [ProcessCommandRunner.cs](../../src/RoslynKit/ProcessCommandRunner.cs); start symbol `GitWorktreeFingerprintService.CaptureAsync`; tests [GitWorktreeFingerprintServiceTests.cs](../../tests/RoslynKit.Tests/GitWorktreeFingerprintServiceTests.cs). This seam is request-time mutable state and remains separate from daemon compatibility identity.
-- Workspace daemon session: [WorkspaceDaemonSession.cs](../../src/RoslynKit/WorkspaceDaemonSession.cs), [GitWorktreeFingerprintService.cs](../../src/RoslynKit/GitWorktreeFingerprintService.cs), [RoslynWorkspaceLoader.cs](../../src/RoslynKit/RoslynWorkspaceLoader.cs), [RoslynCommandExecutor.cs](../../src/RoslynKit/RoslynCommandExecutor.cs); start symbols `WorkspaceDaemonSession.ExecuteAsync`, `WorkspaceDaemonGeneration.LoadAsync`; tests [WorkspaceDaemonSessionTests.cs](../../tests/RoslynKit.Tests/WorkspaceDaemonSessionTests.cs). This seam owns generation lifetime, fingerprint baselines, reload coordination, and bounded clean-reader admission, not daemon hosting, process lifecycle, IPC dispatch, or CLI fallback.
-- Workspace daemon lifecycle: [WorkspaceDaemonHost.cs](../../src/RoslynKit/WorkspaceDaemonHost.cs), [WorkspaceDaemonServer.cs](../../src/RoslynKit/WorkspaceDaemonServer.cs), [DaemonServerRunner.cs](../../src/RoslynKit/DaemonServerRunner.cs), [DaemonLifetimeLease.cs](../../src/RoslynKit/DaemonLifetimeLease.cs), [WorkspaceDaemonSession.cs](../../src/RoslynKit/WorkspaceDaemonSession.cs), [DaemonProtocolMessages.cs](../../src/RoslynKit/DaemonProtocolMessages.cs); start symbols `WorkspaceDaemonHost.ExecuteAsync`, `WorkspaceDaemonServer.RunAsync`, `DaemonServerRunner.RunAsync`; tests [WorkspaceDaemonHostTests.cs](../../tests/RoslynKit.Tests/WorkspaceDaemonHostTests.cs), [WorkspaceDaemonServerTests.cs](../../tests/RoslynKit.Tests/WorkspaceDaemonServerTests.cs), [DaemonLifetimeLeaseTests.cs](../../tests/RoslynKit.Tests/DaemonLifetimeLeaseTests.cs), and [ProgramTests.cs](../../tests/RoslynKit.Tests/ProgramTests.cs). This seam owns request registration, deadline and disconnect cancellation, idle timing, status snapshots, graceful stop, hidden-process construction, one-live-server enforcement, and named-pipe dispatch.
-- Daemon client and fallback: [DaemonFallbackWorkspaceCommandRouter.cs](../../src/RoslynKit/DaemonFallbackWorkspaceCommandRouter.cs), [DaemonClient.cs](../../src/RoslynKit/DaemonClient.cs), [DaemonPipeClient.cs](../../src/RoslynKit/DaemonPipeClient.cs), [DaemonBootstrapLease.cs](../../src/RoslynKit/DaemonBootstrapLease.cs), [DaemonProcessStarter.cs](../../src/RoslynKit/DaemonProcessStarter.cs), [DaemonCommandExecutor.cs](../../src/RoslynKit/DaemonCommandExecutor.cs); start symbols `DaemonFallbackWorkspaceCommandRouter.ExecuteAsync`, `DaemonClient.ExecuteAsync`, `DaemonPipeClient.SendAsync`, `DaemonBootstrapLease.TryAcquire`, `DaemonProcessStarter.Start`, `DaemonCommandExecutor.ExecuteAsync`; tests [DaemonFallbackWorkspaceCommandRouterTests.cs](../../tests/RoslynKit.Tests/DaemonFallbackWorkspaceCommandRouterTests.cs), [DaemonClientTests.cs](../../tests/RoslynKit.Tests/DaemonClientTests.cs), [DaemonPipeClientTests.cs](../../tests/RoslynKit.Tests/DaemonPipeClientTests.cs), [DaemonBootstrapLeaseTests.cs](../../tests/RoslynKit.Tests/DaemonBootstrapLeaseTests.cs), and [DaemonProcessStarterTests.cs](../../tests/RoslynKit.Tests/DaemonProcessStarterTests.cs). `DaemonClient` owns public connection, handshake validation, startup serialization, same-build self-launch, readiness polling, and typed infrastructure normalization. `DaemonFallbackWorkspaceCommandRouter` owns strict fallback classification, the buffered-stderr warning, and one standalone retry; non-starting lifecycle controls bypass fallback.
-- Markdown output contract: `MarkdownProjection.cs`, result model types under `Output/`, [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md); tests `MarkdownFormatTests.cs`, `CliOutputTests.cs`.
-- Tooling/packaging: `RoslynKit.csproj`, `InitCommandExecutor.cs`, `scripts/prepare-roslynkit-package.ps1`, `scripts/install-roslynkit-dev.ps1`, `scripts/RoslynKit.Packaging.ps1`, [docs/dev-install.md](../../docs/dev-install.md), [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md), [docs/agents/skill-maintenance.md](../../docs/agents/skill-maintenance.md); tests usually start with `CliOutputTests.cs`, `InitCommandExecutorTests.cs`, plus build/pack smoke commands.
-- Native benchmarking: [scripts/benchmark.sh](../../scripts/benchmark.sh) is the public Bash controller; [tests/Integration/Benchmarking/](../../tests/Integration/Benchmarking/) contains the C# benchmark helper; [tests/Integration/Benchmarking/cases.json](../../tests/Integration/Benchmarking/cases.json), [docs/benchmark.md](../../docs/benchmark.md), and [.agents/skills/benchmark/SKILL.md](../../.agents/skills/benchmark/SKILL.md) define the catalog and explicit-only workflow. The catalog owns selection: `--case default` runs six `isDefault: true` code-search cases in catalog order, while `--case all` includes four optional navigation and stress cases. The C# helper is the single source of truth for options, defaults, and validation; Bash forwards user arguments verbatim, keeps only build-free `--clean` and `--help`, schedules from the helper's control directive, and makes the direct `codex exec` calls. The helper owns `prepare`, `prepare-session`, `evaluate-session`, and `report`, including option parsing, catalog validation, Release apphost build, text-only index/retrieval, JSON Lines (JSONL) evaluation, persistence, and reports; `prepare` prints a directive (`action`, `run-root`, `model`, `reasoning-effort`, `session` lines) on standard output and all human-readable text on standard error. Bash clears host-injected `CODEX_THREAD_ID`, retains `CODEX_HOME`, uses `--ephemeral`, and captures `codex exec --json` output. `--ignore-rules` skips user and project `execpolicy` `.rules` files rather than project instructions. Prompts prohibit tools and the evaluator rejects tool events; the judge sandbox remains read-only rather than claiming tools are disabled. Typed JSONL accounting, evidence groups, and a strict per-pair 20% input-token threshold determine comparability. One `run.json` beneath `artifacts/benchmark/` is the report source for `runs.csv` and `summary.md`; resume schedules only unfinished tuples, report-only regenerates derived files without judge sessions, and cleanup removes every entry under [artifacts/](../../artifacts/) except [artifacts/.gitkeep](../../artifacts/.gitkeep).
-- Agent/navigation policy: [AGENTS.md](../../AGENTS.md), [docs/agents/README.md](../../docs/agents/README.md), [.agents/skills/roslynkit/SKILL.md](../../.agents/skills/roslynkit/SKILL.md), [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md), [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md), [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md), [.agents/skills/benchmark/SKILL.md](../../.agents/skills/benchmark/SKILL.md), [.agents/skills/grill-me/SKILL.md](../../.agents/skills/grill-me/SKILL.md), this map.
+Explicit `.slnx`, `.sln`, `.slnf`, `.csproj`, and repository-directory targets remain supported. Linked worktrees and other `.git` indirection files are intentionally unsupported in the initial repository-discovery contract.
 
-## Test Routing
+## Runtime Domains
 
-- Parser and option validation -> `tests/RoslynKit.Tests/CliParserTests.cs`
-- Init scaffolding and guardrails -> `tests/RoslynKit.Tests/InitCommandExecutorTests.cs`
-- Command execution and Roslyn navigation flows, including search-to-context identity chaining -> `tests/RoslynKit.Tests/CommandExecution/`
-- Help/version/error output -> `tests/RoslynKit.Tests/CliOutputTests.cs`
-- Markdown rendering contract -> `tests/RoslynKit.Tests/MarkdownFormatTests.cs`
-- Symbol search and document-symbol behavior -> `tests/RoslynKit.Tests/SymbolsCommandTests.cs`
-- External daemon startup, lifecycle, reload, fallback, and packaged-tool behavior -> [DaemonProcessIntegrationTests.cs](../../tests/RoslynKit.Tests/DaemonProcessIntegrationTests.cs), [DaemonFallbackProcessIntegrationTests.cs](../../tests/RoslynKit.Tests/DaemonFallbackProcessIntegrationTests.cs), and [PackagedToolProcessIntegrationTests.cs](../../tests/RoslynKit.Tests/PackagedToolProcessIntegrationTests.cs), using [DaemonProcessTestArea.cs](../../tests/RoslynKit.Tests/DaemonProcessTestArea.cs)
-- Repo and fixture path helpers -> `tests/RoslynKit.Tests/TestPaths.cs`
-- Native benchmark harness and coverage -> [tests/Integration/Benchmarking/](../../tests/Integration/Benchmarking/)
-- PowerShell packaging portability -> [PortabilityRegressionTests.ps1](../../tests/PowerShell/PortabilityRegressionTests.ps1)
+### Entry, Parsing, and Command Contract
 
-## Commands
+**Read first**
 
-- Build: `dotnet build ./RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"`
-- Test: `dotnet test ./RoslynKit.slnx`
-- Run: `dotnet run --project ./src/RoslynKit -- help`
-- Pack: `dotnet pack ./src/RoslynKit/RoslynKit.csproj`
-- Workspace graph: `dotnet run --project ./tests/RoslynKit.WorkspaceGraphDump -- ./RoslynKit.slnx`
-- Benchmark dry run: `bash ./scripts/benchmark.sh --dry-run --trials 1 --case default`
+1. [src/RoslynKit/Program.cs](../../src/RoslynKit/Program.cs)
+2. [src/RoslynKit/CliParser.cs](../../src/RoslynKit/CliParser.cs)
+3. [src/RoslynKit/BuiltinCommandRegistry.cs](../../src/RoslynKit/BuiltinCommandRegistry.cs)
+4. [src/RoslynKit/CliApplication.cs](../../src/RoslynKit/CliApplication.cs)
+5. [tests/RoslynKit.Tests/CliParserTests.cs](../../tests/RoslynKit.Tests/CliParserTests.cs)
 
-## Navigation Rules
+Command metadata in `BuiltinCommandRegistry` generates [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md). Public command changes require regeneration with [tools/RoslynKit.CommandDocs.cs](../../tools/RoslynKit.CommandDocs.cs).
 
-- Use `roslynkit-dev` for repo-local C# semantic inspection unless the task is explicitly about the stable global tool.
-- Prefer tests before implementation when available.
-- For command or feature tracing, follow the runtime spine first, then use RoslynKit or direct line reads for the narrow unclear hop; use broad literal search only after the spine fails.
-- Prefer RoslynKit `symbols`, `document-symbols`, `definition`, `references`, `implementations`, `type-definition`, `quick-info`, `signature-help`, `document-lines`, and `symbol-source` over broad source reads.
-- Use sparse XML comments surfaced by documentation-enabled RoslynKit output as next-hop hints, not as exhaustive documentation.
-- Do not use Atlas as a file inventory, test inventory, symbol graph, reference graph, or source cache.
-- Ignore first: `artifacts/`, `TestResults/`, `.vs/`, `Visual Studio 18/`, `bin/`, `obj/`, `*.nupkg`.
+### Repository and Workspace Resolution
 
-Last verified: `2026-08-24`
+**Read first**
+
+1. [src/RoslynKit/RepositoryContext.cs](../../src/RoslynKit/RepositoryContext.cs)
+2. [src/RoslynKit/RepositoryProjectDiscovery.cs](../../src/RoslynKit/RepositoryProjectDiscovery.cs)
+3. [src/RoslynKit/RoslynWorkspaceLoader.cs](../../src/RoslynKit/RoslynWorkspaceLoader.cs)
+4. [tests/RoslynKit.Tests/RepositoryDiscoveryTests.cs](../../tests/RoslynKit.Tests/RepositoryDiscoveryTests.cs)
+5. [tests/RoslynKit.Tests/WorkspaceCommandExecutionTests.cs](../../tests/RoslynKit.Tests/WorkspaceCommandExecutionTests.cs)
+
+`RepositoryContext` establishes the repository and default catalog boundary. `RepositoryProjectDiscovery` uses Git-visible files as the project source of truth. `RoslynWorkspaceLoader` opens the implicit project forest or an explicit target and avoids reopening projects already loaded transitively.
+
+### Search and Semantic Catalog
+
+**Read first**
+
+1. [src/RoslynKit/SearchCommandService.cs](../../src/RoslynKit/SearchCommandService.cs)
+2. [src/RoslynKit/SqliteSearchIndex.cs](../../src/RoslynKit/SqliteSearchIndex.cs)
+3. [src/RoslynKit/SqliteSearchIndex.Catalog.cs](../../src/RoslynKit/SqliteSearchIndex.Catalog.cs)
+4. [src/RoslynKit/RoslynSearchCorpusBuilder.cs](../../src/RoslynKit/RoslynSearchCorpusBuilder.cs)
+5. [tests/RoslynKit.Tests/SqliteSemanticCatalogTests.cs](../../tests/RoslynKit.Tests/SqliteSemanticCatalogTests.cs)
+
+The catalog owns:
+
+- Full-Text Search 5 (FTS5) and Best Matching 25 (BM25) declaration retrieval.
+- Exact symbol identity, project, accessibility, static state, containing symbol, declaration location, and UTF-16 source span.
+- XML summaries and structured ordinary comments.
+- Project references and containment, inheritance, interface implementation, and override edges.
+- Lazy serialized results for bounded live operations such as exact reference queries.
+
+Search validates source fingerprints and republishes search and semantic data atomically. Text-only mode uses a separate repository partition and does not load `MSBuildWorkspace`.
+
+### Cache-First Semantic Navigation
+
+**Read first**
+
+1. [src/RoslynKit/RoslynCommandExecutor.cs](../../src/RoslynKit/RoslynCommandExecutor.cs)
+2. [src/RoslynKit/CatalogCommandService.cs](../../src/RoslynKit/CatalogCommandService.cs)
+3. [src/RoslynKit/PositionResolver.cs](../../src/RoslynKit/PositionResolver.cs)
+4. [src/RoslynKit/SymbolResolver.cs](../../src/RoslynKit/SymbolResolver.cs)
+5. [tests/RoslynKit.Tests/SemanticCommandExecutionTests.cs](../../tests/RoslynKit.Tests/SemanticCommandExecutionTests.cs)
+
+A fresh catalog can answer exact `symbols`, symbol-based `definition`, `symbol-source`, and `implementations`. A matching cached `references` invocation can also complete from SQLite. Missing or unsupported catalog answers fall through to a newly loaded Roslyn workspace; live reference results are persisted only when a fresh catalog already exists.
+
+Position-based operations, fuzzy symbol queries, symbol context, quick info, signature help, diagnostics, and generated-document operations remain live Roslyn paths.
+
+### Rendering and Output Contract
+
+**Read first**
+
+1. [src/RoslynKit/MarkdownProjection.cs](../../src/RoslynKit/MarkdownProjection.cs)
+2. [src/RoslynKit/Output/](../../src/RoslynKit/Output/)
+3. [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md)
+4. [tests/RoslynKit.Tests/CliOutputTests.cs](../../tests/RoslynKit.Tests/CliOutputTests.cs)
+
+Implicit repository index and search output uses `scope: repository` plus `repository:`. Explicit scopes retain `target:`. Symbol chaining uses emitted documentation-comment `id:` values and `loc:` coordinates; no RoslynKit-specific opaque reference identifier exists.
+
+## Packaging and Skill Maintenance
+
+- [src/RoslynKit/RoslynKit.csproj](../../src/RoslynKit/RoslynKit.csproj) defines the .NET tool package.
+- [scripts/prepare-roslynkit-package.ps1](../../scripts/prepare-roslynkit-package.ps1) prepares release artifacts.
+- [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md) owns stable release and smoke-test instructions.
+- [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/) is the canonical embedded stable skill bundle.
+- [src/RoslynKit/SkillScaffoldService.cs](../../src/RoslynKit/SkillScaffoldService.cs) scaffolds that bundle for supported coding agents.
+- [docs/agents/skill-maintenance.md](../../docs/agents/skill-maintenance.md) defines synchronization rules.
+
+## Validation Routes
+
+| Change | Focused validation |
+|---|---|
+| Parser or command metadata | `CliParserTests`, `CommandReferenceMarkdownTests`, generated command-reference check |
+| Repository discovery | `RepositoryDiscoveryTests`, `WorkspaceCommandExecutionTests` |
+| Search schema or freshness | `SqliteSearchIndexTests`, `SqliteSemanticCatalogTests`, `SearchCliContractTests` |
+| Semantic navigation | `SemanticCommandExecutionTests`, `SymbolContextCommandExecutionTests` |
+| Rendering | `CliOutputTests`, [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md) |
+| Packaging | `PackagedToolProcessIntegrationTests`, [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md) |
+
+Run post-change formatting and the smallest targeted test set first. Run the full solution build and test suite before publishing changes.

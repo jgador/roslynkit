@@ -59,7 +59,7 @@ On success, the command writes a compact markdown fragment to stdout and exits `
 
 ```text
 error: usage
-message: Missing required option '--target'.
+message: Missing required option '--query'.
 ```
 
 All failures include `error:` and `message:`. Usage errors with a deterministic retry path may include a third `hint:` line:
@@ -71,16 +71,6 @@ hint: Retry with --line between 1 and 13, or run document-lines to inspect valid
 ```
 
 Exit codes: `0` success, `2` usage error, `130` canceled, `1` any other failure. The `error:` value is `usage`, `canceled`, or the exception type name. A zero exit code means stdout is command output; a non-zero exit code means stdout is the plain-text error.
-
-### Daemon Fallback Stderr
-
-When a daemon-eligible read-only workspace command receives a typed daemon infrastructure failure, the resulting buffered stderr starts with exactly one line:
-
-```text
-warning: daemon unavailable; executing standalone
-```
-
-The warning is not written to stdout and does not change the standalone command's stdout or exit-code contract. It is not emitted for usage errors, ordinary workspace-load errors, semantic command errors, or cancellation during the daemon attempt. Once an infrastructure failure has selected fallback, the warning remains when standalone execution later reports cancellation. `daemon status` and `daemon stop` never use fallback.
 
 Success output starts with `command: <name>` followed by command-specific key-value lines, then a blank line before bullets or fences:
 
@@ -172,83 +162,55 @@ Agent values map only the outer target folder. The scaffolded bundle-relative fi
 - `claude` -> `.claude/skills/roslynkit/`
 - `copilot` -> `.github/skills/roslynkit/`
 
-### `daemon status` And `daemon stop`
-
-Daemon lifecycle commands require an explicit target, execute locally, and never start a daemon. When no compatible daemon is running, both commands exit `0` and report the same state shape:
-
-```markdown
-command: daemon status
-state: not-running
-```
-
-`daemon stop` uses `command: daemon stop` with the same `state: not-running` line when the daemon is already absent.
-
-When a compatible daemon is running, status reports daemon availability and its workspace snapshot:
-
-```markdown
-command: daemon status
-state: running
-target: `<canonical-target>`
-pid: <process-id>
-workspace: <notloaded|reloading|ready|disposed>
-generation: <generation>
-active-requests: <count>
-queued-requests: <count>
-diagnostic: <latest-infrastructure-diagnostic>
-```
-
-`generation` is omitted before the first usable workspace generation, and `diagnostic` is omitted when no infrastructure diagnostic is available. Diagnostic line breaks are normalized to spaces. A successful stop acknowledgement renders:
-
-```markdown
-command: daemon stop
-state: stopping
-```
-
 ### `index`
 
-`index` prepares or refreshes the selected target partition in the repository-local SQLite Full-Text Search 5 (FTS5) database. It requires both `--target` and `--index-path`. The index path must be inside the repository and ignored by Git. One database can contain partitions for multiple targets in that repository. SQLite persists target identities, project paths, and declaration source paths relative to the repository; public target and declaration locations are reconstructed as absolute paths from the resolved repository root, while `index-path` is the resolved absolute database path.
+`index` prepares or refreshes a partition in the repository-local SQLite Full-Text Search 5 (FTS5) database. Without `--target`, RoslynKit finds the nearest standard Git repository, discovers all tracked or unignored `.csproj` files, and stores the catalog at `.roslynkit/roslynkit.db`. An explicit `--target` narrows the scope to a solution, solution filter, project, or repository directory; an explicit `--index-path` is an advanced override that must be inside the repository and ignored by Git. One database can contain partitions for multiple scopes in that repository. SQLite persists project paths and declaration source paths relative to the repository, then reconstructs public locations from the resolved repository root.
 
-`index` waits for a stable workspace before reporting success. `--rebuild` recreates the selected target partition. SQLite uses write-ahead logging (WAL), so an active `artifacts/roslynkit.db` can also have adjacent `roslynkit.db-wal` and `roslynkit.db-shm` files. Multi-targeted projects, missing physical project or non-generated source paths, external projects, and external linked non-generated source files are rejected. Generated source documents are skipped, including source-generated documents, generated paths below `bin` or `obj`, and sources with standard generated-code markers injected from extracted NuGet packages outside the worktree.
+`index` waits for a stable workspace before reporting success. `--rebuild` recreates the selected partition. The generated `.roslynkit/.gitignore` covers the database and its write-ahead logging (WAL) sidecars. Multi-targeted projects, missing physical project or non-generated source paths, external projects, and external linked non-generated source files are rejected. Generated source documents are skipped, including source-generated documents, generated paths below `bin` or `obj`, and sources with standard generated-code markers injected from extracted NuGet packages outside the worktree.
 
 ```markdown
 command: index
-target: `C:\repo\MyApp\MyApp.slnx`
-index-path: `C:\repo\MyApp\artifacts\roslynkit.db`
+scope: repository
+repository: `C:\repo\MyApp`
+index-path: `C:\repo\MyApp\.roslynkit\roslynkit.db`
 index-state: fresh
 symbols: 124
 rebuilt: false
 ```
 
-`symbols:` is the number of indexed declarations in the selected target partition. A successful explicit index reports `index-state: fresh`. `rebuilt:` is `true` when `--rebuild` recreated the selected partition and `false` when the command refreshed it normally.
+`symbols:` is the number of indexed declarations in the selected partition. An implicit repository scope renders `scope: repository` and `repository:`; an explicit scope renders `target:`. A successful explicit index reports `index-state: fresh`. `rebuilt:` is `true` when `--rebuild` recreated the selected partition and `false` when the command refreshed it normally.
 
 ### `search`
 
-`search` finds C# declarations from an English-oriented query. It requires both `--target` and `--index-path`. It validates the selected target and refreshes stale data automatically. The first request waits for indexing; when a prior coherent index exists, a concurrent refresh can return that data with `index-state: stale`.
+`search` finds C# declarations from an English-oriented query. It infers the repository scope and default catalog unless those values are explicitly overridden. It validates the selected partition and refreshes stale data automatically. The first request waits for indexing; when a prior coherent index exists, a concurrent refresh can return that data with `index-state: stale`.
 
 ```markdown
 command: search
-target: `C:\repo\MyApp\MyApp.slnx`
-index-path: `C:\repo\MyApp\artifacts\roslynkit.db`
-query: `how does workspace daemon reload after source changes`
+scope: repository
+repository: `C:\repo\MyApp`
+index-path: `C:\repo\MyApp\.roslynkit\roslynkit.db`
+query: `where is configuration validated during startup`
 index-state: fresh
 returned: 2/2
 truncated: false
 
-- rank: 1 kind: method name: `MyApp.WorkspaceDaemonSession.ReloadAsync` loc: `C:\repo\MyApp\src\MyApp\WorkspaceDaemonSession.cs:398:43-398:54` id: `M:MyApp.WorkspaceDaemonSession.ReloadAsync(System.Threading.CancellationToken)`
-  excerpt: `Reloads the workspace generation after the repository source changes.`
+- rank: 1 kind: method name: `MyApp.ConfigurationValidator.Validate` loc: `C:\repo\MyApp\src\MyApp\ConfigurationValidator.cs:24:5-36:6` id: `M:MyApp.ConfigurationValidator.Validate(MyApp.Configuration)`
+  excerpt: `Validates configuration before startup.`
   excerpt-source: documentation
-- rank: 2 kind: class name: `MyApp.WorkspaceDaemonSession` loc: `C:\repo\MyApp\src\MyApp\WorkspaceDaemonSession.cs:112:23-112:45` id: `T:MyApp.WorkspaceDaemonSession`
+- rank: 2 kind: class name: `MyApp.ConfigurationValidator` loc: `C:\repo\MyApp\src\MyApp\ConfigurationValidator.cs:8:14-38:2` id: `T:MyApp.ConfigurationValidator`
 ```
 
 Results are ordered by the internal Best Matching 25 (BM25) ranking but do not expose raw scores. `rank:` starts at one. `excerpt:` is optional and is a bounded source-derived excerpt with normalized whitespace; it is never generated or paraphrased. Whenever `excerpt:` is present, `excerpt-source:` immediately follows it and is one of `documentation`, `comment`, `signature`, or `body`. `id:` and `loc:` are navigation inputs for an agent-selected follow-up command, not a standard-input pipeline. Rank and excerpt provenance are routing metadata, so agents compare several excerpts, kinds, identities, and locations before choosing a next navigation target and verify the selected route with source evidence.
+
+The same semantic partition stores exact symbol metadata, declaration spans, structured comments, project references, and containment, inheritance, interface implementation, and override relationships. A fresh catalog can answer exact `symbols`, symbol-based `definition`, `symbol-source`, and `implementations` without loading an MSBuild workspace. The first bounded exact `references` request runs Roslyn and stores the result for an identical later invocation.
 
 With `--compact`, search emits a judgment-only shape with repository-relative locations:
 
 ```markdown
 results: 2/17
-- 1 method `MyApp.WorkspaceDaemonSession.ReloadAsync` `src/MyApp/WorkspaceDaemonSession.cs:398:43-398:54`
-  `Reloads the workspace generation after repository source changes.`
-- 2 method `MyApp.Tests.WorkspaceDaemonSessionTests.ReloadsAfterChange` `tests/MyApp.Tests/WorkspaceDaemonSessionTests.cs:75:23-75:41`
+- 1 method `MyApp.ConfigurationValidator.Validate` `src/MyApp/ConfigurationValidator.cs:24:5-36:6`
+  `Validates configuration before startup.`
+- 2 method `MyApp.Tests.ConfigurationValidatorTests.RejectsMissingEndpoint` `tests/MyApp.Tests/ConfigurationValidatorTests.cs:18:17-18:39`
 ```
 
 Compact output omits the command header, target and index metadata, stale/fresh state, truncation flag, symbol IDs, and excerpt provenance. Use it when an LLM will judge bounded search evidence directly, not when the next command must chain through `id:`. `--balanced` changes only bounded selection: when both source and test paths match, half of the result capacity is reserved for tests and unused capacity is filled from the original ranking.
@@ -410,7 +372,7 @@ public void Execute(string value)
 ```markdown
 command: symbols
 description: Search source declarations by symbol name.
-usage: `roslynkit symbols --target <target> --query <text> [--max-results <n>]`
+usage: `roslynkit symbols --query <text> [--target <target>] [--max-results <n>]`
 
 - option: `--query` short: `-q` value: text required: true description: symbol name text to search for
 ```

@@ -1,13 +1,13 @@
 namespace RoslynKit.Benchmarking.Tests;
 
 /// <summary>
-/// Verifies the Release apphost performs text-only index and search without starting a daemon.
+/// Verifies the Release apphost performs text-only index and search as short-lived CLI commands.
 /// </summary>
 [Collection("Benchmark apphost integration")]
 public sealed class BenchmarkApphostIntegrationTests
 {
     [Fact]
-    public async Task ReleaseApphost_DefaultTextOnlySearchesDoNotStartDaemon()
+    public async Task ReleaseApphost_DefaultTextOnlySearchesUseShortLivedCommands()
     {
         var repositoryRoot = BenchmarkPaths.FindRepositoryRoot(AppContext.BaseDirectory);
         var processRunner = new ProcessRunner();
@@ -31,14 +31,6 @@ public sealed class BenchmarkApphostIntegrationTests
             var targetPath = Path.Combine(temporaryRoot, "BenchmarkTarget.slnx");
             var indexPath = Path.Combine(temporaryRoot, "index.db");
             File.Copy(Path.Combine(repositoryRoot, "RoslynKit.slnx"), targetPath);
-            var initialStatus = await RunApphostAsync(
-                processRunner,
-                apphost,
-                repositoryRoot,
-                ["daemon", "status", "--target", targetPath],
-                timeout.Token);
-            AssertSuccess(initialStatus, "initial daemon status");
-            Assert.Contains("state: not-running", initialStatus.StandardOutput, StringComparison.Ordinal);
 
             var index = await RunApphostAsync(
                 processRunner,
@@ -64,7 +56,7 @@ public sealed class BenchmarkApphostIntegrationTests
                     timeout.Token);
                 AssertSuccess(search, $"text-only search for '{benchmarkCase.Id}'");
                 Assert.StartsWith("results:", search.StandardOutput, StringComparison.Ordinal);
-                Assert.DoesNotContain("workspace daemon", search.StandardError, StringComparison.OrdinalIgnoreCase);
+                Assert.Empty(search.StandardError);
                 foreach (var evidenceGroup in benchmarkCase.RequiredEvidenceGroups)
                 {
                     Assert.True(
@@ -72,15 +64,6 @@ public sealed class BenchmarkApphostIntegrationTests
                         $"Text-only search for '{benchmarkCase.Id}' did not return any path from required evidence group: {string.Join(", ", evidenceGroup)}.\nOutput:\n{search.StandardOutput}");
                 }
             }
-
-            var finalStatus = await RunApphostAsync(
-                processRunner,
-                apphost,
-                repositoryRoot,
-                ["daemon", "status", "--target", targetPath],
-                timeout.Token);
-            AssertSuccess(finalStatus, "final daemon status");
-            Assert.Contains("state: not-running", finalStatus.StandardOutput, StringComparison.Ordinal);
         }
         finally
         {

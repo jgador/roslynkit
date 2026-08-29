@@ -64,24 +64,25 @@
       ]
     },
     {
-      "id": "daemon-disconnect",
+      "id": "repository-project-forest",
       "isDefault": false,
-      "intent": "Find the production declarations and focused tests that explain how a daemon transport disconnect avoids partial stdout or stderr, when standalone retry occurs, and which failures do not retry.",
-      "query": "daemon client transport disconnect complete buffered response partial stdout stderr standalone retry infrastructure cancellation exception",
+      "intent": "Find the production declarations and focused tests that infer the nearest standard Git repository, discover every tracked or unignored C# project, and load connected and disconnected project components.",
+      "query": "infer nearest Git repository discover tracked unignored csproj load connected disconnected project forest",
       "requiredEvidenceGroups": [
-        ["src/RoslynKit/DaemonFallbackWorkspaceCommandRouter.cs"],
-        ["src/RoslynKit/DaemonClient.cs", "src/RoslynKit/DaemonPipeClient.cs", "src/RoslynKit/DaemonProtocolMessages.cs"],
-        ["tests/RoslynKit.Tests/DaemonFallbackProcessIntegrationTests.cs", "tests/RoslynKit.Tests/DaemonFallbackWorkspaceCommandRouterTests.cs"]
+        ["src/RoslynKit/RepositoryContext.cs", "src/RoslynKit/RepositoryProjectDiscovery.cs"],
+        ["src/RoslynKit/RoslynWorkspaceLoader.cs"],
+        ["tests/RoslynKit.Tests/RepositoryDiscoveryTests.cs", "tests/RoslynKit.Tests/CommandExecution/WorkspaceCommandExecutionTests.cs"]
       ]
     },
     {
-      "id": "workspace-generation",
+      "id": "semantic-catalog-navigation",
       "isDefault": false,
-      "intent": "Find the production declarations and focused tests for consistent compiler views while tracked files change, including clean-reader capacity, pending reload priority, quiet-period retry, and a second mismatch.",
-      "query": "consistent compiler view tracked files change clean readers pending reload quiet period retry second mismatch",
+      "intent": "Find the production declarations and focused tests that persist semantic symbol metadata and relationships in SQLite, answer supported navigation from a fresh catalog, and fall back to live Roslyn when catalog data is insufficient.",
+      "query": "SQLite semantic catalog symbols relationships cache first definition implementations references live Roslyn fallback",
       "requiredEvidenceGroups": [
-        ["src/RoslynKit/WorkspaceDaemonSession.cs"],
-        ["tests/RoslynKit.Tests/WorkspaceDaemonSessionTests.cs"]
+        ["src/RoslynKit/SqliteSearchIndex.Catalog.cs", "src/RoslynKit/RoslynSearchCorpusBuilder.cs"],
+        ["src/RoslynKit/CatalogCommandService.cs", "src/RoslynKit/RoslynCommandExecutor.cs"],
+        ["tests/RoslynKit.Tests/SqliteSemanticCatalogTests.cs", "tests/RoslynKit.Tests/CommandExecution/SemanticCommandExecutionTests.cs"]
       ]
     },
     {

@@ -39,6 +39,7 @@ internal sealed class RoslynSearchCorpusBuilder
         var projects = SelectProjects(solution, options.RepositoryRoot, options.ProjectPath, issues);
         var unsupportedProjects = FindMultiTargetProjects(solution, projects, issues);
         var records = new List<RoslynSearchCorpusRecord>();
+        var catalogProjects = new List<SqliteSearchIndexProject>();
 
         foreach (var project in projects
                      .Where(project => !unsupportedProjects.Contains(project.Id))
@@ -66,6 +67,7 @@ internal sealed class RoslynSearchCorpusBuilder
                 options.RepositoryRoot,
                 issues,
                 cancellationToken).ConfigureAwait(false);
+            catalogProjects.Add(CreateCatalogProject(solution, project, projectPath, options.RepositoryRoot));
             if (documents.Count == 0)
             {
                 continue;
@@ -104,7 +106,13 @@ internal sealed class RoslynSearchCorpusBuilder
             .ThenBy(record => record.SymbolKey, StringComparer.Ordinal)
             .ToArray();
 
-        return new RoslynSearchCorpusBuildResult(orderedRecords, issues.ToArray());
+        return new RoslynSearchCorpusBuildResult(
+            orderedRecords,
+            catalogProjects
+                .DistinctBy(project => project.Path)
+                .OrderBy(project => project.Path.Value, StringComparer.Ordinal)
+                .ToArray(),
+            issues.ToArray());
     }
 
     private static IReadOnlyList<Project> SelectProjects(
@@ -356,6 +364,7 @@ internal sealed class RoslynSearchCorpusBuilder
         var signature = NormalizeWhitespace(symbol.ToDisplayString(SearchSignatureFormat));
         var documentation = ExtractDocumentation(symbol, declaration.Node);
         var comments = ExtractComments(declaration.Node);
+        var structuredComments = ExtractStructuredComments(declaration);
         var attributes = ExtractAttributes(symbol);
         var body = Truncate(NormalizeWhitespace(declaration.Node.ToFullString()), MaximumBodyCharacters);
         var excerpt = SelectExcerpt(documentation, comments, signature, body);
@@ -389,7 +398,169 @@ internal sealed class RoslynSearchCorpusBuilder
             BuildSearchText($"{symbol.ContainingType?.ToDisplayString(SymbolDisplayFormats.Qualified)} {symbol.ContainingNamespace?.ToDisplayString(SymbolDisplayFormats.Qualified)} {displayName}"),
             BuildSearchText($"{documentation} {comments} {attributes} {signature}"),
             BuildSearchText(declaration.Document.Path.Value),
-            BuildSearchText(body));
+            BuildSearchText(body),
+            symbol.MetadataName,
+            symbol.Kind.ToString(),
+            symbol.DeclaredAccessibility.ToString(),
+            symbol.IsStatic,
+            symbol.ContainingType?.ToDisplayString(SymbolDisplayFormats.Qualified),
+            symbol.ContainingNamespace is { IsGlobalNamespace: false }
+                ? symbol.ContainingNamespace.ToDisplayString(SymbolDisplayFormats.Qualified)
+                : null,
+            declaration.Node.Span.Start,
+            declaration.Node.Span.Length,
+            structuredComments,
+            CreateRelations(symbol));
+    }
+
+    private static SqliteSearchIndexProject CreateCatalogProject(
+        Solution solution,
+        Project project,
+        RepositoryRelativePath projectPath,
+        string repositoryRoot)
+    {
+        var projectReferences = project.ProjectReferences
+            .Select(reference => solution.GetProject(reference.ProjectId)?.FilePath)
+            .Where(path => path is not null)
+            .Select(path => RepositoryRelativePath.FromPhysicalPath(
+                repositoryRoot,
+                path!,
+                $"Project reference from '{project.Name}'"))
+            .Distinct()
+            .OrderBy(path => path.Value, StringComparer.Ordinal)
+            .ToArray();
+        return new SqliteSearchIndexProject(projectPath, project.Name, projectReferences);
+    }
+
+    private static IReadOnlyList<SqliteSearchIndexComment> ExtractStructuredComments(
+        CorpusDeclaration declaration)
+    {
+        return declaration.Node
+            .DescendantTrivia(descendIntoTrivia: true)
+            .Concat(declaration.Node.GetLeadingTrivia())
+            .Concat(declaration.Node.GetTrailingTrivia())
+            .Where(trivia => trivia.IsKind(SyntaxKind.SingleLineCommentTrivia)
+                || trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
+            .DistinctBy(trivia => trivia.FullSpan)
+            .OrderBy(trivia => trivia.FullSpan.Start)
+            .Select(trivia =>
+            {
+                var location = SourceRange.FromLocation(trivia.GetLocation());
+                return new SqliteSearchIndexComment(
+                    CommentPlacement(declaration.Node, trivia),
+                    trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ? "line" : "block",
+                    declaration.Document.Path,
+                    location.Line,
+                    location.Column,
+                    location.EndLine,
+                    location.EndColumn,
+                    NormalizeCommentText(trivia.ToString()) ?? string.Empty);
+            })
+            .Where(comment => comment.Text.Length > 0)
+            .ToArray();
+    }
+
+    private static string CommentPlacement(SyntaxNode declaration, SyntaxTrivia trivia)
+    {
+        if (declaration.GetLeadingTrivia().Any(candidate => candidate.FullSpan == trivia.FullSpan))
+        {
+            return "leading";
+        }
+
+        if (declaration.GetTrailingTrivia().Any(candidate => candidate.FullSpan == trivia.FullSpan))
+        {
+            return "trailing";
+        }
+
+        return "body";
+    }
+
+    private static IReadOnlyList<SqliteSearchIndexRelation> CreateRelations(ISymbol symbol)
+    {
+        var relations = new HashSet<SqliteSearchIndexRelation>();
+        AddRelation(relations, "contained-by", symbol.ContainingSymbol);
+
+        if (symbol is INamedTypeSymbol namedType)
+        {
+            if (namedType.BaseType is { SpecialType: not SpecialType.System_Object } baseType)
+            {
+                AddRelation(relations, "inherits", baseType);
+            }
+
+            foreach (var interfaceType in namedType.Interfaces)
+            {
+                AddRelation(relations, "implements", interfaceType);
+            }
+        }
+
+        switch (symbol)
+        {
+            case IMethodSymbol method:
+                AddRelation(relations, "overrides", method.OverriddenMethod);
+                foreach (var interfaceMember in method.ExplicitInterfaceImplementations)
+                {
+                    AddRelation(relations, "implements", interfaceMember);
+                }
+
+                break;
+            case IPropertySymbol property:
+                AddRelation(relations, "overrides", property.OverriddenProperty);
+                foreach (var interfaceMember in property.ExplicitInterfaceImplementations)
+                {
+                    AddRelation(relations, "implements", interfaceMember);
+                }
+
+                break;
+            case IEventSymbol eventSymbol:
+                AddRelation(relations, "overrides", eventSymbol.OverriddenEvent);
+                foreach (var interfaceMember in eventSymbol.ExplicitInterfaceImplementations)
+                {
+                    AddRelation(relations, "implements", interfaceMember);
+                }
+
+                break;
+        }
+
+        AddImplicitInterfaceRelations(relations, symbol);
+        return relations
+            .OrderBy(relation => relation.Kind, StringComparer.Ordinal)
+            .ThenBy(relation => relation.TargetSymbolId, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static void AddImplicitInterfaceRelations(
+        ISet<SqliteSearchIndexRelation> relations,
+        ISymbol symbol)
+    {
+        if (symbol.ContainingType is not { } containingType
+            || symbol is not (IMethodSymbol or IPropertySymbol or IEventSymbol))
+        {
+            return;
+        }
+
+        foreach (var interfaceMember in containingType.AllInterfaces.SelectMany(type => type.GetMembers()))
+        {
+            var implementation = containingType.FindImplementationForInterfaceMember(interfaceMember);
+            if (SymbolEqualityComparer.Default.Equals(implementation, symbol)
+                || SymbolEqualityComparer.Default.Equals(implementation?.OriginalDefinition, symbol.OriginalDefinition))
+            {
+                AddRelation(relations, "implements", interfaceMember);
+            }
+        }
+    }
+
+    private static void AddRelation(
+        ISet<SqliteSearchIndexRelation> relations,
+        string kind,
+        ISymbol? target)
+    {
+        var targetSymbolId = target is null
+            ? null
+            : DocumentationCommentId.CreateDeclarationId(target);
+        if (targetSymbolId is not null)
+        {
+            relations.Add(new SqliteSearchIndexRelation(kind, targetSymbolId));
+        }
     }
 
     private static string? ExtractDocumentation(ISymbol symbol, SyntaxNode declaration)
@@ -635,6 +806,7 @@ internal sealed record RoslynSearchCorpusBuildIssue(string Code, string Message)
 /// </summary>
 internal sealed record RoslynSearchCorpusBuildResult(
     IReadOnlyList<RoslynSearchCorpusRecord> Records,
+    IReadOnlyList<SqliteSearchIndexProject> Projects,
     IReadOnlyList<RoslynSearchCorpusBuildIssue> Issues);
 
 /// <summary>
@@ -663,7 +835,17 @@ internal sealed record RoslynSearchCorpusRecord(
     string ContainingTokens,
     string DetailsTokens,
     string PathTokens,
-    string BodyTokens)
+    string BodyTokens,
+    string MetadataName,
+    string SymbolKind,
+    string Accessibility,
+    bool IsStatic,
+    string? ContainingType,
+    string? ContainingNamespace,
+    int SpanStart,
+    int SpanLength,
+    IReadOnlyList<SqliteSearchIndexComment> StructuredComments,
+    IReadOnlyList<SqliteSearchIndexRelation> Relations)
 {
     /// <summary>
     /// Converts this corpus record into the storage model owned by the SQLite index.
@@ -691,6 +873,16 @@ internal sealed record RoslynSearchCorpusRecord(
             ContainingTokens,
             DetailsTokens,
             PathTokens,
-            BodyTokens);
+            BodyTokens,
+            MetadataName,
+            SymbolKind,
+            Accessibility,
+            IsStatic,
+            ContainingType,
+            ContainingNamespace,
+            SpanStart,
+            SpanLength,
+            StructuredComments,
+            Relations);
     }
 }

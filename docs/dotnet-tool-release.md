@@ -67,9 +67,9 @@ roslynkit version
 
 ## 5. Manually smoke-test the stable global tool
 
-The following test installs or updates the freshly packed release in the standard global .NET tool folder, which is `%USERPROFILE%\.dotnet\tools` on Windows. It then uses [RoslynKit.slnx](../RoslynKit.slnx) as a real target for indexing, search, daemon lifecycle checks, and representative navigation commands.
+The following test installs or updates the freshly packed release in the standard global .NET tool folder, which is `%USERPROFILE%\.dotnet\tools` on Windows. It then exercises implicit repository discovery, indexing, search, persisted semantic navigation, and live Roslyn commands.
 
-Run the blocks from the repository root in a committed Git worktree. The test database stays under the Git-ignored `artifacts\release-smoke` folder. There is no public daemon start command; the first daemon-eligible workspace command starts it on demand.
+Run the blocks from the repository root in a standard Git repository. The test database stays at the normal `.roslynkit\roslynkit.db` path and is covered by RoslynKit's generated `.roslynkit\.gitignore`.
 
 ### 5.1 Pack and install the release globally
 
@@ -139,7 +139,7 @@ The final path should resolve inside the global `.dotnet\tools` folder, and the 
 
 ### 5.2 Run the end-to-end command test
 
-Paste this block into the same terminal or a new PowerShell terminal from the repository root. Every product check invokes the `roslynkit` command directly. The native-command preference makes PowerShell stop when a command returns a nonzero exit code, and the daemon wait helper stops when the expected state is not reached.
+Paste this block into the same terminal or a new PowerShell terminal from the repository root. Every product check invokes the `roslynkit` command directly. The native-command preference makes PowerShell stop when a command returns a nonzero exit code.
 
 ```powershell
 Set-StrictMode -Version Latest
@@ -149,79 +149,32 @@ $PSNativeCommandUseErrorActionPreference = $true
 $repoRoot = (Resolve-Path ".").Path
 [xml]$versionXml = Get-Content (Join-Path $repoRoot "Directory.Build.props")
 $version = [string]$versionXml.Project.PropertyGroup.Version
-$target = Join-Path $repoRoot "RoslynKit.slnx"
-$indexFolder = Join-Path $repoRoot "artifacts\release-smoke"
-$indexPath = Join-Path $indexFolder "roslynkit.db"
 $globalToolFolder = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".dotnet\tools"
 $pathSeparator = [IO.Path]::PathSeparator
 $env:PATH = "$globalToolFolder$pathSeparator$env:PATH"
-
-New-Item -ItemType Directory -Path $indexFolder -Force | Out-Null
-
-function Wait-RoslynKitDaemonState
-{
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Target,
-        [Parameter(Mandatory = $true)]
-        [string]$State
-    )
-
-    for ($attempt = 1; $attempt -le 120; $attempt++)
-    {
-        $status = roslynkit daemon status --target $Target
-        if ($LASTEXITCODE -ne 0)
-        {
-            throw "Unable to read RoslynKit daemon status."
-        }
-
-        if (($status -join "`n") -match "(?m)^state: $([Regex]::Escape($State))$")
-        {
-            $status
-            return
-        }
-
-        Start-Sleep -Milliseconds 250
-    }
-
-    throw "The RoslynKit daemon did not reach state '$State'."
-}
 
 # Confirm the globally installed command and its local help surface.
 roslynkit --version
 roslynkit help
 
-# Build a clean search index and run an English-oriented declaration search.
-roslynkit index --target $target --index-path $indexPath --rebuild
-roslynkit search --target $target --index-path $indexPath `
-    --query "how does workspace daemon reload after source changes" `
+# Build the default repository catalog and run an English-oriented declaration search.
+roslynkit index --rebuild
+roslynkit search `
+    --query "how does repository project discovery load projects" `
     --max-results 5
 
-# Reset any daemon started by index or search, then test on-demand startup.
-roslynkit daemon stop --target $target
-Wait-RoslynKitDaemonState -Target $target -State "not-running"
-roslynkit workspace --target $target
-Wait-RoslynKitDaemonState -Target $target -State "running"
-
-# A second workspace command should reuse the running daemon.
-roslynkit workspace --target $target
-roslynkit daemon status --target $target
-
-# Exercise representative discovery, navigation, source-read, and diagnostic commands.
-roslynkit symbols --target $target --query PositionResolver --exact --kind class
-roslynkit definition --target $target --symbol "T:RoslynKit.PositionResolver"
-roslynkit references --target $target `
+# Exercise catalog-backed and live semantic commands without explicit target or index options.
+roslynkit workspace
+roslynkit symbols --query PositionResolver --exact --kind class
+roslynkit definition --symbol "T:RoslynKit.PositionResolver"
+roslynkit references `
     --symbol "RoslynKit.PositionResolver.GetPositionAsync" `
     --max-results 3
-roslynkit document-lines --target $target `
+roslynkit document-lines `
     --file (Join-Path $repoRoot "src\RoslynKit\PositionResolver.cs") `
     --start-line 1 `
     --end-line 25
-roslynkit diagnostics --target $target --max-results 20
-
-# Stop the daemon and confirm that the background process exits.
-roslynkit daemon stop --target $target
-Wait-RoslynKitDaemonState -Target $target -State "not-running"
+roslynkit diagnostics --max-results 20
 
 Write-Host "RoslynKit $version global-tool smoke test passed."
 ```
@@ -230,9 +183,8 @@ Expected success markers include:
 
 - `index-state: fresh` and `rebuilt: true` from `index`;
 - one or more ranked results from `search`;
-- `state: running`, `workspace: ready`, a process ID, and a positive generation after `workspace` starts the daemon;
-- `command: symbols`, `command: definition`, `command: references`, `command: document-lines`, and `command: diagnostics`; and
-- `state: stopping` followed by `state: not-running` during final daemon shutdown.
+- `scope: repository` and the inferred repository path;
+- `command: workspace`, `command: symbols`, `command: definition`, `command: references`, `command: document-lines`, and `command: diagnostics`.
 
 ## 6. Install or update the side-by-side prerelease dev tool
 

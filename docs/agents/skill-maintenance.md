@@ -55,7 +55,7 @@ Do not hardcode a literal prerelease version inside [.agents/skills/roslynkit-de
 Update both skill files together when any of these change:
 
 - the public CLI command names;
-- required options such as `--target`, `--file`, `--project`, `--tfm`, or `--document-kind`;
+- option requirements and defaults such as implicit repository scope or `--file`, `--project`, `--tfm`, and `--document-kind`;
 - recommended command ordering such as “run `workspace` first”;
 - reusable cursor-choice guidance or generic examples;
 - fallback guidance for non-C# or non-semantic tasks.

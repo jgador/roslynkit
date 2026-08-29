@@ -5,7 +5,7 @@ description: Run, inspect, analyze, resume, report, or clean the opt-in raw-text
 
 # Benchmark
 
-Treat the text after `$benchmark` as a forgiving command-like request. Accept obvious aliases, natural modifiers such as `3 trials` or `case daemon-disconnect`, and the controller's exact options. Do not silently ignore unknown or conflicting modifiers. A bare `$benchmark` behaves as `help`.
+Treat the text after `$benchmark` as a forgiving command-like request. Accept obvious aliases, natural modifiers such as `3 trials` or `case semantic-catalog-navigation`, and the controller's exact options. Do not silently ignore unknown or conflicting modifiers. A bare `$benchmark` behaves as `help`.
 
 Read [docs/benchmark.md](../../../docs/benchmark.md) before measured or state-changing work. The C# benchmark helper is the single source of truth for every option, default, and validation rule; [scripts/benchmark.sh](../../../scripts/benchmark.sh) is the entrypoint that forwards those options and runs the judge:
 
@@ -32,7 +32,7 @@ bash ./scripts/benchmark.sh [options]
 
 `latest` must be resolved before the requested action: sort immediate `artifacts/benchmark/*/run.json` candidates by parent-directory name, newest first, and select the first run accepted by the current helper's report-only validation. Inspection commands use the same helper-validated set and derive completion from persisted session state. Never pass the word `latest` to the controller.
 
-The catalog owns case selection: `--case default` selects its six `isDefault: true` code-search cases, while `--case all` also includes the four optional `daemon-disconnect`, `workspace-generation`, `stale-search-index`, and `symbol-comments` cases. Friendly modifiers map to `--model`, `--reasoning-effort`, `--trials`, `--case`, `--max-results`, `--index-path`, and `--roslynkit-path`. Accept at most one action preset and one case selector, and reject duplicate or conflicting presets, selectors, or values with a compact usage correction. Exact or friendly configuration modifiers without another preset behave as `run`. Print the resolved configuration and planned judge-turn count before a measured run, but do not request confirmation again.
+The catalog owns case selection: `--case default` selects its six `isDefault: true` code-search cases, while `--case all` also includes the four optional `repository-project-forest`, `semantic-catalog-navigation`, `stale-search-index`, and `symbol-comments` cases. Friendly modifiers map to `--model`, `--reasoning-effort`, `--trials`, `--case`, `--max-results`, `--index-path`, and `--roslynkit-path`. Accept at most one action preset and one case selector, and reject duplicate or conflicting presets, selectors, or values with a compact usage correction. Exact or friendly configuration modifiers without another preset behave as `run`. Print the resolved configuration and planned judge-turn count before a measured run, but do not request confirmation again.
 
 `default`, `run`, `smoke`, `quick`, `case`, `acceptance`, `resume`, and configuration-only invocations explicitly authorize their required paid Codex sessions. Help, planning, inspection, reporting, cleanup, benchmark design, and benchmark modification do not authorize a paid session. If paid intent is unclear, show the closest safe command instead of guessing.
 

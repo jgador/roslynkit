@@ -1,7 +1,7 @@
 namespace RoslynKit.Tests;
 
 /// <summary>
-/// Verifies the public parser and daemon transport contract for indexed symbol search.
+/// Verifies the public parser contract for indexed symbol search.
 /// </summary>
 public sealed class SearchCliContractTests
 {
@@ -20,6 +20,15 @@ public sealed class SearchCliContractTests
         Assert.Equal("repo.slnx", command.Required("target"));
         Assert.Equal("artifacts\\roslynkit.db", command.Required("index-path"));
         Assert.True(command.Flag("rebuild"));
+    }
+
+    [Fact]
+    public void Parse_IndexAcceptsImplicitRepositoryAndDatabase()
+    {
+        var command = CliParser.Parse(["index"]);
+
+        Assert.Null(command.Optional("target"));
+        Assert.Null(command.Optional("index-path"));
     }
 
     [Fact]
@@ -60,6 +69,16 @@ public sealed class SearchCliContractTests
     }
 
     [Fact]
+    public void Parse_SearchAcceptsImplicitRepositoryAndDatabase()
+    {
+        var command = CliParser.Parse(["search", "--query", "workspace catalog"]);
+
+        Assert.Equal("workspace catalog", command.Required("query"));
+        Assert.Null(command.Optional("target"));
+        Assert.Null(command.Optional("index-path"));
+    }
+
+    [Fact]
     public void Parse_IndexRebuildFlagDefaultsToFalse()
     {
         var command = CliParser.Parse(
@@ -73,13 +92,10 @@ public sealed class SearchCliContractTests
     }
 
     [Theory]
-    [InlineData("index")]
-    [InlineData("index", "--target", "repo.slnx")]
     [InlineData("search")]
     [InlineData("search", "--target", "repo.slnx")]
     [InlineData("search", "--target", "repo.slnx", "--index-path", "artifacts\\roslynkit.db")]
-    [InlineData("search", "--index-path", "artifacts\\roslynkit.db", "--query", "workspace daemon session")]
-    public void Parse_RejectsMissingRequiredSearchOptions(params string[] arguments)
+    public void Parse_RejectsMissingRequiredSearchQuery(params string[] arguments)
     {
         var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(arguments));
 
@@ -143,37 +159,4 @@ public sealed class SearchCliContractTests
         Assert.Contains("Unknown symbol kind 'Class'", exception.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void DaemonCommandRequest_CanonicalizesIndexPathAndRoundTripsSearch()
-    {
-        var repositoryRoot = TestPaths.RepositoryRoot();
-        var solutionPath = Path.Combine(".", "RoslynKit.slnx");
-        var indexPath = Path.Combine(".", "artifacts", "search-cli-contract", "not-created", "roslynkit.db");
-        var parsed = CliParser.Parse(
-        [
-            "search",
-            "--target", solutionPath,
-            "--index-path", indexPath,
-            "--query", "workspace daemon session",
-            "--max-results", "20",
-        ]);
-
-        Assert.False(Directory.Exists(TestPaths.RepoFile("artifacts", "search-cli-contract", "not-created")));
-
-        var request = DaemonCommandRequest.Create(
-            parsed,
-            Guid.Parse("b38e58b2-35f8-4f10-9b5d-3bb617c2e947"),
-            DateTimeOffset.Parse("2026-08-02T12:00:00+08:00"),
-            repositoryRoot);
-
-        Assert.Equal(TestPaths.SolutionPath(), request.Options["target"]);
-        Assert.Equal(TestPaths.RepoFile("artifacts", "search-cli-contract", "not-created", "roslynkit.db"), request.Options["index-path"]);
-
-        var reconstructed = request.ToParsedCommand();
-
-        Assert.Equal("search", reconstructed.Name);
-        Assert.Equal("workspace daemon session", reconstructed.Required("query"));
-        Assert.Equal(20, reconstructed.OptionalInt("max-results", 1, 1));
-        Assert.Equal(request.Options["index-path"], reconstructed.Required("index-path"));
-    }
 }

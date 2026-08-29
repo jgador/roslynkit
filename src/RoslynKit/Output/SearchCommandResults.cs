@@ -29,7 +29,8 @@ public sealed record IndexResult(
     SearchIndexState IndexState,
     int SymbolCount,
     bool Rebuilt,
-    IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics);
+    IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics,
+    bool RepositoryScope = false);
 
 /// <summary>
 /// Represents the <c>search</c> command payload with ranked symbol hits from one target index.
@@ -44,7 +45,8 @@ public sealed record SearchResult(
     bool Truncated,
     IReadOnlyList<SearchHit> Hits,
     IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics,
-    bool Compact = false);
+    bool Compact = false,
+    bool RepositoryScope = false);
 
 /// <summary>
 /// Represents one ranked C# symbol hit returned by a full-text search query.

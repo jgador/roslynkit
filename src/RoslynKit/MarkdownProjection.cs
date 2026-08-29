@@ -139,7 +139,7 @@ public static class MarkdownProjection
 
         var builder = new StringBuilder();
         builder.Append("command: search");
-        builder.Append("\ntarget: ").Append(CodeSpan(result.TargetPath));
+        AppendSearchScope(builder, result.TargetPath, result.RepositoryScope);
         builder.Append("\nindex-path: ").Append(CodeSpan(result.IndexPath));
         builder.Append("\nquery: ").Append(CodeSpan(result.Query));
         builder.Append("\nindex-state: ").Append(SearchIndexStateText(result.IndexState));
@@ -198,13 +198,28 @@ public static class MarkdownProjection
     {
         var builder = new StringBuilder();
         builder.Append("command: index");
-        builder.Append("\ntarget: ").Append(CodeSpan(result.TargetPath));
+        AppendSearchScope(builder, result.TargetPath, result.RepositoryScope);
         builder.Append("\nindex-path: ").Append(CodeSpan(result.IndexPath));
         builder.Append("\nindex-state: ").Append(SearchIndexStateText(result.IndexState));
         builder.Append("\nsymbols: ").Append(result.SymbolCount);
         builder.Append("\nrebuilt: ").Append(result.Rebuilt ? "true" : "false");
         AppendWorkspaceDiagnostics(builder, result.WorkspaceDiagnostics);
         return builder.ToString();
+    }
+
+    private static void AppendSearchScope(
+        StringBuilder builder,
+        string targetPath,
+        bool repositoryScope)
+    {
+        if (repositoryScope)
+        {
+            builder.Append("\nscope: repository");
+            builder.Append("\nrepository: ").Append(CodeSpan(targetPath));
+            return;
+        }
+
+        builder.Append("\ntarget: ").Append(CodeSpan(targetPath));
     }
 
     private static string RenderDefinition(DefinitionResult result)

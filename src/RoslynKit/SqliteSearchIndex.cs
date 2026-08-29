@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using Dapper;
 using Microsoft.Data.Sqlite;
 
@@ -7,7 +8,7 @@ namespace RoslynKit;
 /// <summary>
 /// Persists and queries target-partitioned Roslyn symbol search records through SQLite full-text search.
 /// </summary>
-internal sealed class SqliteSearchIndex
+internal sealed partial class SqliteSearchIndex
 {
     private const int BusyTimeoutMilliseconds = 5_000;
     private const int NameWeight = 12;
@@ -51,6 +52,54 @@ internal sealed class SqliteSearchIndex
         "path_tokens",
         "body_tokens",
     ];
+    private static readonly string[] CatalogProjectColumns =
+    [
+        "target_identity",
+        "project_path",
+        "project_name",
+        "project_references_json",
+    ];
+    private static readonly string[] CatalogSymbolColumns =
+    [
+        "target_identity",
+        "symbol_key",
+        "project_path",
+        "project_name",
+        "kind",
+        "name",
+        "metadata_name",
+        "display_name",
+        "symbol_id",
+        "symbol_kind",
+        "accessibility",
+        "is_static",
+        "containing_type",
+        "containing_namespace",
+        "path",
+        "line",
+        "column_number",
+        "end_line",
+        "end_column_number",
+        "span_start",
+        "span_length",
+        "documentation",
+        "comments_json",
+    ];
+    private static readonly string[] CatalogRelationColumns =
+    [
+        "target_identity",
+        "source_symbol_key",
+        "relation_kind",
+        "target_symbol_id",
+    ];
+    private static readonly string[] CatalogOperationColumns =
+    [
+        "target_identity",
+        "operation_key",
+        "result_type",
+        "format_version",
+        "payload_json",
+    ];
     private readonly string _databasePath;
     private readonly string _connectionString;
     private readonly string _readConnectionString;
@@ -82,8 +131,24 @@ internal sealed class SqliteSearchIndex
         IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
         CancellationToken cancellationToken)
     {
+        await ReplaceTargetAsync(
+            target,
+            symbols,
+            CreateProjectsFromSymbols(symbols),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Replaces all indexed symbols and project metadata for a target atomically.
+    /// </summary>
+    public async Task ReplaceTargetAsync(
+        SqliteSearchIndexTarget target,
+        IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
+        IReadOnlyCollection<SqliteSearchIndexProject> projects,
+        CancellationToken cancellationToken)
+    {
         await using var lease = await AcquireWriterLeaseAsync(TimeSpan.FromMilliseconds(BusyTimeoutMilliseconds), cancellationToken);
-        await lease.ReplaceTargetAsync(target, symbols, cancellationToken);
+        await lease.ReplaceTargetAsync(target, symbols, projects, cancellationToken);
         await lease.CommitAsync(cancellationToken);
     }
 
@@ -96,8 +161,26 @@ internal sealed class SqliteSearchIndex
         IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
         CancellationToken cancellationToken)
     {
+        await ReplaceProjectsAsync(
+            target,
+            projectPaths,
+            symbols,
+            CreateProjectsFromSymbols(symbols),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Replaces selected project partitions and their semantic metadata atomically.
+    /// </summary>
+    public async Task ReplaceProjectsAsync(
+        SqliteSearchIndexTarget target,
+        IReadOnlyCollection<RepositoryRelativePath> projectPaths,
+        IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
+        IReadOnlyCollection<SqliteSearchIndexProject> projects,
+        CancellationToken cancellationToken)
+    {
         await using var lease = await AcquireWriterLeaseAsync(TimeSpan.FromMilliseconds(BusyTimeoutMilliseconds), cancellationToken);
-        await lease.ReplaceProjectsAsync(target, projectPaths, symbols, cancellationToken);
+        await lease.ReplaceProjectsAsync(target, projectPaths, symbols, projects, cancellationToken);
         await lease.CommitAsync(cancellationToken);
     }
 
@@ -120,7 +203,9 @@ internal sealed class SqliteSearchIndex
             transaction = connection.BeginTransaction(deferred: false);
             if (schemaExists)
             {
-                await ValidateSchemaAsync(connection, transaction, cancellationToken);
+                await ValidateSearchSchemaAsync(connection, transaction, cancellationToken);
+                await EnsureCatalogSchemaAsync(connection, transaction, cancellationToken);
+                await ValidateCatalogSchemaAsync(connection, transaction, cancellationToken);
             }
             else
             {
@@ -396,7 +481,7 @@ internal sealed class SqliteSearchIndex
                 return null;
             }
 
-            await ValidateSchemaAsync(connection, null, cancellationToken);
+            await ValidateSearchSchemaAsync(connection, null, cancellationToken);
             return connection;
         }
         catch (SqliteException exception) when (IsInvalidDatabase(exception))
@@ -493,10 +578,81 @@ internal sealed class SqliteSearchIndex
             );
             """, cancellationToken);
 
-        await ValidateSchemaAsync(connection, transaction, cancellationToken);
+        await EnsureCatalogSchemaAsync(connection, transaction, cancellationToken);
+        await ValidateSearchSchemaAsync(connection, transaction, cancellationToken);
+        await ValidateCatalogSchemaAsync(connection, transaction, cancellationToken);
     }
 
-    private static async Task ValidateSchemaAsync(
+    private static async Task EnsureCatalogSchemaAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await ExecuteNonQueryAsync(connection, transaction, """
+            CREATE TABLE IF NOT EXISTS semantic_catalog_projects (
+                target_identity TEXT NOT NULL,
+                project_path TEXT NOT NULL,
+                project_name TEXT NOT NULL,
+                project_references_json TEXT NOT NULL,
+                PRIMARY KEY (target_identity, project_path)
+            );
+
+            CREATE TABLE IF NOT EXISTS semantic_catalog_symbols (
+                target_identity TEXT NOT NULL,
+                symbol_key TEXT NOT NULL,
+                project_path TEXT NOT NULL,
+                project_name TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                name TEXT NOT NULL,
+                metadata_name TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                symbol_id TEXT NULL,
+                symbol_kind TEXT NOT NULL,
+                accessibility TEXT NOT NULL,
+                is_static INTEGER NOT NULL CHECK (is_static IN (0, 1)),
+                containing_type TEXT NULL,
+                containing_namespace TEXT NULL,
+                path TEXT NOT NULL,
+                line INTEGER NOT NULL CHECK (line >= 1),
+                column_number INTEGER NOT NULL CHECK (column_number >= 1),
+                end_line INTEGER NOT NULL CHECK (end_line >= 1),
+                end_column_number INTEGER NOT NULL CHECK (end_column_number >= 1),
+                span_start INTEGER NOT NULL CHECK (span_start >= 0),
+                span_length INTEGER NOT NULL CHECK (span_length >= 0),
+                documentation TEXT NULL,
+                comments_json TEXT NOT NULL,
+                PRIMARY KEY (target_identity, symbol_key)
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_semantic_catalog_symbols_selector
+                ON semantic_catalog_symbols (target_identity, symbol_id, display_name, project_path);
+
+            CREATE INDEX IF NOT EXISTS ix_semantic_catalog_symbols_name
+                ON semantic_catalog_symbols (target_identity, name, kind);
+
+            CREATE TABLE IF NOT EXISTS semantic_catalog_relations (
+                target_identity TEXT NOT NULL,
+                source_symbol_key TEXT NOT NULL,
+                relation_kind TEXT NOT NULL,
+                target_symbol_id TEXT NOT NULL,
+                PRIMARY KEY (target_identity, source_symbol_key, relation_kind, target_symbol_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_semantic_catalog_relations_target
+                ON semantic_catalog_relations (target_identity, target_symbol_id, relation_kind);
+
+            CREATE TABLE IF NOT EXISTS semantic_catalog_operation_cache (
+                target_identity TEXT NOT NULL,
+                operation_key TEXT NOT NULL,
+                result_type TEXT NOT NULL,
+                format_version INTEGER NOT NULL,
+                payload_json TEXT NOT NULL,
+                PRIMARY KEY (target_identity, operation_key)
+            );
+            """, cancellationToken);
+    }
+
+    private static async Task ValidateSearchSchemaAsync(
         SqliteConnection connection,
         SqliteTransaction? transaction,
         CancellationToken cancellationToken)
@@ -504,6 +660,17 @@ internal sealed class SqliteSearchIndex
         await ValidateSchemaObjectAsync(connection, transaction, "search_index_targets", false, TargetColumns, cancellationToken);
         await ValidateSchemaObjectAsync(connection, transaction, "search_index_symbols", false, SymbolColumns, cancellationToken);
         await ValidateSchemaObjectAsync(connection, transaction, "search_index_fts", true, FtsColumns, cancellationToken);
+    }
+
+    private static async Task ValidateCatalogSchemaAsync(
+        SqliteConnection connection,
+        SqliteTransaction? transaction,
+        CancellationToken cancellationToken)
+    {
+        await ValidateSchemaObjectAsync(connection, transaction, "semantic_catalog_projects", false, CatalogProjectColumns, cancellationToken);
+        await ValidateSchemaObjectAsync(connection, transaction, "semantic_catalog_symbols", false, CatalogSymbolColumns, cancellationToken);
+        await ValidateSchemaObjectAsync(connection, transaction, "semantic_catalog_relations", false, CatalogRelationColumns, cancellationToken);
+        await ValidateSchemaObjectAsync(connection, transaction, "semantic_catalog_operation_cache", false, CatalogOperationColumns, cancellationToken);
     }
 
     private static async Task ValidateSchemaObjectAsync(
@@ -574,14 +741,23 @@ internal sealed class SqliteSearchIndex
         SqliteTransaction transaction,
         SqliteSearchIndexTarget target,
         IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
+        IReadOnlyCollection<SqliteSearchIndexProject> projects,
         CancellationToken cancellationToken)
     {
         ValidateTarget(target);
         ArgumentNullException.ThrowIfNull(symbols);
+        ArgumentNullException.ThrowIfNull(projects);
         ValidateSymbols(symbols, target.TargetIdentity);
 
         await DeleteTargetAsync(connection, transaction, target.TargetIdentity, cancellationToken);
         await InsertSymbolsAsync(connection, transaction, target.TargetIdentity, symbols, cancellationToken);
+        await InsertCatalogAsync(
+            connection,
+            transaction,
+            target.TargetIdentity,
+            symbols,
+            projects,
+            cancellationToken);
         await UpsertMetadataAsync(connection, transaction, target, symbols.Count, cancellationToken);
     }
 
@@ -591,11 +767,13 @@ internal sealed class SqliteSearchIndex
         SqliteSearchIndexTarget target,
         IReadOnlyCollection<RepositoryRelativePath> projectPaths,
         IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
+        IReadOnlyCollection<SqliteSearchIndexProject> projects,
         CancellationToken cancellationToken)
     {
         ValidateTarget(target);
         ArgumentNullException.ThrowIfNull(projectPaths);
         ArgumentNullException.ThrowIfNull(symbols);
+        ArgumentNullException.ThrowIfNull(projects);
         var normalizedProjectPaths = NormalizeProjectPaths(projectPaths);
         if (normalizedProjectPaths.Count == 0)
         {
@@ -613,6 +791,13 @@ internal sealed class SqliteSearchIndex
 
         await DeleteProjectsAsync(connection, transaction, target.TargetIdentity, normalizedProjectPaths, cancellationToken);
         await InsertSymbolsAsync(connection, transaction, target.TargetIdentity, symbols, cancellationToken);
+        await InsertCatalogAsync(
+            connection,
+            transaction,
+            target.TargetIdentity,
+            symbols,
+            projects,
+            cancellationToken);
         var symbolCount = await CountTargetSymbolsAsync(connection, transaction, target.TargetIdentity, cancellationToken);
         await UpsertMetadataAsync(connection, transaction, target, symbolCount, cancellationToken);
     }
@@ -634,6 +819,12 @@ internal sealed class SqliteSearchIndex
         RepositoryRelativePath targetIdentity,
         CancellationToken cancellationToken)
     {
+        await DeleteCatalogTargetAsync(
+            connection,
+            transaction,
+            targetIdentity,
+            cancellationToken);
+
         await using var deleteFtsCommand = connection.CreateCommand();
         deleteFtsCommand.Transaction = transaction;
         deleteFtsCommand.CommandText = """
@@ -667,6 +858,13 @@ internal sealed class SqliteSearchIndex
         IReadOnlyCollection<RepositoryRelativePath> projectPaths,
         CancellationToken cancellationToken)
     {
+        await DeleteCatalogProjectsAsync(
+            connection,
+            transaction,
+            targetIdentity,
+            projectPaths,
+            cancellationToken);
+
         await using var deleteFtsCommand = connection.CreateCommand();
         deleteFtsCommand.Transaction = transaction;
         var ftsFilters = new List<string> { "target_identity = $targetIdentity" };
@@ -689,6 +887,83 @@ internal sealed class SqliteSearchIndex
         AddFilterValues(deleteSymbolsCommand, symbolFilters, "project_path", "$projectPath", projectPaths.Select(path => path.Value).ToArray());
         deleteSymbolsCommand.CommandText = $"DELETE FROM search_index_symbols WHERE {string.Join(" AND ", symbolFilters)};";
         await deleteSymbolsCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task DeleteCatalogTargetAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        RepositoryRelativePath targetIdentity,
+        CancellationToken cancellationToken)
+    {
+        foreach (var table in new[]
+                 {
+                     "semantic_catalog_operation_cache",
+                     "semantic_catalog_relations",
+                     "semantic_catalog_symbols",
+                     "semantic_catalog_projects",
+                 })
+        {
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = $"DELETE FROM {table} WHERE target_identity = $targetIdentity;";
+            command.Parameters.AddWithValue("$targetIdentity", targetIdentity.Value);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+    }
+
+    private static async Task DeleteCatalogProjectsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        RepositoryRelativePath targetIdentity,
+        IReadOnlyCollection<RepositoryRelativePath> projectPaths,
+        CancellationToken cancellationToken)
+    {
+        await using (var clearOperations = connection.CreateCommand())
+        {
+            clearOperations.Transaction = transaction;
+            clearOperations.CommandText = "DELETE FROM semantic_catalog_operation_cache WHERE target_identity = $targetIdentity;";
+            clearOperations.Parameters.AddWithValue("$targetIdentity", targetIdentity.Value);
+            await clearOperations.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await using (var deleteRelations = connection.CreateCommand())
+        {
+            deleteRelations.Transaction = transaction;
+            var filters = new List<string> { "target_identity = $targetIdentity" };
+            deleteRelations.Parameters.AddWithValue("$targetIdentity", targetIdentity.Value);
+            AddFilterValues(
+                deleteRelations,
+                filters,
+                "project_path",
+                "$catalogProjectPath",
+                projectPaths.Select(path => path.Value).ToArray());
+            deleteRelations.CommandText = $"""
+                DELETE FROM semantic_catalog_relations
+                WHERE target_identity = $targetIdentity
+                  AND source_symbol_key IN (
+                      SELECT symbol_key
+                      FROM semantic_catalog_symbols
+                      WHERE {string.Join(" AND ", filters)}
+                  );
+                """;
+            await deleteRelations.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        foreach (var table in new[] { "semantic_catalog_symbols", "semantic_catalog_projects" })
+        {
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            var filters = new List<string> { "target_identity = $targetIdentity" };
+            command.Parameters.AddWithValue("$targetIdentity", targetIdentity.Value);
+            AddFilterValues(
+                command,
+                filters,
+                "project_path",
+                "$catalogProjectPath",
+                projectPaths.Select(path => path.Value).ToArray());
+            command.CommandText = $"DELETE FROM {table} WHERE {string.Join(" AND ", filters)};";
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
     }
 
     private static async Task InsertSymbolsAsync(
@@ -816,6 +1091,232 @@ internal sealed class SqliteSearchIndex
             pathTokensParameter.Value = NormalizeSearchText(symbol.PathTokens);
             bodyTokensParameter.Value = NormalizeSearchText(symbol.BodyTokens);
             await ftsCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+    }
+
+    private static async Task InsertCatalogAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        RepositoryRelativePath targetIdentity,
+        IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
+        IReadOnlyCollection<SqliteSearchIndexProject> projects,
+        CancellationToken cancellationToken)
+    {
+        await InsertCatalogProjectsAsync(
+            connection,
+            transaction,
+            targetIdentity,
+            projects,
+            cancellationToken);
+        await InsertCatalogSymbolsAsync(
+            connection,
+            transaction,
+            targetIdentity,
+            symbols,
+            cancellationToken);
+        await InsertCatalogRelationsAsync(
+            connection,
+            transaction,
+            targetIdentity,
+            symbols,
+            cancellationToken);
+    }
+
+    private static async Task InsertCatalogProjectsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        RepositoryRelativePath targetIdentity,
+        IReadOnlyCollection<SqliteSearchIndexProject> projects,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO semantic_catalog_projects (
+                target_identity,
+                project_path,
+                project_name,
+                project_references_json)
+            VALUES (
+                $targetIdentity,
+                $projectPath,
+                $projectName,
+                $projectReferencesJson)
+            ON CONFLICT (target_identity, project_path) DO UPDATE SET
+                project_name = excluded.project_name,
+                project_references_json = excluded.project_references_json;
+            """;
+        var targetIdentityParameter = command.Parameters.Add("$targetIdentity", SqliteType.Text);
+        var projectPathParameter = command.Parameters.Add("$projectPath", SqliteType.Text);
+        var projectNameParameter = command.Parameters.Add("$projectName", SqliteType.Text);
+        var projectReferencesParameter = command.Parameters.Add("$projectReferencesJson", SqliteType.Text);
+
+        foreach (var project in projects
+                     .DistinctBy(project => project.Path)
+                     .OrderBy(project => project.Path.Value, StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            targetIdentityParameter.Value = targetIdentity.Value;
+            projectPathParameter.Value = project.Path.Value;
+            projectNameParameter.Value = project.Name;
+            projectReferencesParameter.Value = JsonSerializer.Serialize(
+                project.ProjectReferences.Select(path => path.Value).ToArray());
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+    }
+
+    private static async Task InsertCatalogSymbolsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        RepositoryRelativePath targetIdentity,
+        IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO semantic_catalog_symbols (
+                target_identity,
+                symbol_key,
+                project_path,
+                project_name,
+                kind,
+                name,
+                metadata_name,
+                display_name,
+                symbol_id,
+                symbol_kind,
+                accessibility,
+                is_static,
+                containing_type,
+                containing_namespace,
+                path,
+                line,
+                column_number,
+                end_line,
+                end_column_number,
+                span_start,
+                span_length,
+                documentation,
+                comments_json)
+            VALUES (
+                $targetIdentity,
+                $symbolKey,
+                $projectPath,
+                $projectName,
+                $kind,
+                $name,
+                $metadataName,
+                $displayName,
+                $symbolId,
+                $symbolKind,
+                $accessibility,
+                $isStatic,
+                $containingType,
+                $containingNamespace,
+                $path,
+                $line,
+                $column,
+                $endLine,
+                $endColumn,
+                $spanStart,
+                $spanLength,
+                $documentation,
+                $commentsJson);
+            """;
+        var targetIdentityParameter = command.Parameters.Add("$targetIdentity", SqliteType.Text);
+        var symbolKeyParameter = command.Parameters.Add("$symbolKey", SqliteType.Text);
+        var projectPathParameter = command.Parameters.Add("$projectPath", SqliteType.Text);
+        var projectNameParameter = command.Parameters.Add("$projectName", SqliteType.Text);
+        var kindParameter = command.Parameters.Add("$kind", SqliteType.Text);
+        var nameParameter = command.Parameters.Add("$name", SqliteType.Text);
+        var metadataNameParameter = command.Parameters.Add("$metadataName", SqliteType.Text);
+        var displayNameParameter = command.Parameters.Add("$displayName", SqliteType.Text);
+        var symbolIdParameter = command.Parameters.Add("$symbolId", SqliteType.Text);
+        var symbolKindParameter = command.Parameters.Add("$symbolKind", SqliteType.Text);
+        var accessibilityParameter = command.Parameters.Add("$accessibility", SqliteType.Text);
+        var isStaticParameter = command.Parameters.Add("$isStatic", SqliteType.Integer);
+        var containingTypeParameter = command.Parameters.Add("$containingType", SqliteType.Text);
+        var containingNamespaceParameter = command.Parameters.Add("$containingNamespace", SqliteType.Text);
+        var pathParameter = command.Parameters.Add("$path", SqliteType.Text);
+        var lineParameter = command.Parameters.Add("$line", SqliteType.Integer);
+        var columnParameter = command.Parameters.Add("$column", SqliteType.Integer);
+        var endLineParameter = command.Parameters.Add("$endLine", SqliteType.Integer);
+        var endColumnParameter = command.Parameters.Add("$endColumn", SqliteType.Integer);
+        var spanStartParameter = command.Parameters.Add("$spanStart", SqliteType.Integer);
+        var spanLengthParameter = command.Parameters.Add("$spanLength", SqliteType.Integer);
+        var documentationParameter = command.Parameters.Add("$documentation", SqliteType.Text);
+        var commentsParameter = command.Parameters.Add("$commentsJson", SqliteType.Text);
+
+        foreach (var symbol in symbols.OrderBy(symbol => symbol.SymbolKey, StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            targetIdentityParameter.Value = targetIdentity.Value;
+            symbolKeyParameter.Value = symbol.SymbolKey;
+            projectPathParameter.Value = symbol.ProjectPath.Value;
+            projectNameParameter.Value = symbol.ProjectName;
+            kindParameter.Value = symbol.Kind;
+            nameParameter.Value = symbol.Name;
+            metadataNameParameter.Value = symbol.MetadataName ?? symbol.Name;
+            displayNameParameter.Value = symbol.DisplayName;
+            symbolIdParameter.Value = ToDatabaseValue(symbol.SymbolId);
+            symbolKindParameter.Value = symbol.SymbolKind ?? symbol.Kind;
+            accessibilityParameter.Value = symbol.Accessibility ?? "NotApplicable";
+            isStaticParameter.Value = symbol.IsStatic ? 1 : 0;
+            containingTypeParameter.Value = ToDatabaseValue(symbol.ContainingType);
+            containingNamespaceParameter.Value = ToDatabaseValue(symbol.ContainingNamespace);
+            pathParameter.Value = symbol.Path.Value;
+            lineParameter.Value = symbol.Line;
+            columnParameter.Value = symbol.Column;
+            endLineParameter.Value = symbol.EndLine;
+            endColumnParameter.Value = symbol.EndColumn;
+            spanStartParameter.Value = symbol.SpanStart;
+            spanLengthParameter.Value = symbol.SpanLength;
+            documentationParameter.Value = ToDatabaseValue(symbol.Documentation);
+            commentsParameter.Value = JsonSerializer.Serialize(symbol.StructuredComments ?? []);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+    }
+
+    private static async Task InsertCatalogRelationsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        RepositoryRelativePath targetIdentity,
+        IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT OR IGNORE INTO semantic_catalog_relations (
+                target_identity,
+                source_symbol_key,
+                relation_kind,
+                target_symbol_id)
+            VALUES (
+                $targetIdentity,
+                $sourceSymbolKey,
+                $relationKind,
+                $targetSymbolId);
+            """;
+        var targetIdentityParameter = command.Parameters.Add("$targetIdentity", SqliteType.Text);
+        var sourceSymbolKeyParameter = command.Parameters.Add("$sourceSymbolKey", SqliteType.Text);
+        var relationKindParameter = command.Parameters.Add("$relationKind", SqliteType.Text);
+        var targetSymbolIdParameter = command.Parameters.Add("$targetSymbolId", SqliteType.Text);
+
+        foreach (var symbol in symbols.OrderBy(symbol => symbol.SymbolKey, StringComparer.Ordinal))
+        {
+            foreach (var relation in (symbol.Relations ?? [])
+                         .OrderBy(relation => relation.Kind, StringComparer.Ordinal)
+                         .ThenBy(relation => relation.TargetSymbolId, StringComparer.Ordinal))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                targetIdentityParameter.Value = targetIdentity.Value;
+                sourceSymbolKeyParameter.Value = symbol.SymbolKey;
+                relationKindParameter.Value = relation.Kind;
+                targetSymbolIdParameter.Value = relation.TargetSymbolId;
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
         }
     }
 
@@ -1418,5 +1919,19 @@ internal sealed class SqliteSearchIndex
                 throw new ArgumentException($"The search index target contains duplicate symbol key '{symbol.SymbolKey}'.", nameof(symbols));
             }
         }
+    }
+
+    private static IReadOnlyCollection<SqliteSearchIndexProject> CreateProjectsFromSymbols(
+        IReadOnlyCollection<SqliteSearchIndexSymbol> symbols)
+    {
+        ArgumentNullException.ThrowIfNull(symbols);
+        return symbols
+            .GroupBy(symbol => symbol.ProjectPath)
+            .Select(group => new SqliteSearchIndexProject(
+                group.Key,
+                group.Select(symbol => symbol.ProjectName).Order(StringComparer.Ordinal).First(),
+                []))
+            .OrderBy(project => project.Path.Value, StringComparer.Ordinal)
+            .ToArray();
     }
 }

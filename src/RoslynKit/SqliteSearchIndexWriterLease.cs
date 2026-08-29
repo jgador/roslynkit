@@ -37,8 +37,33 @@ internal sealed class SqliteSearchIndexWriterLease : IAsyncDisposable
         IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
         CancellationToken cancellationToken)
     {
+        return ReplaceTargetAsync(
+            target,
+            symbols,
+            symbols
+                .Select(symbol => new SqliteSearchIndexProject(symbol.ProjectPath, symbol.ProjectName, []))
+                .DistinctBy(project => project.Path)
+                .ToArray(),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Replaces one target partition and its project metadata without publishing it until commit.
+    /// </summary>
+    public Task ReplaceTargetAsync(
+        SqliteSearchIndexTarget target,
+        IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
+        IReadOnlyCollection<SqliteSearchIndexProject> projects,
+        CancellationToken cancellationToken)
+    {
         ThrowIfUnavailable();
-        return SqliteSearchIndex.ReplaceTargetWithinLeaseAsync(_connection, _transaction, target, symbols, cancellationToken);
+        return SqliteSearchIndex.ReplaceTargetWithinLeaseAsync(
+            _connection,
+            _transaction,
+            target,
+            symbols,
+            projects,
+            cancellationToken);
     }
 
     /// <summary>
@@ -50,6 +75,27 @@ internal sealed class SqliteSearchIndexWriterLease : IAsyncDisposable
         IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
         CancellationToken cancellationToken)
     {
+        return ReplaceProjectsAsync(
+            target,
+            projectPaths,
+            symbols,
+            symbols
+                .Select(symbol => new SqliteSearchIndexProject(symbol.ProjectPath, symbol.ProjectName, []))
+                .DistinctBy(project => project.Path)
+                .ToArray(),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Replaces selected project partitions and their project metadata without publishing until commit.
+    /// </summary>
+    public Task ReplaceProjectsAsync(
+        SqliteSearchIndexTarget target,
+        IReadOnlyCollection<RepositoryRelativePath> projectPaths,
+        IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
+        IReadOnlyCollection<SqliteSearchIndexProject> projects,
+        CancellationToken cancellationToken)
+    {
         ThrowIfUnavailable();
         return SqliteSearchIndex.ReplaceProjectsWithinLeaseAsync(
             _connection,
@@ -57,6 +103,7 @@ internal sealed class SqliteSearchIndexWriterLease : IAsyncDisposable
             target,
             projectPaths,
             symbols,
+            projects,
             cancellationToken);
     }
 
@@ -70,6 +117,29 @@ internal sealed class SqliteSearchIndexWriterLease : IAsyncDisposable
             _connection,
             _transaction,
             target,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Writes one semantic operation result without publishing it until the lease commits.
+    /// </summary>
+    public Task WriteCatalogOperationAsync(
+        RepositoryRelativePath targetIdentity,
+        string operationKey,
+        string resultType,
+        int formatVersion,
+        string payloadJson,
+        CancellationToken cancellationToken)
+    {
+        ThrowIfUnavailable();
+        return SqliteSearchIndex.WriteCatalogOperationWithinLeaseAsync(
+            _connection,
+            _transaction,
+            targetIdentity,
+            operationKey,
+            resultType,
+            formatVersion,
+            payloadJson,
             cancellationToken);
     }
 

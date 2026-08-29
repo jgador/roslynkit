@@ -21,23 +21,9 @@ public static class BuiltinCommandRegistry
                 OptionSpec.Flag(null, "overwrite", "replace existing scaffolded skill files when content differs"),
             ]),
         new BuiltinCommand(
-            "daemon status",
-            "Report the compatible workspace daemon state without starting it.",
-            ["roslynkit daemon status --target <target>"],
-            [
-                DaemonTargetOption(),
-            ]),
-        new BuiltinCommand(
-            "daemon stop",
-            "Stop the compatible workspace daemon if it is running, without starting one.",
-            ["roslynkit daemon stop --target <target>"],
-            [
-                DaemonTargetOption(),
-            ]),
-        new BuiltinCommand(
             "workspace",
-            "List projects and repo-relevant documents loaded from a solution or project.",
-            ["roslynkit workspace --target <solution.slnx|solution.sln|project.csproj> [--include-generated] [--include-additional] [--include-analyzer-config]"],
+            "List projects and repository-relevant documents in the inferred repository or explicit target.",
+            ["roslynkit workspace [--target <solution.slnx|solution.sln|solution.slnf|project.csproj|repository>] [--include-generated] [--include-additional] [--include-analyzer-config]"],
             [
                 TargetOption(),
                 OptionSpec.Flag(null, "include-generated", "include source-generated and generated source documents"),
@@ -47,7 +33,7 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "diagnostics",
             "Return source compiler diagnostics for the loaded target.",
-            ["roslynkit diagnostics --target <target> [--max-results <n>] [--include-hidden] [--include-generated]"],
+            ["roslynkit diagnostics [--target <target>] [--max-results <n>] [--include-hidden] [--include-generated]"],
             [
                 TargetOption(),
                 MaxResultsOption(),
@@ -56,18 +42,18 @@ public static class BuiltinCommandRegistry
             ]),
         new BuiltinCommand(
             "index",
-            "Build or refresh a repository-local full-text search index for the loaded target.",
-            ["roslynkit index --target <target> --index-path <path> [--rebuild] [--text-only]"],
+            "Build or refresh the repository-local search and semantic catalog.",
+            ["roslynkit index [--target <target>] [--index-path <path>] [--rebuild] [--text-only]"],
             [
                 TargetOption(),
                 IndexPathOption(),
-                OptionSpec.Flag(null, "rebuild", "discard the selected target's existing index records before indexing"),
-                OptionSpec.Flag(null, "text-only", "index repository C# source in-process without loading MSBuild or using the daemon"),
+                OptionSpec.Flag(null, "rebuild", "discard the selected partition before indexing"),
+                OptionSpec.Flag(null, "text-only", "index repository C# source in-process without loading MSBuild"),
             ]),
         new BuiltinCommand(
             "search",
-            "Search indexed C# symbols using English-oriented text matching and ranking.",
-            ["roslynkit search --target <target> --index-path <path> --query <text> [--project <path>] [--kind <kind>] [--max-results <n>] [--text-only] [--compact] [--balanced]"],
+            "Search the repository-local C# catalog using English-oriented text matching and ranking.",
+            ["roslynkit search --query <text> [--target <target>] [--index-path <path>] [--project <path>] [--kind <kind>] [--max-results <n>] [--text-only] [--compact] [--balanced]"],
             [
                 TargetOption(),
                 IndexPathOption(),
@@ -75,14 +61,14 @@ public static class BuiltinCommandRegistry
                 SearchProjectOption(),
                 SymbolKindOption(),
                 SearchMaxResultsOption(),
-                OptionSpec.Flag(null, "text-only", "search repository C# source in-process without loading MSBuild or using the daemon"),
+                OptionSpec.Flag(null, "text-only", "search repository C# source in-process without loading MSBuild"),
                 OptionSpec.Flag(null, "compact", "emit concise ranked evidence with repository-relative locations"),
                 OptionSpec.Flag(null, "balanced", "reserve half of bounded results for focused test declarations when both source and tests match"),
             ]),
         new BuiltinCommand(
             "symbols",
             "Search source declarations by symbol name.",
-            ["roslynkit symbols --target <target> --query <text> [--max-results <n>] [--case-sensitive] [--exact] [--kind <kind>]"],
+            ["roslynkit symbols --query <text> [--target <target>] [--max-results <n>] [--case-sensitive] [--exact] [--kind <kind>]"],
             [
                 TargetOption(),
                 OptionSpec.String('q', "query", "text", "symbol name text to search for", required: true),
@@ -94,7 +80,7 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "document-text",
             "Read the full text of one resolved document.",
-            ["roslynkit document-text --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>]"],
+            ["roslynkit document-text --file <path> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]"],
             [
                 TargetOption(),
                 FileOption(),
@@ -105,7 +91,7 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "document-lines",
             "Read a bounded one-based line range from one resolved document.",
-            ["roslynkit document-lines --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --start-line <n> --end-line <n>"],
+            ["roslynkit document-lines --file <path> --start-line <n> --end-line <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]"],
             [
                 TargetOption(),
                 FileOption(),
@@ -118,7 +104,7 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "document-symbols",
             "List declared symbols in one source or source-generated C# document.",
-            ["roslynkit document-symbols --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>]"],
+            ["roslynkit document-symbols --file <path> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]"],
             [
                 TargetOption(),
                 FileOption(),
@@ -130,8 +116,8 @@ public static class BuiltinCommandRegistry
             "definition",
             "Resolve a symbol selector or the symbol at a one-based line and column to source definitions.",
             [
-                "roslynkit definition --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>",
-                "roslynkit definition --target <target> --symbol <selector>",
+                "roslynkit definition --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]",
+                "roslynkit definition --symbol <selector> [--target <target>]",
             ],
             [
                 TargetOption(),
@@ -146,7 +132,7 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "type-definition",
             "Resolve the type of the symbol at a one-based line and column to source definitions.",
-            ["roslynkit type-definition --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>"],
+            ["roslynkit type-definition --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]"],
             [
                 TargetOption(),
                 FileOption(),
@@ -160,8 +146,8 @@ public static class BuiltinCommandRegistry
             "references",
             "Find source references for a symbol selector or the symbol at a one-based line and column.",
             [
-                "roslynkit references --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n> [--max-results <n>]",
-                "roslynkit references --target <target> --symbol <selector> [--max-results <n>]",
+                "roslynkit references --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--max-results <n>]",
+                "roslynkit references --symbol <selector> [--target <target>] [--max-results <n>]",
             ],
             [
                 TargetOption(),
@@ -178,8 +164,8 @@ public static class BuiltinCommandRegistry
             "implementations",
             "Find implementations for a symbol selector or the symbol at a one-based line and column.",
             [
-                "roslynkit implementations --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n> [--max-results <n>]",
-                "roslynkit implementations --target <target> --symbol <selector> [--max-results <n>]",
+                "roslynkit implementations --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--max-results <n>]",
+                "roslynkit implementations --symbol <selector> [--target <target>] [--max-results <n>]",
             ],
             [
                 TargetOption(),
@@ -196,8 +182,8 @@ public static class BuiltinCommandRegistry
             "symbol-context",
             "Return the local syntax node, resolved symbol, ordinary comments, and bounded semantic context.",
             [
-                "roslynkit symbol-context --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n> [--max-results <n>] [--max-comments <n>]",
-                "roslynkit symbol-context --target <target> --symbol <selector> [--max-results <n>] [--max-comments <n>]",
+                "roslynkit symbol-context --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--max-results <n>] [--max-comments <n>]",
+                "roslynkit symbol-context --symbol <selector> [--target <target>] [--max-results <n>] [--max-comments <n>]",
             ],
             [
                 TargetOption(),
@@ -214,7 +200,7 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "quick-info",
             "Return Roslyn quick info for the symbol at a one-based line and column.",
-            ["roslynkit quick-info --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>"],
+            ["roslynkit quick-info --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]"],
             [
                 TargetOption(),
                 FileOption(),
@@ -227,7 +213,7 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "signature-help",
             "Return Roslyn signature help for the position at a one-based line and column.",
-            ["roslynkit signature-help --target <target> --file <path> [--project <path>] [--tfm <framework>] [--document-kind <kind>] --line <n> --column <n>"],
+            ["roslynkit signature-help --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]"],
             [
                 TargetOption(),
                 FileOption(),
@@ -240,7 +226,7 @@ public static class BuiltinCommandRegistry
         new BuiltinCommand(
             "symbol-source",
             "Return the full declaration source text for a symbol selector.",
-            ["roslynkit symbol-source --target <target> --symbol <selector>"],
+            ["roslynkit symbol-source --symbol <selector> [--target <target>]"],
             [
                 TargetOption(),
                 SymbolOption(required: true),
@@ -305,12 +291,7 @@ public static class BuiltinCommandRegistry
 
     private static OptionSpec TargetOption()
     {
-        return OptionSpec.String('t', "target", "target", "solution or project file to load", required: true);
-    }
-
-    private static OptionSpec DaemonTargetOption()
-    {
-        return OptionSpec.String('t', "target", "target", "solution or project file identifying the compatible daemon", required: true);
+        return OptionSpec.String('t', "target", "target", "optional solution, project, or repository-directory scope; defaults to the nearest repository");
     }
 
     private static OptionSpec FileOption()
@@ -320,7 +301,7 @@ public static class BuiltinCommandRegistry
 
     private static OptionSpec IndexPathOption()
     {
-        return OptionSpec.String(null, "index-path", "path", "Git-ignored repository-local SQLite database file path", required: true);
+        return OptionSpec.String(null, "index-path", "path", "optional SQLite database override; defaults to .roslynkit/roslynkit.db");
     }
 
     private static OptionSpec ProjectOption()

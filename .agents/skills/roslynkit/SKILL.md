@@ -26,7 +26,7 @@ For an English-oriented C# question with no declaration name:
 
 Before the first command, turn the requested behaviors into a short evidence checklist. Each clause must be supported by an emitted implementation or focused-test location before the investigation stops; a documentation summary or a neighboring helper is only a routing hint.
 
-1. Run one `search` with `--target`, `--index-path`, a focused natural-language query containing the central type or behavior nouns, and `--max-results 10`. This is normally the only search. If it has no useful method or location, refine the query and/or add `--kind method` while keeping `--max-results 10`. If that refinement still leaves no reliable jump target, run one third and final search with `--max-results 20`; use `--max-results 50` instead only when the first two rankings show many plausible near-ties that a 20-result window may truncate. When the first result is a test method, include its containing production type in the refined query instead of switching to broad symbol enumeration.
+1. Run one `search` with a focused natural-language query containing the central type or behavior nouns and `--max-results 10`. Let RoslynKit infer the repository, project forest, and catalog. This is normally the only search. If it has no useful method or location, refine the query and/or add `--kind method` while keeping `--max-results 10`. If that refinement still leaves no reliable jump target, run one third and final search with `--max-results 20`; use `--max-results 50` instead only when the first two rankings show many plausible near-ties that a 20-result window may truncate. When the first result is a test method, include its containing production type in the refined query instead of switching to broad symbol enumeration.
 2. Prefer returned method or test-method hits over namespace, type, and field hits. Compare `excerpt-source:` values with excerpts, kinds, identities, and locations; copy every returned `id:` or `loc:` verbatim.
 3. Run `symbol-context` for the most promising returned `id:` or `loc:` before reading source when syntax structure, declaration comments, or the next semantic relation is still unclear. Use its selected symbol, ancestors, descendants, and `target-id:` values to choose one focused hop.
 4. Read only the method bodies that carry the requested control-flow branches. Prefer `document-lines` around returned locations (at most 80 lines); use `symbol-source` only when a method body cannot be captured by that window. For reload/generation questions, cover both the reader/reload hand-off and the retry/mismatch branch rather than reading only the final installation helper. If the first search returns only a type, use one narrower search for its behavior in place of one source read.
@@ -38,20 +38,22 @@ When a declaration identity is already known, skip discovery and call `definitio
 
 ## Search and indexing
 
-Use the stable global command and always pass an explicit target:
+Use the stable global command from anywhere inside a standard Git repository:
 
 ```powershell
-roslynkit search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit.db --query "workspace daemon reload after source changes" --max-results 10
+roslynkit search --query "where is configuration validated during startup" --max-results 10
 ```
 
-`search` validates and refreshes the selected target automatically. The first request waits when no coherent partition exists; a coherent partition may answer `stale` while a writer refreshes. Use `index` for deliberate preparation and `--rebuild` only when a target partition must be recreated. The generated [references/commands.md](references/commands.md) file is authoritative for options and usage.
+RoslynKit finds the nearest standard `.git/` directory, discovers every tracked or unignored `.csproj`, and stores the catalog in `.roslynkit/roslynkit.db`. `search` validates and refreshes that repository partition automatically. The first request waits when no coherent partition exists; a coherent partition may answer `stale` while a writer refreshes. Use `index` for deliberate preparation and `--rebuild` only when a partition must be recreated. Pass `--target` only to narrow evaluation to a `.slnx`, `.sln`, `.slnf`, `.csproj`, or repository-directory scope; pass `--index-path` only for an advanced ignored-path override. The generated [references/commands.md](references/commands.md) file is authoritative for options and usage.
 
 Search supports repository-local physical C# projects and non-generated source documents with one target framework. It skips source-generated documents, `bin`/`obj` paths, standard generated-code markers, external projects, and external linked non-generated files. Narrow with `--project`, `--kind`, or `--max-results` only when needed.
 
-For a search-only judgment on a host where daemon or MSBuild build-host sockets are unavailable, add `--text-only --compact --balanced`. `--text-only` bypasses the daemon and MSBuild, scans repository C# files into a separate synthetic partition, and cannot be combined with `--project`. `--compact` keeps only ranked declarations, repository-relative locations, and excerpts; it omits `id:` and `excerpt-source:`, so do not use it when the next step must chain into semantic navigation. `--balanced` reserves half of the bounded result set for focused tests when both production and test paths match.
+The semantic partition persists exact symbols, locations, comments, project references, and key type/member relationships. A fresh catalog can answer exact `symbols`, symbol-based `definition`, `symbol-source`, and `implementations` without loading an MSBuild workspace. The first exact `references` request runs Roslyn and stores its bounded result; an identical later request can use that stored result. Other position and compiler-context commands load Roslyn normally.
+
+For a search-only judgment on a host where MSBuild workspace loading is unavailable, add `--text-only --compact --balanced`. `--text-only` scans repository C# files into a separate synthetic partition without MSBuild and cannot be combined with `--project`. `--compact` keeps only ranked declarations, repository-relative locations, and excerpts; it omits `id:` and `excerpt-source:`, so do not use it when the next step must chain into semantic navigation. `--balanced` reserves half of the bounded result set for focused tests when both production and test paths match.
 
 ```powershell
-roslynkit search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit-text.db --query "daemon disconnect buffered response fallback" --max-results 10 --text-only --compact --balanced
+roslynkit search --query "configuration validation fallback" --max-results 10 --text-only --compact --balanced
 ```
 
 `excerpt-source:` follows `excerpt:` when an excerpt is available. Its value is `documentation`, `comment`, `signature`, or `body`. An excerpt and its provenance help rank navigation candidates, but neither proves that a candidate satisfies the requested intent.
@@ -61,7 +63,7 @@ roslynkit search --target ./SomeSolution.slnx --index-path ./artifacts/roslynkit
 A syntax node is source structure, such as an `InvocationExpression` or `MethodDeclaration`; a symbol is the compiler-resolved identity connected to that structure. `symbol-context` bridges those views from exactly one selector: `--symbol <selector>`, or `--file` with `--line --column`. Use the same emitted `id:` and `loc:` values from a search result rather than reconstructing a selector.
 
 ```powershell
-roslynkit symbol-context --target ./SomeSolution.slnx --symbol "M:SomeNamespace.SomeType.Execute(System.String)"
+roslynkit symbol-context --symbol "M:SomeNamespace.SomeType.Execute(System.String)"
 ```
 
 The output identifies the selected node and symbol, alternate declarations, nearest-first syntax ancestors, and bounded descendants for declarations, invocations, constructions, and member references. Selected-node and ancestor entries carry syntax kind, location, and available `name:` or `id:` values. Descendants carry relationship, depth, syntax kind, location, and available `target-id:` values. It also returns XML documentation separately from structured declaration comments: each ordinary comment has placement (`leading`, `body`, or `trailing`), style (`line` or `block`), source location, and normalized text.
@@ -79,7 +81,7 @@ Coordinates must come from RoslynKit output, a diagnostic, or the user. If a com
 For a source slice, use the smallest inclusive range:
 
 ```powershell
-roslynkit document-lines --target ./SomeSolution.slnx --file ./src/App/Service.cs --start-line 40 --end-line 58
+roslynkit document-lines --file ./src/App/Service.cs --start-line 40 --end-line 58
 ```
 
 `--file` paths for RoslynKit document commands must end in `.cs`. Generated documents require `workspace --include-generated` first and the emitted generated path. Use `workspace` first only when generated/additional/analyzer-config documents or multiple document contexts are actually needed.

@@ -1,3 +1,5 @@
+using Microsoft.Data.Sqlite;
+
 namespace RoslynKit.Tests;
 
 /// <summary>
@@ -23,6 +25,37 @@ public sealed class SearchCommandTests
         Assert.True(File.Exists(area.DatabasePath));
         Assert.True(result.TotalCount > 0);
         Assert.Contains(result.Hits, hit => hit.DisplayName == ConfigurationMethodDisplayName);
+    }
+
+    [Fact]
+    public async Task Search_RefreshesAFreshPartitionWhenItsSemanticCatalogIsMissing()
+    {
+        await using var area = SearchCommandTestArea.Create();
+        await ExecuteSearchAsync(area, "where is configuration validation performed");
+
+        await using (var connection = new SqliteConnection($"Data Source={area.DatabasePath}"))
+        {
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                """
+                DELETE FROM semantic_catalog_operation_cache;
+                DELETE FROM semantic_catalog_relations;
+                DELETE FROM semantic_catalog_symbols;
+                DELETE FROM semantic_catalog_projects;
+                """;
+            await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        }
+
+        await ExecuteSearchAsync(area, "where is configuration validation performed");
+
+        await using var verificationConnection = new SqliteConnection($"Data Source={area.DatabasePath}");
+        await verificationConnection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var verificationCommand = verificationConnection.CreateCommand();
+        verificationCommand.CommandText = "SELECT COUNT(*) FROM semantic_catalog_symbols;";
+        var symbolCount = (long)(await verificationCommand.ExecuteScalarAsync(
+            TestContext.Current.CancellationToken))!;
+        Assert.True(symbolCount > 0);
     }
 
     [Fact]

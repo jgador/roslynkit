@@ -125,8 +125,8 @@ public sealed class BenchmarkCatalogTests
             BenchmarkCatalog.Select(cases, "default").Select(benchmarkCase => benchmarkCase.Id));
         Assert.Equal(
             [
-                "daemon-disconnect",
-                "workspace-generation",
+                "repository-project-forest",
+                "semantic-catalog-navigation",
                 "stale-search-index",
                 "symbol-comments",
             ],

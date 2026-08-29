@@ -10,7 +10,7 @@ namespace RoslynKit;
 internal static class SearchCommandService
 {
     private static readonly TimeSpan WorkspaceReloadDelay = TimeSpan.FromMilliseconds(250);
-    private static readonly TimeSpan IndexWriterWait = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan IndexWriterWait = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan InitialSearchWriterPoll = TimeSpan.FromMilliseconds(250);
 
     /// <summary>
@@ -25,8 +25,8 @@ internal static class SearchCommandService
         {
             var before = await CaptureFingerprintAsync(command.Name, context, cancellationToken).ConfigureAwait(false);
             var loaded = command.Flag("text-only")
-                ? await RoslynWorkspaceLoader.LoadTextOnlyAsync(command.Required("target"), cancellationToken).ConfigureAwait(false)
-                : await RoslynWorkspaceLoader.LoadAsync(command.Required("target"), cancellationToken).ConfigureAwait(false);
+                ? await RoslynWorkspaceLoader.LoadTextOnlyAsync(context.Path.TargetPath, cancellationToken).ConfigureAwait(false)
+                : await RoslynWorkspaceLoader.LoadAsync(context.Path.TargetPath, cancellationToken).ConfigureAwait(false);
             var after = await CaptureFingerprintAsync(command.Name, context, cancellationToken).ConfigureAwait(false);
             if (string.Equals(before.Value, after.Value, StringComparison.Ordinal))
             {
@@ -46,6 +46,70 @@ internal static class SearchCommandService
     }
 
     /// <summary>
+    /// Reuses a fresh target partition without loading Roslyn, otherwise loads and refreshes the selected workspace.
+    /// </summary>
+    public static async Task<IndexResult> IndexAsync(
+        ParsedCommand command,
+        CancellationToken cancellationToken)
+    {
+        var context = await ResolveContextAsync(command, cancellationToken).ConfigureAwait(false);
+        var fingerprint = await CaptureFingerprintAsync(command.Name, context, cancellationToken).ConfigureAwait(false);
+        var metadata = await context.Index.ReadMetadataAsync(
+            context.TargetIdentity,
+            cancellationToken).ConfigureAwait(false);
+        var hasCatalog = await context.Index.HasCatalogTargetAsync(
+            context.TargetIdentity,
+            cancellationToken).ConfigureAwait(false);
+        if (!command.Flag("rebuild")
+            && hasCatalog
+            && FingerprintMatches(metadata, StoredFingerprint.Create(fingerprint)))
+        {
+            return new IndexResult(
+                context.Path.TargetPath,
+                context.Path.DatabasePath,
+                SearchIndexState.Fresh,
+                metadata!.SymbolCount,
+                Rebuilt: false,
+                [],
+                RepositoryScope: Directory.Exists(context.Path.TargetPath));
+        }
+
+        using var loaded = await LoadStableWorkspaceAsync(command, cancellationToken).ConfigureAwait(false);
+        return await IndexAsync(command, loaded, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Queries a fresh target partition without loading Roslyn, otherwise refreshes it before searching.
+    /// </summary>
+    public static async Task<SearchResult> SearchAsync(
+        ParsedCommand command,
+        CancellationToken cancellationToken)
+    {
+        var context = await ResolveContextAsync(command, cancellationToken).ConfigureAwait(false);
+        var fingerprint = await CaptureFingerprintAsync(command.Name, context, cancellationToken).ConfigureAwait(false);
+        var metadata = await context.Index.ReadMetadataAsync(
+            context.TargetIdentity,
+            cancellationToken).ConfigureAwait(false);
+        if (FingerprintMatches(metadata, StoredFingerprint.Create(fingerprint))
+            && (command.Flag("text-only")
+                || await context.Index.HasCatalogTargetAsync(
+                    context.TargetIdentity,
+                    cancellationToken).ConfigureAwait(false)))
+        {
+            return await QueryAsync(
+                command,
+                context,
+                fingerprint,
+                solution: null,
+                workspaceDiagnostics: [],
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        using var loaded = await LoadStableWorkspaceAsync(command, cancellationToken).ConfigureAwait(false);
+        return await SearchAsync(command, loaded, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Strictly prepares the selected target partition and reports whether records changed.
     /// </summary>
     public static async Task<IndexResult> IndexAsync(
@@ -55,6 +119,9 @@ internal static class SearchCommandService
     {
         var context = await ResolveContextAsync(command, cancellationToken).ConfigureAwait(false);
         ValidateSingleTargetFrameworkProjects(command.Name, loaded.Solution);
+        var hasCatalog = await context.Index.HasCatalogTargetAsync(
+            context.TargetIdentity,
+            cancellationToken).ConfigureAwait(false);
 
         SqliteSearchIndexWriterLease lease;
         try
@@ -75,7 +142,9 @@ internal static class SearchCommandService
             var metadata = await lease.ReadMetadataAsync(context.TargetIdentity, cancellationToken).ConfigureAwait(false);
             var requestedFingerprint = StoredFingerprint.Create(fingerprint);
             var forceRebuild = command.Flag("rebuild");
-            if (!forceRebuild && FingerprintMatches(metadata, requestedFingerprint))
+            if (!forceRebuild
+                && hasCatalog
+                && FingerprintMatches(metadata, requestedFingerprint))
             {
                 return new IndexResult(
                     loaded.TargetPath,
@@ -83,7 +152,8 @@ internal static class SearchCommandService
                     SearchIndexState.Fresh,
                     metadata!.SymbolCount,
                     Rebuilt: false,
-                    loaded.WorkspaceDiagnostics);
+                    loaded.WorkspaceDiagnostics,
+                    RepositoryScope: Directory.Exists(context.Path.TargetPath));
             }
 
             var refreshed = await RefreshAsync(
@@ -101,7 +171,8 @@ internal static class SearchCommandService
                 SearchIndexState.Fresh,
                 refreshed.SymbolCount,
                 Rebuilt: forceRebuild,
-                loaded.WorkspaceDiagnostics);
+                loaded.WorkspaceDiagnostics,
+                RepositoryScope: Directory.Exists(context.Path.TargetPath));
         }
     }
 
@@ -116,21 +187,19 @@ internal static class SearchCommandService
         var context = await ResolveContextAsync(command, cancellationToken).ConfigureAwait(false);
         ValidateSingleTargetFrameworkProjects(command.Name, loaded.Solution);
 
-        var query = command.Required("query");
-        var queryTokens = SearchQueryTokenizer.TokenizeQuery(query);
-        var maxResults = command.OptionalInt("max-results", 20, 1);
-        var compact = command.Flag("compact");
-        var balanced = command.Flag("balanced");
-        var projectPaths = ResolveProjectFilter(command, context.Path.RepositoryRoot, loaded.Solution);
-        var kinds = ResolveKindFilter(command.Name, command.Optional("kind"));
         var fingerprint = await CaptureFingerprintAsync(command.Name, context, cancellationToken).ConfigureAwait(false);
         EnsureWorkspaceMatches(command.Name, context, loaded, fingerprint);
         var metadata = await context.Index.ReadMetadataAsync(context.TargetIdentity, cancellationToken).ConfigureAwait(false);
         var requestedFingerprint = StoredFingerprint.Create(fingerprint);
+        var hasRequiredCatalog = command.Flag("text-only")
+            || await context.Index.HasCatalogTargetAsync(
+                context.TargetIdentity,
+                cancellationToken).ConfigureAwait(false);
 
-        if (!FingerprintMatches(metadata, requestedFingerprint))
+        if (!FingerprintMatches(metadata, requestedFingerprint) || !hasRequiredCatalog)
         {
-            var mustWaitForCompatibleIndex = metadata is null
+            var mustWaitForCompatibleIndex = !hasRequiredCatalog
+                || metadata is null
                 || StoredFingerprint.TryParse(metadata.Fingerprint) is null;
             var lease = mustWaitForCompatibleIndex
                 ? await WaitForWriterLeaseAsync(context.Index, cancellationToken).ConfigureAwait(false)
@@ -144,7 +213,11 @@ internal static class SearchCommandService
                     EnsureWorkspaceMatches(command.Name, context, loaded, fingerprint);
                     requestedFingerprint = StoredFingerprint.Create(fingerprint);
                     metadata = await lease.ReadMetadataAsync(context.TargetIdentity, cancellationToken).ConfigureAwait(false);
-                    if (!FingerprintMatches(metadata, requestedFingerprint))
+                    hasRequiredCatalog = command.Flag("text-only")
+                        || await context.Index.HasCatalogTargetAsync(
+                            context.TargetIdentity,
+                            cancellationToken).ConfigureAwait(false);
+                    if (!FingerprintMatches(metadata, requestedFingerprint) || !hasRequiredCatalog)
                     {
                         metadata = await RefreshAsync(
                             command.Name,
@@ -153,13 +226,66 @@ internal static class SearchCommandService
                             lease,
                             fingerprint,
                             metadata,
-                            forceFullRebuild: false,
+                            forceFullRebuild: !hasRequiredCatalog,
                             cancellationToken).ConfigureAwait(false);
                     }
                 }
             }
         }
 
+        return await QueryAsync(
+            command,
+            context,
+            fingerprint,
+            loaded.Solution,
+            loaded.WorkspaceDiagnostics,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Returns a catalog context only when its target partition matches the current repository state.
+    /// </summary>
+    internal static async Task<SemanticCatalogContext?> ResolveFreshCatalogContextAsync(
+        ParsedCommand command,
+        CancellationToken cancellationToken)
+    {
+        var context = await ResolveContextAsync(command, cancellationToken).ConfigureAwait(false);
+        if (command.Flag("text-only"))
+        {
+            return null;
+        }
+
+        var fingerprint = await CaptureFingerprintAsync(command.Name, context, cancellationToken).ConfigureAwait(false);
+        var metadata = await context.Index.ReadMetadataAsync(
+            context.TargetIdentity,
+            cancellationToken).ConfigureAwait(false);
+        if (!FingerprintMatches(metadata, StoredFingerprint.Create(fingerprint))
+            || !await context.Index.HasCatalogTargetAsync(
+                context.TargetIdentity,
+                cancellationToken).ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        return new SemanticCatalogContext(context.Path, context.TargetIdentity, context.Index);
+    }
+
+    private static async Task<SearchResult> QueryAsync(
+        ParsedCommand command,
+        SearchCommandContext context,
+        SearchIndexFingerprint fingerprint,
+        Solution? solution,
+        IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics,
+        CancellationToken cancellationToken)
+    {
+        var query = command.Required("query");
+        var queryTokens = SearchQueryTokenizer.TokenizeQuery(query);
+        var maxResults = command.OptionalInt("max-results", 20, 1);
+        var compact = command.Flag("compact");
+        var balanced = command.Flag("balanced");
+        var projectPaths = ResolveProjectFilter(command, context.Path.RepositoryRoot, solution);
+        var kinds = ResolveKindFilter(command.Name, command.Optional("kind"));
+        var requestedFingerprint = StoredFingerprint.Create(fingerprint);
         var searchLimit = balanced
             ? (int)Math.Min((long)maxResults * 4, int.MaxValue)
             : maxResults;
@@ -201,7 +327,7 @@ internal static class SearchCommandService
             .ToArray();
 
         return new SearchResult(
-            loaded.TargetPath,
+            context.Path.TargetPath,
             context.Path.DatabasePath,
             query,
             indexState,
@@ -209,8 +335,9 @@ internal static class SearchCommandService
             hits.Length,
             search.TotalMatchCount > hits.Length,
             hits,
-            loaded.WorkspaceDiagnostics,
-            compact);
+            workspaceDiagnostics,
+            compact,
+            RepositoryScope: Directory.Exists(context.Path.TargetPath));
     }
 
     private static IReadOnlyList<SqliteSearchIndexMatch> SelectBalancedMatches(
@@ -241,6 +368,7 @@ internal static class SearchCommandService
                     break;
                 }
             }
+
         }
 
         return matches
@@ -259,20 +387,28 @@ internal static class SearchCommandService
         ParsedCommand command,
         CancellationToken cancellationToken)
     {
+        var targetPath = command.Optional("target");
+        var filePath = command.Optional("file");
+        var baseDirectory = targetPath is null && filePath is not null
+            ? Path.GetDirectoryName(Path.GetFullPath(filePath))
+            : null;
         var resolution = await new SearchIndexPathPolicy().ResolveAsync(
-            command.Required("target"),
-            command.Required("index-path"),
-            cancellationToken).ConfigureAwait(false);
+            targetPath,
+            command.Optional("index-path"),
+            cancellationToken,
+            baseDirectory).ConfigureAwait(false);
         if (!resolution.IsSuccessful)
         {
             throw new CliUsageException(command.Name, resolution.Diagnostic ?? "Search index path validation failed.");
         }
 
         var path = resolution.Path!;
-        var targetIdentity = RepositoryRelativePath.FromPhysicalPath(
-            path.RepositoryRoot,
-            path.TargetPath,
-            "Search target");
+        var targetIdentity = Directory.Exists(path.TargetPath)
+            ? RepositoryRelativePath.FromStoredValue("__repository__", "Repository search target")
+            : RepositoryRelativePath.FromPhysicalPath(
+                path.RepositoryRoot,
+                path.TargetPath,
+                "Search target");
         if (command.Flag("text-only"))
         {
             targetIdentity = RepositoryRelativePath.FromStoredValue(
@@ -304,10 +440,12 @@ internal static class SearchCommandService
             forceFullRebuild,
             cancellationToken).ConfigureAwait(false);
         IReadOnlyList<RoslynSearchCorpusRecord> records = [];
+        IReadOnlyList<SqliteSearchIndexProject> projects = [];
 
         if (plan.Kind == SearchIndexRefreshKind.Projects)
         {
             var incrementalRecords = new List<RoslynSearchCorpusRecord>();
+            var incrementalProjects = new List<SqliteSearchIndexProject>();
             foreach (var projectPath in plan.ProjectPaths)
             {
                 var build = await BuildCorpusAsync(
@@ -316,19 +454,23 @@ internal static class SearchCommandService
                     loaded.Solution,
                     projectPath,
                     cancellationToken).ConfigureAwait(false);
-                incrementalRecords.AddRange(build);
+                incrementalRecords.AddRange(build.Records);
+                incrementalProjects.AddRange(build.Projects);
             }
 
             records = incrementalRecords;
+            projects = incrementalProjects;
         }
         else if (plan.Kind == SearchIndexRefreshKind.Full)
         {
-            records = await BuildCorpusAsync(
+            var build = await BuildCorpusAsync(
                 commandName,
                 context,
                 loaded.Solution,
                 projectSelector: null,
                 cancellationToken).ConfigureAwait(false);
+            records = build.Records;
+            projects = build.Projects;
         }
 
         var verifiedFingerprint = await CaptureFingerprintAsync(commandName, context, cancellationToken).ConfigureAwait(false);
@@ -344,11 +486,16 @@ internal static class SearchCommandService
         var symbols = records.Select(record => record.ToSqliteSymbol()).ToArray();
         if (plan.Kind == SearchIndexRefreshKind.Projects)
         {
-            await lease.ReplaceProjectsAsync(target, plan.ProjectPaths, symbols, cancellationToken).ConfigureAwait(false);
+            await lease.ReplaceProjectsAsync(
+                target,
+                plan.ProjectPaths,
+                symbols,
+                projects,
+                cancellationToken).ConfigureAwait(false);
         }
         else if (plan.Kind == SearchIndexRefreshKind.Full)
         {
-            await lease.ReplaceTargetAsync(target, symbols, cancellationToken).ConfigureAwait(false);
+            await lease.ReplaceTargetAsync(target, symbols, projects, cancellationToken).ConfigureAwait(false);
         }
         else
         {
@@ -361,7 +508,7 @@ internal static class SearchCommandService
             ?? throw new InvalidOperationException("The search index refresh completed without persistent target metadata.");
     }
 
-    private static async Task<IReadOnlyList<RoslynSearchCorpusRecord>> BuildCorpusAsync(
+    private static async Task<RoslynSearchCorpusBuildResult> BuildCorpusAsync(
         string commandName,
         SearchCommandContext context,
         Solution solution,
@@ -382,7 +529,7 @@ internal static class SearchCommandService
                 string.Join(" ", build.Issues.Select(issue => issue.Message)));
         }
 
-        return build.Records;
+        return build;
     }
 
     private static async Task<SearchIndexRefreshPlan> CreateRefreshPlanAsync(
@@ -444,7 +591,6 @@ internal static class SearchCommandService
         Solution solution,
         IReadOnlyList<string> changedSourcePaths)
     {
-
         var affected = new HashSet<RepositoryRelativePath>();
         foreach (var relativePath in changedSourcePaths)
         {
@@ -479,13 +625,37 @@ internal static class SearchCommandService
             }
         }
 
+        var projectsByPath = solution.Projects
+            .Where(project => project.FilePath is not null)
+            .ToDictionary(
+                project => RepositoryRelativePath.FromPhysicalPath(
+                    context.Path.RepositoryRoot,
+                    project.FilePath!,
+                    $"Loaded project '{project.Name}'"),
+                project => project.Id);
+        var dependencyGraph = solution.GetProjectDependencyGraph();
+        var dependentProjectIds = affected
+            .Where(projectsByPath.ContainsKey)
+            .Select(project => projectsByPath[project])
+            .SelectMany(projectId => dependencyGraph
+                .GetProjectsThatTransitivelyDependOnThisProject(projectId)
+                .Append(projectId))
+            .ToHashSet();
+        foreach (var pair in projectsByPath)
+        {
+            if (dependentProjectIds.Contains(pair.Value))
+            {
+                affected.Add(pair.Key);
+            }
+        }
+
         return affected.OrderBy(path => path.Value, StringComparer.Ordinal).ToArray();
     }
 
     private static IReadOnlyCollection<RepositoryRelativePath>? ResolveProjectFilter(
         ParsedCommand command,
         string repositoryRoot,
-        Solution solution)
+        Solution? solution)
     {
         var selector = command.Optional("project");
         if (selector is null)
@@ -494,6 +664,22 @@ internal static class SearchCommandService
         }
 
         var fullSelector = Path.GetFullPath(selector);
+        if (solution is null)
+        {
+            if (!File.Exists(fullSelector))
+            {
+                throw new CliUsageException(command.Name, $"Project '{fullSelector}' does not exist.");
+            }
+
+            return
+            [
+                RepositoryRelativePath.FromPhysicalPath(
+                    repositoryRoot,
+                    fullSelector,
+                    "Search project"),
+            ];
+        }
+
         var matches = solution.Projects
             .Where(project => project.FilePath is not null && PathsEqual(project.FilePath, fullSelector))
             .Select(project => RepositoryRelativePath.FromPhysicalPath(

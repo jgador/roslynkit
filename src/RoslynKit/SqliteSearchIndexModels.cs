@@ -31,7 +31,43 @@ internal sealed record SqliteSearchIndexSymbol(
     string ContainingTokens,
     string DetailsTokens,
     string PathTokens,
-    string BodyTokens);
+    string BodyTokens,
+    string? MetadataName = null,
+    string? SymbolKind = null,
+    string? Accessibility = null,
+    bool IsStatic = false,
+    string? ContainingType = null,
+    string? ContainingNamespace = null,
+    int SpanStart = 0,
+    int SpanLength = 0,
+    IReadOnlyList<SqliteSearchIndexComment>? StructuredComments = null,
+    IReadOnlyList<SqliteSearchIndexRelation>? Relations = null);
+
+/// <summary>
+/// Preserves one ordinary source comment associated with an indexed declaration.
+/// </summary>
+internal sealed record SqliteSearchIndexComment(
+    string Placement,
+    string Style,
+    RepositoryRelativePath Path,
+    int Line,
+    int Column,
+    int EndLine,
+    int EndColumn,
+    string Text);
+
+/// <summary>
+/// Describes one outgoing semantic relationship from an indexed symbol.
+/// </summary>
+internal sealed record SqliteSearchIndexRelation(string Kind, string TargetSymbolId);
+
+/// <summary>
+/// Describes one indexed project and its direct project references.
+/// </summary>
+internal sealed record SqliteSearchIndexProject(
+    RepositoryRelativePath Path,
+    string Name,
+    IReadOnlyList<RepositoryRelativePath> ProjectReferences);
 
 /// <summary>
 /// Represents a tokenized full-text search request over one target partition.
