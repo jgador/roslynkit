@@ -16,7 +16,7 @@ internal sealed record BenchmarkOptions
 
     public string Case { get; init; } = "default";
 
-    public int MaximumResults { get; init; } = 10;
+    public int MaximumResults { get; init; } = 25;
 
     public string IndexPath { get; init; } = "./artifacts/roslynkit-text.db";
 
@@ -55,7 +55,7 @@ internal static partial class BenchmarkOptionsParser
           --trials <1-100>             Trials per selected case (default: 1)
           --case <id|default|all>      Select one case, the default suite, or all cases (default: default)
           --case-id <id|default|all>   Compatibility alias for --case
-          --max-results <2-50>         Maximum RoslynKit results (default: 10)
+          --max-results <2-50>         Maximum RoslynKit results (default: 25)
           --index-path <path>          Database directly below ./artifacts/
           --roslynkit-path <path>      Use an existing RoslynKit apphost
           --dry-run                    Print preparation and sessions without creating a run or starting a process

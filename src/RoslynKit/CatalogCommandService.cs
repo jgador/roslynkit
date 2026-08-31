@@ -120,7 +120,7 @@ internal static class CatalogCommandService
         CancellationToken cancellationToken)
     {
         var query = command.Required("query");
-        var maxResults = command.OptionalInt("max-results", 200, 1);
+        var maxResults = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
         var rows = await context.Index.ReadCatalogSymbolsByNameAsync(
             context.TargetIdentity,
             query,
@@ -257,7 +257,7 @@ internal static class CatalogCommandService
             .ThenBy(symbol => symbol.PrimaryLocation?.Path, StringComparer.Ordinal)
             .ThenBy(symbol => symbol.PrimaryLocation?.Line)
             .ToArray();
-        var maxResults = command.OptionalInt("max-results", 200, 1);
+        var maxResults = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
         var selected = symbols.Take(maxResults).ToArray();
         return new ImplementationsResult(
             document: null,

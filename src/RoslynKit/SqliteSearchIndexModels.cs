@@ -77,7 +77,7 @@ internal sealed record SqliteSearchIndexQuery(
     IReadOnlyList<string> Tokens,
     IReadOnlyCollection<RepositoryRelativePath>? ProjectPaths = null,
     IReadOnlyCollection<string>? Kinds = null,
-    int MaxResults = 20);
+    int MaxResults = CommandDefaults.MaxResults);
 
 /// <summary>
 /// Reports persistent metadata for one indexed target partition.

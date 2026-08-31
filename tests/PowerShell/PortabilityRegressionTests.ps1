@@ -90,15 +90,19 @@ finally {
 $agentsInstructions = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "AGENTS.md")
 Assert-True -Condition $agentsInstructions.Contains("pwsh -Command 'Get-Content AGENTS.md'") -Message "The agent instructions did not provide an explicit pwsh wrapper for PowerShell cmdlets under WSL or Linux."
 
+$commitContextSkill = Get-Content -Raw -LiteralPath (Join-Path $repoRoot ".agents/skills/commit-context/SKILL.md")
+Assert-True -Condition $commitContextSkill.Contains('one `Co-authored-by` trailer per contributing coding agent') -Message "The commit-context skill did not select trailers from contributing coding agents."
+Assert-True -Condition (-not $commitContextSkill.Contains('Co-authored-by: codex <242516109+codex@users.noreply.github.com>')) -Message "The commit-context skill still hardcoded Codex attribution."
+
 $securityAuditSkill = Get-Content -Raw -LiteralPath (Join-Path $repoRoot ".agents/skills/security-audit/SKILL.md")
 $securityAuditScannerProbe = "pwsh -NoProfile -Command 'Get-Command gitleaks,trufflehog -ErrorAction SilentlyContinue'"
 Assert-True -Condition $securityAuditSkill.Contains($securityAuditScannerProbe) -Message "The security-audit scanner probe did not use an explicit PowerShell host."
 Assert-True -Condition $securityAuditSkill.Contains("do not submit individual PowerShell cmdlets to Bash") -Message "The security-audit multiline commands did not require an explicit PowerShell execution context."
 
 $roslynKitDevSkill = Get-Content -Raw -LiteralPath (Join-Path $repoRoot ".agents/skills/roslynkit-dev/SKILL.md")
-Assert-True -Condition $roslynKitDevSkill.Contains("--max-results 10") -Message "The development skill did not begin search discovery with 10 results."
-Assert-True -Condition $roslynKitDevSkill.Contains('one third and final search with `--max-results 20`') -Message "The development skill did not cap ordinary fallback expansion at 20 results."
-Assert-True -Condition $roslynKitDevSkill.Contains('`--max-results 50` only when the first two rankings show many plausible near-ties') -Message "The development skill did not reserve 50 results for demonstrated ranking ambiguity."
+Assert-True -Condition $roslynKitDevSkill.Contains("--max-results 25") -Message "The development skill did not begin search discovery with 25 results."
+Assert-True -Condition $roslynKitDevSkill.Contains('increasing to `--max-results 50`') -Message "The development skill did not increase refined search discovery to 50 results."
+Assert-True -Condition $roslynKitDevSkill.Contains('one third and final search with `--max-results 200`') -Message "The development skill did not cap final fallback expansion at 200 results."
 
 $claudeWrapperPaths = @(
     ".claude/skills/commit-context/SKILL.md",

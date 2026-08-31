@@ -81,4 +81,7 @@ public static class ConfigurationValidationCatalog
 
     /// <summary>Performs configuration validation rule 21.</summary>
     public static bool ValidateConfigurationRule21() => true;
+
+    /// <summary>Performs configuration validation rule 22.</summary>
+    public static bool ValidateConfigurationRule22() => true;
 }

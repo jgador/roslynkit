@@ -17,7 +17,7 @@ RoslynKit is a compact, read-only semantic navigator for C# declarations, source
 - Never use `document-symbols` merely to turn a known declaration identity into coordinates. Use its fully qualified, unambiguous name or emitted `id:` directly.
 - When output provides an `id:`, pass that exact documentation-comment ID to the next `--symbol` command. Never shorten it or replace it with the adjacent display name.
 - Once the RoslynKit route starts, do not read C# source with `rg`, `grep`, `sed`, `cat`, or another shell text command. Use one bounded RoslynKit source or line-window command per implementation/test file instead.
-- Run no more than three `search` commands and no symbol-enumeration command after a useful method or location has been returned. Follow the bounded `10` -> refined `10` -> final `20`/`50` workflow below; never run a fourth search.
+- Run no more than three `search` commands and no symbol-enumeration command after a useful method or location has been returned. Follow the bounded `25` -> `50` -> `200` workflow below; never run a fourth search.
 - Stop after the source and focused-test evidence answers the question. A normal investigation needs one discovery search and at most a handful of follow-up reads.
 
 ## Bounded evidence workflow
@@ -26,7 +26,7 @@ For an English-oriented C# question with no declaration name:
 
 Before the first command, turn the requested behaviors into a short evidence checklist. Each clause must be supported by an emitted implementation or focused-test location before the investigation stops; a documentation summary or a neighboring helper is only a routing hint.
 
-1. Run one `search` with a focused natural-language query containing the central type or behavior nouns and `--max-results 10`. Let RoslynKit infer the repository, project forest, and catalog. This is normally the only search. If it has no useful method or location, refine the query and/or add `--kind method` while keeping `--max-results 10`. If that refinement still leaves no reliable jump target, run one third and final search with `--max-results 20`; use `--max-results 50` instead only when the first two rankings show many plausible near-ties that a 20-result window may truncate. When the first result is a test method, include its containing production type in the refined query instead of switching to broad symbol enumeration.
+1. Run one `search` with a focused natural-language query containing the central type or behavior nouns and `--max-results 25`. Let RoslynKit infer the repository, project forest, and catalog. This is normally the only search. If it has no useful method or location, refine the query and/or add `--kind method` while increasing to `--max-results 50`. If that refinement still leaves no reliable jump target, run one third and final search with `--max-results 200`. When the first result is a test method, include its containing production type in the refined query instead of switching to broad symbol enumeration.
 2. Prefer returned method or test-method hits over namespace, type, and field hits. Compare `excerpt-source:` values with excerpts, kinds, identities, and locations; copy every returned `id:` or `loc:` verbatim.
 3. Run `symbol-context` for the most promising returned `id:` or `loc:` before reading source when syntax structure, declaration comments, or the next semantic relation is still unclear. Use its selected symbol, ancestors, descendants, and `target-id:` values to choose one focused hop.
 4. Read only the method bodies that carry the requested control-flow branches. Prefer `document-lines` around returned locations (at most 80 lines); use `symbol-source` only when a method body cannot be captured by that window. For reload/generation questions, cover both the reader/reload hand-off and the retry/mismatch branch rather than reading only the final installation helper. If the first search returns only a type, use one narrower search for its behavior in place of one source read.
@@ -41,7 +41,7 @@ When a declaration identity is already known, skip discovery and call `definitio
 Use the stable global command from anywhere inside a standard Git repository:
 
 ```powershell
-roslynkit search --query "where is configuration validated during startup" --max-results 10
+roslynkit search --query "where is configuration validated during startup" --max-results 25
 ```
 
 RoslynKit finds the nearest standard `.git/` directory, discovers every tracked or unignored `.csproj`, and stores the catalog in `.roslynkit/roslynkit.db`. `search` validates and refreshes that repository partition automatically. The first request waits when no coherent partition exists; a coherent partition may answer `stale` while a writer refreshes. Use `index` for deliberate preparation and `--rebuild` only when a partition must be recreated. Pass `--target` only to narrow evaluation to a `.slnx`, `.sln`, `.slnf`, `.csproj`, or repository-directory scope; pass `--index-path` only for an advanced ignored-path override. The generated [references/commands.md](references/commands.md) file is authoritative for options and usage.
@@ -53,7 +53,7 @@ The semantic partition persists exact symbols, locations, comments, project refe
 For a search-only judgment on a host where MSBuild workspace loading is unavailable, add `--text-only --compact --balanced`. `--text-only` scans repository C# files into a separate synthetic partition without MSBuild and cannot be combined with `--project`. `--compact` keeps only ranked declarations, repository-relative locations, and excerpts; it omits `id:` and `excerpt-source:`, so do not use it when the next step must chain into semantic navigation. `--balanced` reserves half of the bounded result set for focused tests when both production and test paths match.
 
 ```powershell
-roslynkit search --query "configuration validation fallback" --max-results 10 --text-only --compact --balanced
+roslynkit search --query "configuration validation fallback" --max-results 25 --text-only --compact --balanced
 ```
 
 `excerpt-source:` follows `excerpt:` when an excerpt is available. Its value is `documentation`, `comment`, `signature`, or `body`. An excerpt and its provenance help rank navigation candidates, but neither proves that a candidate satisfies the requested intent.
@@ -68,7 +68,7 @@ roslynkit symbol-context --symbol "M:SomeNamespace.SomeType.Execute(System.Strin
 
 The output identifies the selected node and symbol, alternate declarations, nearest-first syntax ancestors, and bounded descendants for declarations, invocations, constructions, and member references. Selected-node and ancestor entries carry syntax kind, location, and available `name:` or `id:` values. Descendants carry relationship, depth, syntax kind, location, and available `target-id:` values. It also returns XML documentation separately from structured declaration comments: each ordinary comment has placement (`leading`, `body`, or `trailing`), style (`line` or `block`), source location, and normalized text.
 
-`--max-results` bounds descendants and defaults to `20`; `--max-comments` bounds ordinary comments and defaults to `3`. Each bounded collection reports its count and truncation state. Comments and XML documentation are routing hints, not proof. Use an emitted identity to select `definition`, `references`, `implementations`, `symbol-source`, or a narrow `document-lines` read for source-backed evidence.
+`--max-results` bounds descendants and defaults to `25`; `--max-comments` bounds ordinary comments and defaults to `3`. Each bounded collection reports its count and truncation state. Comments and XML documentation are routing hints, not proof. Use an emitted identity to select `definition`, `references`, `implementations`, `symbol-source`, or a narrow `document-lines` read for source-backed evidence.
 
 The coding agent maintains the intent and chooses each next relationship: `search` -> `symbol-context` -> semantic navigation -> source or focused-test evidence -> decision. Track visited IDs and locations to prevent cycles, and stop when focused evidence meets the intent. RoslynKit does not embed an LLM planner or infer that a comment establishes behavior.
 

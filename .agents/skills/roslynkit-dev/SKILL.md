@@ -13,7 +13,7 @@ These override every other section when they conflict. They exist because readin
 - Never read the same file twice. Capture needed context the first time.
 - Resolve positions with RoslynKit instead of falling back to `Read`/grep on `.cs` source once the file is loaded.
 - Prefer single-target commands (`definition`, `quick-info`, `type-definition`) over `symbols`; `symbols` returns verbose arrays. When `symbols` or `references` are required, always cap output with the smallest useful `--max-results` (often `--max-results 1` to confirm one known declaration).
-- Run no more than three `search` commands. Start with 10 results, keep one refined query at 10, then use one final 20-result fallback; raise only that final cap to 50 when earlier rankings show many plausible near-ties, and never run a fourth search.
+- Run no more than three `search` commands. Start with 25 results, increase one refined query to 50, then use one final 200-result fallback; never run a fourth search.
 - Stop once enough evidence is available. Do not gather extra members, siblings, or confirmation reads.
 
 Use this skill for ordinary C# semantic inspection when the side-by-side prerelease RoslynKit dev tool is already installed with `--tool-path`.
@@ -30,17 +30,17 @@ Do not default to `Get-Content`, `Select-String`, or grep-style file reads for q
 Use `search` when an English-oriented question describes a C# responsibility but no declared symbol name is known. From anywhere inside a standard Git repository, let RoslynKit infer the repository project forest and `.roslynkit/roslynkit.db` catalog.
 
 ```powershell
-& $roslynkitDev search --query "where is configuration validated during startup" --max-results 10
+& $roslynkitDev search --query "where is configuration validated during startup" --max-results 25
 ```
 
 `search` validates and refreshes the index automatically. Use `index` to prepare the index deliberately, and add `--rebuild` only when the selected partition must be recreated. Use `--target` only to narrow evaluation to a `.slnx`, `.sln`, `.slnf`, `.csproj`, or repository-directory scope; use `--index-path` only for an advanced ignored-path override.
 
-Treat the first 10-result search as the normal discovery pass. If it returns no useful method or location, refine the query and/or add `--kind method` while retaining `--max-results 10`. If the refined ranking still has no reliable jump target, run one third and final search with `--max-results 20`, or `--max-results 50` only when the first two rankings show many plausible near-ties that a 20-result window may truncate.
+Treat the first 25-result search as the normal discovery pass. If it returns no useful method or location, refine the query and/or add `--kind method` while increasing to `--max-results 50`. If the refined ranking still has no reliable jump target, run one third and final search with `--max-results 200`.
 
 For a search-only large language model (LLM) judgment on a constrained host, add `--text-only --compact --balanced`. This bypasses MSBuild loading, uses a separate repository-C# partition, returns repository-relative compact evidence, and reserves half of the bounded result set for tests when available. It cannot be combined with `--project`, and compact hits omit navigation IDs, so return to normal search when semantic follow-up is required.
 
 ```powershell
-& $roslynkitDev search --query "configuration validation fallback" --max-results 10 --text-only --compact --balanced
+& $roslynkitDev search --query "configuration validation fallback" --max-results 25 --text-only --compact --balanced
 ```
 
 ```powershell
@@ -80,7 +80,7 @@ A syntax node is source structure, such as an `InvocationExpression` or `MethodD
 
 The result reports the selected node and resolved symbol, alternate declarations, nearest-first syntax ancestors, and bounded declaration, invocation, construction, and member-reference descendants. Selected-node and ancestor entries carry syntax kind, location, and available `name:` or `id:` values. Descendant items carry a relation, depth, syntax kind, location, and available `target-id:` values. It keeps XML documentation separate from ordinary C# comments; each comment has placement (`leading`, `body`, or `trailing`), style (`line` or `block`), location, and normalized text.
 
-`--max-results` defaults to `20` descendants and `--max-comments` defaults to `3` comments. Both collections report count and truncation. Documentation and comments are routing hints, not proof. The coding agent selects the next semantic relation, tracks visited IDs and locations to prevent cycles, and verifies a route through `definition`, `references`, `implementations`, `symbol-source`, or a narrow `document-lines` read.
+`--max-results` defaults to `25` descendants and `--max-comments` defaults to `3` comments. Both collections report count and truncation. Documentation and comments are routing hints, not proof. The coding agent selects the next semantic relation, tracks visited IDs and locations to prevent cycles, and verifies a route through `definition`, `references`, `implementations`, `symbol-source`, or a narrow `document-lines` read.
 
 The bounded loop is `search` -> `symbol-context` -> semantic navigation -> source or focused-test evidence -> decision. RoslynKit supplies deterministic identities, syntax context, and metadata; it does not embed a planner or make an intent-completion judgment.
 
@@ -248,13 +248,13 @@ The following examples assume `$roslynkitDev` has already been set as shown abov
 ### Find implementations by declared name
 
 ```powershell
-& $roslynkitDev implementations --symbol SomeNamespace.ISomeService --max-results 20
+& $roslynkitDev implementations --symbol SomeNamespace.ISomeService --max-results 25
 ```
 
 ### Find implementations from a usage site
 
 ```powershell
-& $roslynkitDev implementations --file ./src/SomeProject/SomeFile.cs --line 12 --column 9 --max-results 20
+& $roslynkitDev implementations --file ./src/SomeProject/SomeFile.cs --line 12 --column 9 --max-results 25
 ```
 
 ### Read a declaration body

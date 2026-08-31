@@ -33,8 +33,11 @@ Update [artifacts/commit-context.md](../../../artifacts/commit-context.md) as a 
    - first line: subject
    - second line: blank
    - remaining lines: body paragraphs matching recent commit structure
-   - final trailer: `Co-authored-by: codex <242516109+codex@users.noreply.github.com>`
-   - keep one blank line between the final body paragraph and the trailer
+   - determine which coding agents materially produced the current change set from session evidence; do not infer authorship from the skill location or from the agent refreshing the file
+   - add one `Co-authored-by` trailer per contributing coding agent, using each agent's canonical identity from current runtime instructions
+   - when the active coding agent produced changes, use that agent's required trailer verbatim
+   - omit a trailer when either the contribution or canonical identity is unknown rather than guessing
+   - keep one blank line between the final body paragraph and the trailers
    - include the whole current change set, not only the latest edit
    - do not include status headings, verification logs, risk lists, or template labels unless they belong in the commit message itself
 
@@ -53,5 +56,7 @@ Update [artifacts/commit-context.md](../../../artifacts/commit-context.md) as a 
 
 <Optional imperative paragraph for important constraints or follow-through.>
 
-Co-authored-by: codex <242516109+codex@users.noreply.github.com>
+Co-authored-by: AGENT_NAME <CANONICAL_EMAIL>
 ```
+
+Repeat the trailer line only when multiple coding agents materially contributed to the current change set.

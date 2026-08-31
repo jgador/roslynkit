@@ -109,18 +109,18 @@ public static partial class RoslynCommandExecutor
         switch (command.Name)
         {
             case "diagnostics":
-                _ = command.OptionalInt("max-results", 200, 1);
+                _ = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
                 break;
             case "symbols":
                 _ = command.Required("query");
-                _ = command.OptionalInt("max-results", 200, 1);
+                _ = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
                 _ = GetSymbolFilter(command.Name, command.Optional("kind"));
                 break;
             case "index":
                 break;
             case "search":
                 _ = command.Required("query");
-                _ = command.OptionalInt("max-results", 20, 1);
+                _ = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
                 _ = GetSymbolFilter(command.Name, command.Optional("kind"));
                 if (command.Flag("text-only") && command.Optional("project") is not null)
                 {
@@ -139,10 +139,10 @@ public static partial class RoslynCommandExecutor
                 break;
             case "references":
             case "implementations":
-                _ = command.OptionalInt("max-results", 200, 1);
+                _ = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
                 break;
             case "symbol-context":
-                _ = command.OptionalInt("max-results", 20, 1);
+                _ = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
                 _ = command.OptionalInt("max-comments", 3, 1);
                 break;
             case "symbol-source":
@@ -206,7 +206,7 @@ public static partial class RoslynCommandExecutor
         RoslynWorkspaceLoader loaded,
         CancellationToken cancellationToken)
     {
-        var maxResults = command.OptionalInt("max-results", 200, 1);
+        var maxResults = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
         var includeGenerated = command.Flag("include-generated");
         var includeHidden = command.Flag("include-hidden");
         var diagnostics = new List<DiagnosticItem>();
@@ -253,7 +253,7 @@ public static partial class RoslynCommandExecutor
         CancellationToken cancellationToken)
     {
         var query = command.Required("query");
-        var maxResults = command.OptionalInt("max-results", 200, 1);
+        var maxResults = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
         var exact = command.Flag("exact");
         var caseSensitive = command.Flag("case-sensitive");
         var kind = command.Optional("kind");
@@ -408,7 +408,7 @@ public static partial class RoslynCommandExecutor
         RoslynWorkspaceLoader loaded,
         CancellationToken cancellationToken)
     {
-        var maxResults = command.OptionalInt("max-results", 200, 1);
+        var maxResults = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
         var target = await ResolveCommandSymbolAsync(command, loaded, cancellationToken).ConfigureAwait(false);
         var sourceSymbol = await SymbolFinder.FindSourceDefinitionAsync(target.Symbol, loaded.Solution, cancellationToken).ConfigureAwait(false) ?? target.Symbol;
         var references = await SymbolFinder.FindReferencesAsync(sourceSymbol, loaded.Solution, cancellationToken).ConfigureAwait(false);
@@ -441,7 +441,7 @@ public static partial class RoslynCommandExecutor
         RoslynWorkspaceLoader loaded,
         CancellationToken cancellationToken)
     {
-        var maxResults = command.OptionalInt("max-results", 200, 1);
+        var maxResults = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
         var target = await ResolveCommandSymbolAsync(command, loaded, cancellationToken).ConfigureAwait(false);
         var sourceSymbol = await SymbolFinder.FindSourceDefinitionAsync(target.Symbol, loaded.Solution, cancellationToken).ConfigureAwait(false) ?? target.Symbol;
         var implementations = await SymbolFinder.FindImplementationsAsync(sourceSymbol, loaded.Solution, cancellationToken: cancellationToken).ConfigureAwait(false);

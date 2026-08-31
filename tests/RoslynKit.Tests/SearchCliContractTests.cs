@@ -49,7 +49,7 @@ public sealed class SearchCliContractTests
         Assert.Equal("workspace daemon session", command.Required("query"));
         Assert.Equal("src\\RoslynKit\\RoslynKit.csproj", command.Required("project"));
         Assert.Equal("class", command.Required("kind"));
-        Assert.Equal(7, command.OptionalInt("max-results", 20, 1));
+        Assert.Equal(7, command.OptionalInt("max-results", CommandDefaults.MaxResults, 1));
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public sealed class SearchCliContractTests
             "--query", "workspace daemon session",
         ]);
 
-        Assert.Equal(20, command.OptionalInt("max-results", 20, 1));
+        Assert.Equal(25, command.OptionalInt("max-results", CommandDefaults.MaxResults, 1));
         Assert.Null(command.Optional("project"));
         Assert.Null(command.Optional("kind"));
     }

@@ -85,7 +85,7 @@ Find a declaration by name, then reuse the returned symbol ID for more precise n
 ```powershell
 roslynkit symbols --query MyService --exact --kind class
 roslynkit definition --symbol "T:MyApp.MyService"
-roslynkit references --symbol "M:MyApp.MyService.Execute(System.String)" --max-results 20
+roslynkit references --symbol "M:MyApp.MyService.Execute(System.String)" --max-results 25
 roslynkit symbol-source --symbol "M:MyApp.MyService.Execute(System.String)"
 ```
 
@@ -118,10 +118,10 @@ For a search-only workflow on a host that cannot load an MSBuild workspace, add 
 
 ```powershell
 roslynkit index --text-only
-roslynkit search --query "configuration validation fallback" --max-results 10 --text-only --compact --balanced
+roslynkit search --query "configuration validation fallback" --max-results 25 --text-only --compact --balanced
 ```
 
-The search index accepts only projects with one target framework. It rejects multi-targeted projects instead of selecting a framework implicitly. Every indexed project and non-generated source document must have an existing physical path inside the target's Git worktree; missing project or non-generated source paths, external projects, and external linked non-generated source files are rejected. Generated source documents are skipped, including source-generated documents, generated paths below `bin` or `obj`, and sources with standard generated-code markers injected from extracted NuGet packages outside the worktree. By default a target search covers every project; use `--project` to narrow it, `--kind` to select symbol kinds, and `--max-results` to change the default limit of 20.
+The search index accepts only projects with one target framework. It rejects multi-targeted projects instead of selecting a framework implicitly. Every indexed project and non-generated source document must have an existing physical path inside the target's Git worktree; missing project or non-generated source paths, external projects, and external linked non-generated source files are rejected. Generated source documents are skipped, including source-generated documents, generated paths below `bin` or `obj`, and sources with standard generated-code markers injected from extracted NuGet packages outside the worktree. By default a target search covers every project; use `--project` to narrow it, `--kind` to select symbol kinds, and `--max-results` to change the default limit of 25.
 
 Search results are not command pipelines. They contain ranked symbols, locations, and, when available, `id:` values. An agent evaluates several results and follows a promising `id:` with `symbol-context`, `definition`, `references`, or `symbol-source`; a `loc:` value can guide a position-based command or narrow source read. RoslynKit does not accept search hits through standard input. When an `excerpt:` is present, `excerpt-source:` identifies whether its text came from documentation, an ordinary comment, a signature, or a body.
 
@@ -130,15 +130,15 @@ Search results are not command pipelines. They contain ranked symbols, locations
 A syntax node is source structure, such as an `InvocationExpression` or `MethodDeclaration`. A symbol is the compiler-resolved identity connected to that structure, such as `M:MyApp.Validator.Validate(MyApp.Configuration)`. `symbol-context` starts from either identity or a source position and returns both views without persisting a syntax-tree node between commands.
 
 ```powershell
-roslynkit search --query "where does startup validate configuration" --max-results 10
+roslynkit search --query "where does startup validate configuration" --max-results 25
 roslynkit symbol-context --symbol "M:MyApp.Validator.Validate(MyApp.Configuration)"
 roslynkit symbol-context --file ./src/MyApp/Startup.cs --line 42 --column 18
-roslynkit references --symbol "M:MyApp.Validator.Validate(MyApp.Configuration)" --max-results 20
+roslynkit references --symbol "M:MyApp.Validator.Validate(MyApp.Configuration)" --max-results 25
 ```
 
 `symbol-context` accepts exactly one selector: `--symbol <selector>`, or `--file` plus `--line` and `--column`. Position selection also supports the normal document-context options. Its output contains the selected node and resolved symbol, alternate declarations when applicable, nearest-first syntax ancestors, and bounded descendant nodes for declarations, invocations, constructions, and member references. The selected node and ancestors include source location, syntax kind, and available `name:` or `id:` values. Descendant items include source location, syntax kind, relationship, depth, and available `target-id:` values for the next semantic hop.
 
-The command reports XML documentation separately from ordinary C# comments. Ordinary comments are structured with placement, style, location, and normalized text. `--max-results` defaults to `20` descendant items and `--max-comments` defaults to `3` comments; each bounded collection reports its count and truncation state.
+The command reports XML documentation separately from ordinary C# comments. Ordinary comments are structured with placement, style, location, and normalized text. `--max-results` defaults to `25` descendant items and `--max-comments` defaults to `3` comments; each bounded collection reports its count and truncation state.
 
 The intended intent-to-evidence loop is:
 

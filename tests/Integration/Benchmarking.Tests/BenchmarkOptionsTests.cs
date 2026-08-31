@@ -6,12 +6,13 @@ namespace RoslynKit.Benchmarking.Tests;
 public sealed class BenchmarkOptionsTests
 {
     [Fact]
-    public void Parse_UsesTerraAndDefaultSuite()
+    public void Parse_UsesExpectedDefaults()
     {
         var parsed = BenchmarkOptionsParser.Parse([]);
 
         Assert.Equal("gpt-5.6-terra", parsed.Model);
         Assert.Equal("default", parsed.Case);
+        Assert.Equal(25, parsed.MaximumResults);
     }
 
     [Theory]

@@ -100,13 +100,13 @@ public sealed class SearchCommandTests
     }
 
     [Fact]
-    public async Task Search_DefaultResultLimitReturnsTwentyOfMoreThanTwentyMatches()
+    public async Task Search_DefaultResultLimitReturnsTwentyFiveOfMoreThanTwentyFiveMatches()
     {
         await using var area = SearchCommandTestArea.Create();
 
         var result = await ExecuteSearchAsync(area, "configuration validation rule");
 
-        Assert.Equal(20, result.ReturnedCount);
+        Assert.Equal(25, result.ReturnedCount);
         Assert.True(result.TotalCount > result.ReturnedCount);
         Assert.True(result.Truncated);
     }

@@ -60,7 +60,7 @@ public static class BuiltinCommandRegistry
                 OptionSpec.String('q', "query", "text", "English-oriented text to search for", required: true),
                 SearchProjectOption(),
                 SymbolKindOption(),
-                SearchMaxResultsOption(),
+                MaxResultsOption(),
                 OptionSpec.Flag(null, "text-only", "search repository C# source in-process without loading MSBuild"),
                 OptionSpec.Flag(null, "compact", "emit concise ranked evidence with repository-relative locations"),
                 OptionSpec.Flag(null, "balanced", "reserve half of bounded results for focused test declarations when both source and tests match"),
@@ -314,11 +314,6 @@ public static class BuiltinCommandRegistry
         return OptionSpec.String(null, "project", "path", "limit search to one project file within the loaded target");
     }
 
-    private static OptionSpec SearchMaxResultsOption()
-    {
-        return OptionSpec.Integer(null, "max-results", "n", "maximum results to return (default: 20)");
-    }
-
     private static OptionSpec TargetFrameworkOption()
     {
         return OptionSpec.String(null, "tfm", "framework", "target framework when a document path is ambiguous across project contexts");
@@ -356,12 +351,12 @@ public static class BuiltinCommandRegistry
 
     private static OptionSpec MaxResultsOption()
     {
-        return OptionSpec.Integer(null, "max-results", "n", "maximum results to return");
+        return OptionSpec.Integer(null, "max-results", "n", $"maximum results to return (default: {CommandDefaults.MaxResults})");
     }
 
     private static OptionSpec SymbolContextMaxResultsOption()
     {
-        return OptionSpec.Integer(null, "max-results", "n", "maximum semantic descendants to return (default: 20)");
+        return OptionSpec.Integer(null, "max-results", "n", $"maximum semantic descendants to return (default: {CommandDefaults.MaxResults})");
     }
 
     private static OptionSpec MaxCommentsOption()

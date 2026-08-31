@@ -17,7 +17,7 @@ public static partial class RoslynCommandExecutor
         RoslynWorkspaceLoader loaded,
         CancellationToken cancellationToken)
     {
-        var maxResults = command.OptionalInt("max-results", 20, 1);
+        var maxResults = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
         var maxComments = command.OptionalInt("max-comments", 3, 1);
         var target = await ResolveCommandSymbolAsync(command, loaded, cancellationToken).ConfigureAwait(false);
         var sourceSymbol = await SymbolFinder.FindSourceDefinitionAsync(target.Symbol, loaded.Solution, cancellationToken).ConfigureAwait(false) ?? target.Symbol;

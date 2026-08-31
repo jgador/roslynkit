@@ -280,7 +280,7 @@ internal static class SearchCommandService
     {
         var query = command.Required("query");
         var queryTokens = SearchQueryTokenizer.TokenizeQuery(query);
-        var maxResults = command.OptionalInt("max-results", 20, 1);
+        var maxResults = command.OptionalInt("max-results", CommandDefaults.MaxResults, 1);
         var compact = command.Flag("compact");
         var balanced = command.Flag("balanced");
         var projectPaths = ResolveProjectFilter(command, context.Path.RepositoryRoot, solution);

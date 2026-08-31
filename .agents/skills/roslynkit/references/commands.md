@@ -83,7 +83,7 @@ roslynkit diagnostics [--target <target>] [--max-results <n>] [--include-hidden]
 ### Options
 
 - `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
-- `--max-results` `<n>`: maximum results to return
+- `--max-results` `<n>`: maximum results to return (default: 25)
 - `--include-hidden`: include hidden diagnostics
 - `--include-generated`: include diagnostics from generated, bin, and obj documents
 
@@ -121,7 +121,7 @@ roslynkit search --query <text> [--target <target>] [--index-path <path>] [--pro
 - `--query` / `-q` `<text>` (required): English-oriented text to search for
 - `--project` `<path>`: limit search to one project file within the loaded target
 - `--kind` `<kind>`: filter symbols by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate
-- `--max-results` `<n>`: maximum results to return (default: 20)
+- `--max-results` `<n>`: maximum results to return (default: 25)
 - `--text-only`: search repository C# source in-process without loading MSBuild
 - `--compact`: emit concise ranked evidence with repository-relative locations
 - `--balanced`: reserve half of bounded results for focused test declarations when both source and tests match
@@ -140,7 +140,7 @@ roslynkit symbols --query <text> [--target <target>] [--max-results <n>] [--case
 
 - `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--query` / `-q` `<text>` (required): symbol name text to search for
-- `--max-results` `<n>`: maximum results to return
+- `--max-results` `<n>`: maximum results to return (default: 25)
 - `--case-sensitive`: match query text case-sensitively
 - `--exact`: match the declaration name exactly
 - `--kind` `<kind>`: filter symbols by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate
@@ -264,7 +264,7 @@ roslynkit references --symbol <selector> [--target <target>] [--max-results <n>]
 - `--line` `<n>`: one-based source line
 - `--column` `<n>`: one-based source column
 - `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
-- `--max-results` `<n>`: maximum results to return
+- `--max-results` `<n>`: maximum results to return (default: 25)
 
 ## `implementations`
 
@@ -287,7 +287,7 @@ roslynkit implementations --symbol <selector> [--target <target>] [--max-results
 - `--line` `<n>`: one-based source line
 - `--column` `<n>`: one-based source column
 - `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
-- `--max-results` `<n>`: maximum results to return
+- `--max-results` `<n>`: maximum results to return (default: 25)
 
 ## `symbol-context`
 
@@ -310,7 +310,7 @@ roslynkit symbol-context --symbol <selector> [--target <target>] [--max-results 
 - `--line` `<n>`: one-based source line
 - `--column` `<n>`: one-based source column
 - `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
-- `--max-results` `<n>`: maximum semantic descendants to return (default: 20)
+- `--max-results` `<n>`: maximum semantic descendants to return (default: 25)
 - `--max-comments` `<n>`: maximum ordinary comments to return (default: 3)
 
 ## `quick-info`
