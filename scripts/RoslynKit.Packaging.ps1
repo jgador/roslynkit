@@ -466,9 +466,12 @@ function Show-RoslynKitDogfoodCommands
     Write-Host "Local folder-feed package:"
     Write-Host $packagePath
     Write-Host ""
-    Write-Host "Exact global replacement and exhaustive smoke test:"
+    Write-Host "Exact global replacement and automated exhaustive smoke test:"
     Write-Host "pwsh ./scripts/install-roslynkit-global.ps1"
     Write-Host "pwsh ./scripts/test-roslynkit-global.ps1"
+    Write-Host ""
+    Write-Host "Manual exhaustive command checklist:"
+    Write-Host "pwsh ./scripts/test-roslynkit-global.ps1 -PrintManualCommands"
 
     Write-Host ""
     Write-Host "Side-by-side dev install:"

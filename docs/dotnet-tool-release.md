@@ -20,9 +20,10 @@ The repo-local [.agents/skills/dotnet-tool-release/SKILL.md](../.agents/skills/d
 - `$dotnet-tool-release install-global`: replace the global `roslynkit` tool with the exact package already in the local folder feed.
 - `$dotnet-tool-release smoke-global`: exhaustively test every command through the current global `roslynkit` installation.
 - `$dotnet-tool-release local-release`: validate, pack, test in isolation, replace the global tool, and test every command globally.
+- `$dotnet-tool-release manual-release`: validate, pack, replace the global tool, and print every exhaustive command for the user to copy and run manually.
 - `$dotnet-tool-release status`: inspect the current version and any existing package without changing local state.
 
-The skill never publishes to NuGet.org and never commits, tags, or pushes Git state. The default `ready` action never changes the global tool. Global replacement occurs only through the explicit `install-global` and `local-release` actions. The complete workflows leave the exact installed and smoke-tested `.nupkg` in `./artifacts/packages/roslynkit`; do not repack after the smoke test, because that would produce an artifact that was not tested.
+The skill never publishes to NuGet.org and never commits, tags, or pushes Git state. The default `ready` action never changes the global tool. Global replacement occurs only through the explicit `install-global`, `local-release`, and `manual-release` actions. The automated complete workflows leave the exact installed and smoke-tested `.nupkg` in `./artifacts/packages/roslynkit`; do not repack after the smoke test, because that would produce an artifact that was not tested. `manual-release` leaves the exact installed package in the same folder but reports it as not upload-ready until the printed checklist has been run and assessed manually.
 
 The actions can also be composed explicitly around one immutable local package:
 
@@ -67,7 +68,7 @@ That script:
 3. Recreates the local folder feed at `./artifacts/packages/roslynkit`.
 4. Packs `src\RoslynKit\RoslynKit.csproj` in `Release` into that folder feed.
 5. Verifies that `roslynkit.<version>.nupkg` exists.
-6. Prints the exact global replacement and smoke-test commands for the packed version and, when the packed version is prerelease, the side-by-side dev install command.
+6. Prints the exact global replacement, automated smoke-test, and manual-checklist commands for the packed version and, when the packed version is prerelease, the side-by-side dev install command.
 
 If you want the raw command instead of the helper script, this is the equivalent pack step:
 
@@ -117,6 +118,14 @@ pwsh ./scripts/test-roslynkit-global.ps1
 This wrapper resolves the command in the active global `.dotnet\tools` directory, including a configured `DOTNET_CLI_HOME`, verifies that it reports the version from [Directory.Build.props](../Directory.Build.props), and runs [scripts/test-roslynkit-commands.ps1](../scripts/test-roslynkit-commands.ps1) against that exact path.
 
 To pack, validate in isolation, replace the global tool, and exhaustively test the global installation in one skill action, run `$dotnet-tool-release local-release`.
+
+To validate, pack, replace the global tool, and perform the exhaustive command checks manually, run `$dotnet-tool-release manual-release`. The agent runs:
+
+```powershell
+pwsh ./scripts/test-roslynkit-global.ps1 -PrintManualCommands
+```
+
+This mode verifies the installed version, invokes `help` only to ensure the checklist still covers the current command inventory, prepares a disposable fixture workspace, and prints one ordered PowerShell block. The block contains `help` and every representative built-in command invocation, with comments identifying the expected zero exit code, output text, package version, and created paths to inspect. The agent prints the block without executing it so it can be copied and run manually. Run the whole block in order because later commands reuse artifacts such as the search index created by earlier commands.
 
 ## 6. Install or update the side-by-side prerelease dev tool
 

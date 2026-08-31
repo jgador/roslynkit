@@ -5,7 +5,8 @@ param(
     [string]$ExpectedVersion,
     [string]$ValidationRoot,
     [ValidateRange(1, 1800)]
-    [int]$CommandTimeoutSeconds = 180
+    [int]$CommandTimeoutSeconds = 180,
+    [switch]$PrintManualCommands
 )
 
 Set-StrictMode -Version Latest
@@ -139,8 +140,44 @@ function Format-Invocation
         [string[]]$Arguments
     )
 
+    $quotedFilePath = "'$($FilePath.Replace("'", "''"))'"
     $quotedArguments = $Arguments | ForEach-Object { "'$($_.Replace("'", "''"))'" }
-    return "'$FilePath' $($quotedArguments -join ' ')"
+    return "& $quotedFilePath $($quotedArguments -join ' ')".TrimEnd()
+}
+
+function Write-ManualTestCase
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [string[]]$ExpectedText,
+        [string]$ExpectedCommandVersion,
+        [string[]]$ExpectedPaths = @()
+    )
+
+    Write-Host "    # $Name"
+    Write-Host "    # Expect exit code: 0"
+    foreach ($expected in $ExpectedText)
+    {
+        Write-Host "    # Expect stdout containing: $expected"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedCommandVersion))
+    {
+        Write-Host "    # Expect RoslynKit package version: $ExpectedCommandVersion (an optional +build metadata suffix is valid)"
+    }
+
+    foreach ($expectedPath in $ExpectedPaths)
+    {
+        Write-Host "    # Expect created path: $expectedPath"
+    }
+
+    Write-Host "    $(Format-Invocation -FilePath $resolvedCommandPath -Arguments $Arguments)"
+    Write-Host ""
 }
 
 function Invoke-RoslynKitCase
@@ -469,6 +506,60 @@ $results.Add([pscustomobject]@{
     Reasons = @($coverageReasons)
     Passed = $coverageReasons.Count -eq 0
 })
+
+if ($PrintManualCommands)
+{
+    if (-not $helpResult.Passed)
+    {
+        throw "Unable to prepare the manual command checklist because 'roslynkit help' failed validation: $($helpResult.Reasons -join '; ')`nstdout:`n$($helpResult.StandardOutput)`nstderr:`n$($helpResult.StandardError)"
+    }
+
+    if ($coverageReasons.Count -gt 0)
+    {
+        throw "Unable to prepare the manual command checklist because exhaustive command coverage is stale: $($coverageReasons -join '; ')"
+    }
+
+    $manualCommandCount = $commandCases.Count + 1
+    $quotedFixtureRoot = "'$($fixtureRoot.Replace("'", "''"))'"
+
+    Write-Host ""
+    Write-Host "RoslynKit manual exhaustive command checklist"
+    Write-Host "Command: $resolvedCommandPath"
+    Write-Host "Expected version: $ExpectedVersion"
+    Write-Host "Commands discovered: $($discoveredCommands.Count)"
+    Write-Host "Manual commands printed: $manualCommandCount"
+    Write-Host "Validation workspace: $fixtureRoot"
+    Write-Host ""
+    Write-Host "Copy and run this PowerShell block in order:"
+    Write-Host ""
+    Write-Host "Push-Location -LiteralPath $quotedFixtureRoot"
+    Write-Host "try"
+    Write-Host "{"
+    Write-ManualTestCase `
+        -Name "help" `
+        -Arguments @("help") `
+        -ExpectedText @("tool: roslynkit", "- command:")
+
+    foreach ($commandCase in $commandCases)
+    {
+        $caseExpectedVersion = if ($commandCase.Name -eq "version") { $ExpectedVersion } else { $null }
+        Write-ManualTestCase `
+            -Name $commandCase.Name `
+            -Arguments $commandCase.Arguments `
+            -ExpectedText $commandCase.ExpectedText `
+            -ExpectedCommandVersion $caseExpectedVersion `
+            -ExpectedPaths $commandCase.ExpectedPaths
+    }
+
+    Write-Host "}"
+    Write-Host "finally"
+    Write-Host "{"
+    Write-Host "    Pop-Location"
+    Write-Host "}"
+    Write-Host ""
+    Write-Host "No representative RoslynKit command was executed; run the printed block to perform the manual test."
+    return
+}
 
 foreach ($commandCase in $commandCases)
 {

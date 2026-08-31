@@ -119,9 +119,9 @@ Implicit repository index and search output uses `scope: repository` plus `repos
 
 - [src/RoslynKit/RoslynKit.csproj](../../src/RoslynKit/RoslynKit.csproj) defines the .NET tool package.
 - [scripts/prepare-roslynkit-package.ps1](../../scripts/prepare-roslynkit-package.ps1) prepares release artifacts.
-- [scripts/test-roslynkit-commands.ps1](../../scripts/test-roslynkit-commands.ps1) invokes every runtime command against deterministic fixtures, guards command coverage against runtime help, and aggregates failures.
+- [scripts/test-roslynkit-commands.ps1](../../scripts/test-roslynkit-commands.ps1) invokes every runtime command against deterministic fixtures or prints the same command inventory as a copy-ready manual checklist, guards command coverage against runtime help, and aggregates automated failures.
 - [scripts/test-roslynkit-package.ps1](../../scripts/test-roslynkit-package.ps1) installs and exhaustively tests the exact local package with isolated tool and cache paths.
-- [scripts/install-roslynkit-global.ps1](../../scripts/install-roslynkit-global.ps1) explicitly replaces the global tool with the exact staged local package, while [scripts/test-roslynkit-global.ps1](../../scripts/test-roslynkit-global.ps1) runs the same exhaustive suite through the global command path.
+- [scripts/install-roslynkit-global.ps1](../../scripts/install-roslynkit-global.ps1) explicitly replaces the global tool with the exact staged local package, while [scripts/test-roslynkit-global.ps1](../../scripts/test-roslynkit-global.ps1) runs the same exhaustive suite through the global command path or prepares its manual command checklist.
 - [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md) owns stable release and smoke-test instructions.
 - [.agents/skills/dotnet-tool-release/SKILL.md](../../.agents/skills/dotnet-tool-release/SKILL.md) orchestrates explicit local packaging, isolated and global installed-package testing, opt-in global replacement, and upload-readiness checks without publishing.
 - [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/) is the canonical embedded stable skill bundle.

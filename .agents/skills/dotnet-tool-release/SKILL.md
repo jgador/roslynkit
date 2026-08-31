@@ -1,6 +1,6 @@
 ---
 name: dotnet-tool-release
-description: Build, package, exhaustively smoke-test, and optionally install RoslynKit as the global .NET tool, while leaving the exact tested package ready for manual NuGet.org upload. Use only when the user invokes `$dotnet-tool-release` or explicitly asks to prepare or locally install a RoslynKit release; never publish it.
+description: Build, package, exhaustively smoke-test or print a manual test checklist, and optionally install RoslynKit as the global .NET tool, while leaving the exact package ready for manual NuGet.org upload. Use only when the user invokes `$dotnet-tool-release` or explicitly asks to prepare or locally install a RoslynKit release; never publish it.
 ---
 
 # RoslynKit .NET Tool Release
@@ -18,11 +18,12 @@ Read [docs/dotnet-tool-release.md](../../../docs/dotnet-tool-release.md) before 
 - `install-global`, `replace-global`, `global`: run the shared preflight, require the current package to exist without repacking it, and replace the global `roslynkit` tool with that exact local package by running [scripts/install-roslynkit-global.ps1](../../../scripts/install-roslynkit-global.ps1). Do not run repository validation or command smoke tests.
 - `smoke-global`, `test-global`: run the shared preflight, require the globally installed command to report the current version, and exercise every runtime command through that global command with [scripts/test-roslynkit-global.ps1](../../../scripts/test-roslynkit-global.ps1). Do not pack or replace the global tool.
 - `local-release`, `local`, `dogfood`: run the standard validation lane, pack and exhaustively test the isolated package, replace the global tool with that exact package, and exhaustively test every command through the global installation. This action does not check public NuGet version availability and is not upload-ready.
+- `manual-release`, `manual`, `manual-test`: run the standard validation lane, pack, replace the global tool with that exact package, and print a copy-ready exhaustive PowerShell checklist for the user to run manually. Do not run the isolated-package or global command smoke tests. This action does not check public NuGet version availability and is not upload-ready.
 - `ready`, `release`, `all`: run the complete release-candidate workflow below. This is the default.
 
 `publish`, `push`, `upload`, `tag`, and `commit` are outside this skill. Never run `dotnet nuget push`, create a GitHub release, change Git refs, commit, or push. Report the ready package path so a separate explicit publication action can use it.
 
-Global installation is allowed only for `install-global` and `local-release` actions and their aliases. `pack`, `smoke`, `ready`, `status`, and `smoke-global` must leave the global tool untouched.
+Global installation is allowed only for `install-global`, `local-release`, and `manual-release` actions and their aliases. `pack`, `smoke`, `ready`, `status`, and `smoke-global` must leave the global tool untouched.
 
 ## Shared Preflight
 
@@ -49,6 +50,8 @@ Global installation is allowed only for `install-global` and `local-release` act
 6. Fail when runtime help adds or removes a command without a matching smoke case.
 
 Exhaustive means every built-in command is invoked with representative valid arguments. It does not mean every option permutation is tested.
+
+[scripts/test-roslynkit-global.ps1](../../../scripts/test-roslynkit-global.ps1) with `-PrintManualCommands` must reuse the same command cases to prepare a disposable fixture workspace and print one ordered, copy-ready PowerShell block containing `help` plus every representative built-in command invocation. The printed comments must identify the expected zero exit code, output text, package version with any permitted build metadata, and created paths that the automated runner would verify. Checklist preparation may verify the installed version and invoke `help` to guard the command inventory, but it must not execute any representative test invocation. Include the generated command block verbatim before the result contract.
 
 ## Global Replacement Safety
 
@@ -95,6 +98,17 @@ For `local-release`:
 8. Recompute and require the package hash to match the original hash. Do not pack again.
 9. Re-check Git status and report any newly created non-ignored files. Do not stage, delete, or commit them.
 
+For `manual-release`:
+
+1. Run the shared preflight and the standard restore, build, and test commands from section 2 of the release guide. Stop at the first failure.
+2. Run `pwsh ./scripts/prepare-roslynkit-package.ps1`.
+3. Record the package size and SHA-256 hash.
+4. Run `pwsh ./scripts/install-roslynkit-global.ps1`. This deliberately replaces the existing global RoslynKit installation.
+5. Recompute and require the package hash to match.
+6. Run `pwsh ./scripts/test-roslynkit-global.ps1 -PrintManualCommands`. Require checklist preparation to succeed, then include the generated PowerShell block verbatim for the user to copy and run. Do not execute that block.
+7. Recompute and require the package hash to match the original hash. Do not pack again.
+8. Re-check Git status and report any newly created non-ignored files. Do not stage, delete, or commit them.
+
 For `smoke`, skip packing and repository validation; consume the existing package and run only the isolated installed-package test. For `install-global`, skip packing, repository validation, and exhaustive smoke testing; consume the existing package and run only the global replacement workflow. For `smoke-global`, do not pack or install; test the existing global command.
 
 ## Result Contract
@@ -102,7 +116,7 @@ For `smoke`, skip packing and repository validation; consume the existing packag
 Return these fields in this order:
 
 ```text
-Action: <status|pack|smoke|install-global|smoke-global|local-release|ready>
+Action: <status|pack|smoke|install-global|smoke-global|local-release|manual-release|ready>
 Version: <version>
 Package: <repo-relative path or missing>
 Size: <bytes or unavailable>
@@ -114,6 +128,7 @@ Installed-package smoke test: <passed|not run|failed>
 Global installation: <installed|replaced|not run|failed>
 Global command smoke test: <passed|not run|failed>
 Commands exercised: <passed/total or not run>
+Manual command checklist: <printed (count)|not run|failed>
 NuGet version availability: <available|already published|unverified|not checked>
 Upload readiness: <ready|not ready>
 Publication: not performed
