@@ -384,7 +384,7 @@ internal sealed partial class SqliteSearchIndex
         {
             var projectPath = RepositoryRelativePath.FromStoredValue(row.ProjectPath, "Persisted project path");
             var sourcePath = RepositoryRelativePath.FromStoredValue(row.Path, "Persisted source path");
-            ValidateSymbolKey(row.SymbolKey, query.TargetIdentity, projectPath, sourcePath);
+            ValidateSymbolKey(row.SymbolKey, projectPath, sourcePath);
             var excerpt = SelectExcerpt(
                 row.Documentation,
                 row.Comments,
@@ -747,7 +747,7 @@ internal sealed partial class SqliteSearchIndex
         ValidateTarget(target);
         ArgumentNullException.ThrowIfNull(symbols);
         ArgumentNullException.ThrowIfNull(projects);
-        ValidateSymbols(symbols, target.TargetIdentity);
+        ValidateSymbols(symbols);
 
         await DeleteTargetAsync(connection, transaction, target.TargetIdentity, cancellationToken);
         await InsertSymbolsAsync(connection, transaction, target.TargetIdentity, symbols, cancellationToken);
@@ -780,7 +780,7 @@ internal sealed partial class SqliteSearchIndex
             throw new ArgumentException("At least one project path must be provided for a project refresh.", nameof(projectPaths));
         }
 
-        ValidateSymbols(symbols, target.TargetIdentity);
+        ValidateSymbols(symbols);
         var knownProjectPaths = normalizedProjectPaths.ToHashSet();
         if (symbols.Any(symbol => !knownProjectPaths.Contains(symbol.ProjectPath)))
         {
@@ -1808,16 +1808,15 @@ internal sealed partial class SqliteSearchIndex
 
     private static void ValidateSymbolKey(
         string symbolKey,
-        RepositoryRelativePath targetIdentity,
         RepositoryRelativePath projectPath,
         RepositoryRelativePath sourcePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(symbolKey);
-        var expectedPathPrefix = $"{targetIdentity.Value}|{projectPath.Value}|{sourcePath.Value}|";
+        var expectedPathPrefix = $"{projectPath.Value}|{sourcePath.Value}|";
         if (!symbolKey.StartsWith(expectedPathPrefix, StringComparison.Ordinal))
         {
             throw new ArgumentException(
-                "Search symbol key path components must match the target identity, project path, and source path stored with the symbol.",
+                "Search symbol key path components must match the project path and source path stored with the symbol.",
                 nameof(symbolKey));
         }
 
@@ -1826,7 +1825,7 @@ internal sealed partial class SqliteSearchIndex
         if (spanSeparator <= 0 || spanSeparator == identityAndSpan.Length - 1)
         {
             throw new ArgumentException(
-                "Search symbol keys must use the '<target>|<project>|<source>|<symbol>|<span>' structure.",
+                "Search symbol keys must use the '<project>|<source>|<symbol>|<span>' structure.",
                 nameof(symbolKey));
         }
     }
@@ -1887,9 +1886,7 @@ internal sealed partial class SqliteSearchIndex
             $"The SQLite search index schema is incompatible because table '{objectName}' has columns [{string.Join(", ", actualColumns.Order(StringComparer.Ordinal))}] but requires [{string.Join(", ", expectedColumns.Order(StringComparer.Ordinal))}]. Delete the index database and run index again.");
     }
 
-    private static void ValidateSymbols(
-        IReadOnlyCollection<SqliteSearchIndexSymbol> symbols,
-        RepositoryRelativePath targetIdentity)
+    private static void ValidateSymbols(IReadOnlyCollection<SqliteSearchIndexSymbol> symbols)
     {
         var keys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var symbol in symbols)
@@ -1902,7 +1899,7 @@ internal sealed partial class SqliteSearchIndex
             ArgumentException.ThrowIfNullOrWhiteSpace(symbol.Name);
             ArgumentException.ThrowIfNullOrWhiteSpace(symbol.DisplayName);
             ValidateRepositoryRelativePath(symbol.Path, "Search symbol source path");
-            ValidateSymbolKey(symbol.SymbolKey, targetIdentity, symbol.ProjectPath, symbol.Path);
+            ValidateSymbolKey(symbol.SymbolKey, symbol.ProjectPath, symbol.Path);
             if (symbol.Line <= 0 || symbol.Column <= 0 || symbol.EndLine <= 0 || symbol.EndColumn <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(symbols), "Search symbol ranges must use one-based positive line and column values.");

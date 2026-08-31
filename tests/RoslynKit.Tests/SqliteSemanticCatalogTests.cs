@@ -25,7 +25,6 @@ public sealed class SqliteSemanticCatalogTests
             var implementationPath = Relative("src/App/Worker.cs");
             var methodPath = Relative("src/App/Runner.cs");
             var interfaceSymbol = CreateSymbol(
-                target,
                 project,
                 interfacePath,
                 "T:Fixture.IWorker",
@@ -33,7 +32,6 @@ public sealed class SqliteSemanticCatalogTests
                 "Fixture.IWorker",
                 "interface");
             var implementationSymbol = CreateSymbol(
-                target,
                 project,
                 implementationPath,
                 "T:Fixture.Worker",
@@ -44,7 +42,6 @@ public sealed class SqliteSemanticCatalogTests
                 Relations = [new SqliteSearchIndexRelation("implements", "T:Fixture.IWorker")],
             };
             var methodSymbol = CreateSymbol(
-                target,
                 project,
                 methodPath,
                 "M:Fixture.Runner.Run~System.Int32",
@@ -82,6 +79,10 @@ public sealed class SqliteSemanticCatalogTests
                 cancellationToken);
             var method = Assert.Single(methodMatches);
             Assert.Equal(20, method.SpanStart);
+            Assert.Equal(
+                "src/App/App.csproj|src/App/Runner.cs|M:Fixture.Runner.Run~System.Int32|0",
+                method.SymbolKey);
+            Assert.DoesNotContain(target.Value, method.SymbolKey, StringComparison.Ordinal);
             Assert.Equal("Runs the fixture.", Assert.Single(method.StructuredComments!).Text);
 
             var implementations = await index.ReadCatalogImplementationsAsync(
@@ -131,7 +132,6 @@ public sealed class SqliteSemanticCatalogTests
     }
 
     private static SqliteSearchIndexSymbol CreateSymbol(
-        RepositoryRelativePath target,
         RepositoryRelativePath project,
         RepositoryRelativePath path,
         string symbolId,
@@ -140,7 +140,7 @@ public sealed class SqliteSemanticCatalogTests
         string kind)
     {
         return new SqliteSearchIndexSymbol(
-            $"{target.Value}|{project.Value}|{path.Value}|{symbolId}|0",
+            $"{project.Value}|{path.Value}|{symbolId}|0",
             project,
             "App",
             kind,

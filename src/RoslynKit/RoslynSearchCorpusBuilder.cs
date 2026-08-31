@@ -370,7 +370,7 @@ internal sealed class RoslynSearchCorpusBuilder
         var excerpt = SelectExcerpt(documentation, comments, signature, body);
         var documentKey = $"{projectPath.Value}|{declaration.Document.Path.Value}";
         var identity = symbolId ?? $"{symbol.Kind}:{displayName}";
-        var symbolKey = $"{targetIdentity.Value}|{documentKey}|{identity}|{declaration.Node.Span.Start}";
+        var symbolKey = $"{documentKey}|{identity}|{declaration.Node.Span.Start}";
 
         return new RoslynSearchCorpusRecord(
             targetIdentity,

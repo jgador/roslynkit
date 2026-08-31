@@ -12,10 +12,11 @@ public sealed class RoslynSearchCorpusBuilderTests
     public async Task BuildAsync_ProducesNavigableDeclarationsAndWeightedSearchFields()
     {
         using var loaded = await RoslynWorkspaceLoader.LoadAsync(TestPaths.FixtureProjectPath(), TestContext.Current.CancellationToken);
+        var targetIdentity = RepositoryRelativePath.FromStoredValue("__repository__", "search target");
 
         var result = await new RoslynSearchCorpusBuilder().BuildAsync(
             loaded.Solution,
-            CreateBuildOptions(),
+            CreateBuildOptions(targetIdentity: targetIdentity),
             TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Issues);
@@ -25,12 +26,16 @@ public sealed class RoslynSearchCorpusBuilderTests
             .Where(record => record.Kind == "namespace" && record.Name == "FixtureApp")
             .ToArray();
 
-        Assert.Equal("tests/FixtureWorkspace/App/App.csproj", messageMethod.TargetIdentity.Value);
+        Assert.Equal(targetIdentity, messageMethod.TargetIdentity);
         Assert.Equal("method", messageMethod.Kind);
         Assert.StartsWith("M:FixtureApp.IMessageSource.GetMessage(System.String)", messageMethod.SymbolId, StringComparison.Ordinal);
         Assert.Equal("tests/FixtureWorkspace/App/App.csproj", messageMethod.ProjectPath.Value);
         Assert.Equal("tests/FixtureWorkspace/App/Source.cs", messageMethod.Path.Value);
-        Assert.Contains("tests/FixtureWorkspace/App/Source.cs", messageMethod.SymbolKey, StringComparison.Ordinal);
+        Assert.StartsWith(
+            $"{messageMethod.ProjectPath.Value}|{messageMethod.Path.Value}|{messageMethod.SymbolId}|",
+            messageMethod.SymbolKey,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(targetIdentity.Value, messageMethod.SymbolKey, StringComparison.Ordinal);
         Assert.DoesNotContain(TestPaths.RepositoryRoot(), messageMethod.SymbolKey, StringComparison.OrdinalIgnoreCase);
         Assert.StartsWith("tests fixtureworkspace", messageMethod.PathTokens, StringComparison.Ordinal);
         Assert.Contains("app", messageMethod.PathTokens, StringComparison.Ordinal);
@@ -303,11 +308,13 @@ public sealed class RoslynSearchCorpusBuilderTests
         Assert.Contains("one target framework", issue.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static RoslynSearchCorpusBuildOptions CreateBuildOptions(RepositoryRelativePath? projectPath = null)
+    private static RoslynSearchCorpusBuildOptions CreateBuildOptions(
+        RepositoryRelativePath? projectPath = null,
+        RepositoryRelativePath? targetIdentity = null)
     {
         return new RoslynSearchCorpusBuildOptions(
             TestPaths.RepositoryRoot(),
-            RepositoryRelativePath.FromStoredValue("tests/FixtureWorkspace/App/App.csproj", "search target"),
+            targetIdentity ?? RepositoryRelativePath.FromStoredValue("tests/FixtureWorkspace/App/App.csproj", "search target"),
             projectPath);
     }
 }
