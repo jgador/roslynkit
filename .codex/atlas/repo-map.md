@@ -123,7 +123,7 @@ Implicit repository index and search output uses `scope: repository` plus `repos
 - [scripts/test-roslynkit-package.ps1](../../scripts/test-roslynkit-package.ps1) installs and exhaustively tests the exact local package with isolated tool and cache paths.
 - [scripts/install-roslynkit-global.ps1](../../scripts/install-roslynkit-global.ps1) explicitly replaces the global tool with the exact staged local package, while [scripts/test-roslynkit-global.ps1](../../scripts/test-roslynkit-global.ps1) runs the same exhaustive suite through the global command path or prepares its manual command checklist.
 - [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md) owns stable release and smoke-test instructions.
-- [.agents/skills/dotnet-tool-release/SKILL.md](../../.agents/skills/dotnet-tool-release/SKILL.md) orchestrates explicit local packaging, isolated and global installed-package testing, opt-in global replacement, and upload-readiness checks without publishing.
+- [.agents/skills/dotnet-tool-release/SKILL.md](../../.agents/skills/dotnet-tool-release/SKILL.md) orchestrates ordered action batches with safe same-invocation phase reuse across explicit local packaging, isolated and global installed-package testing, opt-in global replacement, and upload-readiness checks without publishing.
 - [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/) is the canonical embedded stable skill bundle.
 - [src/RoslynKit/InitCommandExecutor.cs](../../src/RoslynKit/InitCommandExecutor.cs) scaffolds that bundle for supported coding agents.
 - [docs/agents/skill-maintenance.md](../../docs/agents/skill-maintenance.md) defines synchronization rules.

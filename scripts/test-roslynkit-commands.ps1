@@ -145,6 +145,27 @@ function Format-Invocation
     return "& $quotedFilePath $($quotedArguments -join ' ')".TrimEnd()
 }
 
+function Format-ManualInvocation
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    $formattedArguments = $Arguments | ForEach-Object {
+        if ($_ -match "^[A-Za-z0-9_./:\\-]+$")
+        {
+            $_
+        }
+        else
+        {
+            "'$($_.Replace("'", "''"))'"
+        }
+    }
+
+    return "roslynkit $($formattedArguments -join ' ')".TrimEnd()
+}
+
 function Write-ManualTestCase
 {
     param(
@@ -176,7 +197,7 @@ function Write-ManualTestCase
         Write-Host "    # Expect created path: $expectedPath"
     }
 
-    Write-Host "    $(Format-Invocation -FilePath $resolvedCommandPath -Arguments $Arguments)"
+    Write-Host "    $(Format-ManualInvocation -Arguments $Arguments)"
     Write-Host ""
 }
 

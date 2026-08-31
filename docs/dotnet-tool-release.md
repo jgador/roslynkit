@@ -23,9 +23,19 @@ The repo-local [.agents/skills/dotnet-tool-release/SKILL.md](../.agents/skills/d
 - `$dotnet-tool-release manual-release`: validate, pack, replace the global tool, and print every exhaustive command for the user to copy and run manually.
 - `$dotnet-tool-release status`: inspect the current version and any existing package without changing local state.
 
+One invocation may contain any ordered combination of actions, with one optional expected version applied to the whole batch:
+
+```text
+$dotnet-tool-release pack smoke
+$dotnet-tool-release pack and manual-release
+$dotnet-tool-release pack, smoke, install-global, smoke-global 0.2.8
+```
+
+The skill validates the complete action sequence before starting and stops at the first failure. Successful phases from earlier actions are reused within the same invocation only while the Git snapshot, version, package hash, and installed command state remain unchanged. For example, `pack manual-release` validates and packs once, then installs that exact package globally and prints the manual checklist. Testing or installing a package that existed before the invocation records it for later package-consuming actions, but does not replace validation and packing when a later action requires a package from the current checkout. Actions retain their requested order; the skill does not move a later `pack` ahead of an earlier `smoke`.
+
 The skill never publishes to NuGet.org and never commits, tags, or pushes Git state. The default `ready` action never changes the global tool. Global replacement occurs only through the explicit `install-global`, `local-release`, and `manual-release` actions. The automated complete workflows leave the exact installed and smoke-tested `.nupkg` in `./artifacts/packages/roslynkit`; do not repack after the smoke test, because that would produce an artifact that was not tested. `manual-release` leaves the exact installed package in the same folder but reports it as not upload-ready until the printed checklist has been run and assessed manually.
 
-The actions can also be composed explicitly around one immutable local package:
+The same actions can still be run as separate invocations around one immutable local package:
 
 ```text
 $dotnet-tool-release pack
@@ -125,7 +135,7 @@ To validate, pack, replace the global tool, and perform the exhaustive command c
 pwsh ./scripts/test-roslynkit-global.ps1 -PrintManualCommands
 ```
 
-This mode verifies the installed version, invokes `help` only to ensure the checklist still covers the current command inventory, prepares a disposable fixture workspace, and prints one ordered PowerShell block. The block contains `help` and every representative built-in command invocation, with comments identifying the expected zero exit code, output text, package version, and created paths to inspect. The agent prints the block without executing it so it can be copied and run manually. Run the whole block in order because later commands reuse artifacts such as the search index created by earlier commands.
+This mode verifies the installed version, invokes `help` only to ensure the checklist still covers the current command inventory, prepares a disposable fixture workspace, and prints one ordered PowerShell block. The block contains `help` and every representative built-in command invocation, with each runnable line beginning with the global command name `roslynkit` so it can be copied and pasted directly. Comments identify the expected zero exit code, output text, package version, and created paths to inspect. The resolved global executable path is still verified before the checklist is printed. The agent prints the block without executing it so it can be run manually. Run the whole block in order because later commands reuse artifacts such as the search index created by earlier commands.
 
 ## 6. Install or update the side-by-side prerelease dev tool
 

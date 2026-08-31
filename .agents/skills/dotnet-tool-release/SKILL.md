@@ -5,13 +5,13 @@ description: Build, package, exhaustively smoke-test or print a manual test chec
 
 # RoslynKit .NET Tool Release
 
-Treat the text after `$dotnet-tool-release` as a forgiving command-like request. A bare invocation behaves as `ready`. Accept at most one action and one optional expected version; reject unknown, duplicate, or conflicting values with a compact usage correction.
+Treat the text after `$dotnet-tool-release` as a forgiving command-like request. A bare invocation behaves as `ready`. Accept one or more actions and at most one optional expected version. Treat `and`, `then`, and commas as optional action separators. Canonicalize aliases, preserve the requested action order, and apply the expected version to the whole batch. Validate the complete request and require any expected version to match [Directory.Build.props](../../../Directory.Build.props) before starting the first action; reject unknown values, multiple expected versions, prohibited actions, and version mismatches with a compact usage correction.
 
 Read [docs/dotnet-tool-release.md](../../../docs/dotnet-tool-release.md) before packaging or testing. That document is the source of truth for release metadata, commands, local installation, smoke tests, and publication constraints. This skill only selects and enforces the workflow.
 
 ## Actions
 
-- `help`, `?`: show the actions and current version from [Directory.Build.props](../../../Directory.Build.props). Start nothing.
+- `help`, `?`: show the actions, multi-action syntax, and current version from [Directory.Build.props](../../../Directory.Build.props). Start nothing for this action.
 - `status`, `inspect`: report the current version, Git status, expected package path, and package hash when the expected file exists. Do not infer that an existing package passed prior validation.
 - `pack`, `candidate`: run the shared preflight, the standard validation lane in section 2 of the release guide, and the local folder-feed build in section 3. Stop after reporting the package path, size, and SHA-256 hash.
 - `smoke`, `test`, `test-package`: run the shared preflight, require the current package to exist without repacking it, and exhaustively test it in an isolated tool path with [scripts/test-roslynkit-package.ps1](../../../scripts/test-roslynkit-package.ps1). Do not run repository validation or claim full release readiness.
@@ -21,9 +21,32 @@ Read [docs/dotnet-tool-release.md](../../../docs/dotnet-tool-release.md) before 
 - `manual-release`, `manual`, `manual-test`: run the standard validation lane, pack, replace the global tool with that exact package, and print a copy-ready exhaustive PowerShell checklist for the user to run manually. Do not run the isolated-package or global command smoke tests. This action does not check public NuGet version availability and is not upload-ready.
 - `ready`, `release`, `all`: run the complete release-candidate workflow below. This is the default.
 
+## Multiple Actions
+
+Run requested actions in order and report each canonical action in that same order. Examples:
+
+```text
+$dotnet-tool-release pack smoke
+$dotnet-tool-release pack and manual-release
+$dotnet-tool-release pack, smoke, install-global, smoke-global 0.2.8
+```
+
+Track successful work completed during the current invocation as phase evidence: shared preflight, repository validation, package creation and hash, installed-package smoke test, global installation, global command smoke test, manual checklist preparation, and NuGet version availability. A later action may reuse earlier phase evidence instead of repeating expensive work only while all relevant invariants still match:
+
+- the version, package metadata, and non-ignored Git snapshot are unchanged for shared preflight and repository validation;
+- the package still exists at the expected path with the recorded SHA-256 hash;
+- installed or smoke-tested commands still resolve to the recorded path and expected version;
+- upload readiness still refers to the exact package hash that passed every required check.
+
+Never infer phase success from an artifact that predates the current invocation. An action such as `smoke` may explicitly validate a pre-existing package, after which later package-consuming actions in the same batch may reuse that recorded path and hash. Consuming a pre-existing package does not satisfy repository validation or package creation required by `pack`, `ready`, `local-release`, or `manual-release`. `help` prints help at its requested position, and `status` always performs a fresh inspection; neither action satisfies later validation requirements.
+
+For example, `pack manual-release` runs shared preflight, repository validation, and packing once, then reuses that exact package for global replacement and checklist preparation. `pack smoke install-global smoke-global` validates and packs once, then runs each distinct requested test or installation phase once. Repeated or overlapping actions remain visible in action reporting even when their already-satisfied phases are reused.
+
+Stop the batch at the first failed action or required phase and mark all later actions as not run. Do not reorder actions across the requested sequence to make an otherwise invalid earlier action succeed.
+
 `publish`, `push`, `upload`, `tag`, and `commit` are outside this skill. Never run `dotnet nuget push`, create a GitHub release, change Git refs, commit, or push. Report the ready package path so a separate explicit publication action can use it.
 
-Global installation is allowed only for `install-global`, `local-release`, and `manual-release` actions and their aliases. `pack`, `smoke`, `ready`, `status`, and `smoke-global` must leave the global tool untouched.
+Global installation is allowed only when the batch contains `install-global`, `local-release`, or `manual-release` and execution reaches that action. `pack`, `smoke`, `ready`, `status`, and `smoke-global` never authorize global replacement by themselves.
 
 ## Shared Preflight
 
@@ -51,7 +74,7 @@ Global installation is allowed only for `install-global`, `local-release`, and `
 
 Exhaustive means every built-in command is invoked with representative valid arguments. It does not mean every option permutation is tested.
 
-[scripts/test-roslynkit-global.ps1](../../../scripts/test-roslynkit-global.ps1) with `-PrintManualCommands` must reuse the same command cases to prepare a disposable fixture workspace and print one ordered, copy-ready PowerShell block containing `help` plus every representative built-in command invocation. The printed comments must identify the expected zero exit code, output text, package version with any permitted build metadata, and created paths that the automated runner would verify. Checklist preparation may verify the installed version and invoke `help` to guard the command inventory, but it must not execute any representative test invocation. Include the generated command block verbatim before the result contract.
+[scripts/test-roslynkit-global.ps1](../../../scripts/test-roslynkit-global.ps1) with `-PrintManualCommands` must reuse the same command cases to prepare a disposable fixture workspace and print one ordered, copy-ready PowerShell block containing `help` plus every representative built-in command invocation. Every runnable line must start with the literal global command name `roslynkit`, such as `roslynkit workspace ...`; do not substitute an absolute executable path or PowerShell call operator. The printed comments must identify the expected zero exit code, output text, package version with any permitted build metadata, and created paths that the automated runner would verify. Checklist preparation may verify the installed version and invoke `help` to guard the command inventory, but it must not execute any representative test invocation. Include the generated command block verbatim before the result contract.
 
 ## Global Replacement Safety
 
@@ -113,10 +136,13 @@ For `smoke`, skip packing and repository validation; consume the existing packag
 
 ## Result Contract
 
-Return these fields in this order:
+For every invocation other than `help` alone, return the aggregate fields below in this order. For multiple actions, first print a compact action table in requested order with each action's `passed`, `failed`, `not run`, or `help shown` outcome and any reused phases.
 
 ```text
-Action: <status|pack|smoke|install-global|smoke-global|local-release|manual-release|ready>
+Actions: <canonical action names joined by " -> ">
+Completed actions: <canonical completed actions in order or none>
+Stopped at: <failed canonical action or none>
+Reused phases: <comma-separated phase names or none>
 Version: <version>
 Package: <repo-relative path or missing>
 Size: <bytes or unavailable>
@@ -135,6 +161,6 @@ Publication: not performed
 Working tree: <unchanged by workflow or concise status summary>
 ```
 
-Only `ready` may report `Upload readiness: ready`, and only after every required command succeeds, the version is not already published, and the package hash remains unchanged.
+The aggregate fields describe the final batch state. Only a batch containing `ready` may report `Upload readiness: ready`, and only after every required command succeeds, the version is not already published, and the package hash remains unchanged.
 
 When an exhaustive smoke test fails, include the detailed per-command failure report emitted by the script before the result contract. Do not replace it with a generic failure summary.
