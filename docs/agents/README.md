@@ -24,6 +24,7 @@ Keep manual references, roadmap inventories, and benchmark procedures outside th
 Do not duplicate shared runtime or workflow facts in hand-written agent docs. Link to the canonical source instead:
 
 - [docs/dev-install.md](../dev-install.md): side-by-side prerelease development install.
+- [docs/dotnet-tool-release.md](../dotnet-tool-release.md): release-candidate packaging, exhaustive command testing, and opt-in global tool replacement.
 
 When command metadata changes, regenerate [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md) with:
 

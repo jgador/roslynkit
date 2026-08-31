@@ -1,6 +1,6 @@
 # Repository Map
 
-Last verified: 2026-04-03
+Last verified: 2026-08-31
 
 RoslynKit is a .NET 10 command-line tool for deterministic, read-only C# inspection. Each invocation is a short-lived process. Reusable state lives in a repository-local SQLite semantic catalog rather than a daemon, named pipe, socket, or Model Context Protocol (MCP) server.
 
@@ -34,7 +34,7 @@ args
                  -> fresh SQLite answer when supported
                  -> otherwise fall through
             -> RoslynWorkspaceLoader
-            -> PositionResolver / SymbolResolver
+            -> PositionResolver / RoslynSymbolResolver
             -> Roslyn operation
             -> optional lazy operation-cache write
        -> MarkdownProjection
@@ -66,7 +66,7 @@ Command metadata in `BuiltinCommandRegistry` generates [.agents/skills/roslynkit
 2. [src/RoslynKit/RepositoryProjectDiscovery.cs](../../src/RoslynKit/RepositoryProjectDiscovery.cs)
 3. [src/RoslynKit/RoslynWorkspaceLoader.cs](../../src/RoslynKit/RoslynWorkspaceLoader.cs)
 4. [tests/RoslynKit.Tests/RepositoryDiscoveryTests.cs](../../tests/RoslynKit.Tests/RepositoryDiscoveryTests.cs)
-5. [tests/RoslynKit.Tests/WorkspaceCommandExecutionTests.cs](../../tests/RoslynKit.Tests/WorkspaceCommandExecutionTests.cs)
+5. [tests/RoslynKit.Tests/CommandExecution/WorkspaceCommandExecutionTests.cs](../../tests/RoslynKit.Tests/CommandExecution/WorkspaceCommandExecutionTests.cs)
 
 `RepositoryContext` establishes the repository and default catalog boundary. `RepositoryProjectDiscovery` uses Git-visible files as the project source of truth. `RoslynWorkspaceLoader` opens the implicit project forest or an explicit target and avoids reopening projects already loaded transitively.
 
@@ -97,8 +97,8 @@ Search validates source fingerprints and republishes search and semantic data at
 1. [src/RoslynKit/RoslynCommandExecutor.cs](../../src/RoslynKit/RoslynCommandExecutor.cs)
 2. [src/RoslynKit/CatalogCommandService.cs](../../src/RoslynKit/CatalogCommandService.cs)
 3. [src/RoslynKit/PositionResolver.cs](../../src/RoslynKit/PositionResolver.cs)
-4. [src/RoslynKit/SymbolResolver.cs](../../src/RoslynKit/SymbolResolver.cs)
-5. [tests/RoslynKit.Tests/SemanticCommandExecutionTests.cs](../../tests/RoslynKit.Tests/SemanticCommandExecutionTests.cs)
+4. [src/RoslynKit/RoslynSymbolResolver.cs](../../src/RoslynKit/RoslynSymbolResolver.cs)
+5. [tests/RoslynKit.Tests/CommandExecution/SemanticCommandExecutionTests.cs](../../tests/RoslynKit.Tests/CommandExecution/SemanticCommandExecutionTests.cs)
 
 A fresh catalog can answer exact `symbols`, symbol-based `definition`, `symbol-source`, and `implementations`. A matching cached `references` invocation can also complete from SQLite. Missing or unsupported catalog answers fall through to a newly loaded Roslyn workspace; live reference results are persisted only when a fresh catalog already exists.
 
@@ -119,9 +119,13 @@ Implicit repository index and search output uses `scope: repository` plus `repos
 
 - [src/RoslynKit/RoslynKit.csproj](../../src/RoslynKit/RoslynKit.csproj) defines the .NET tool package.
 - [scripts/prepare-roslynkit-package.ps1](../../scripts/prepare-roslynkit-package.ps1) prepares release artifacts.
+- [scripts/test-roslynkit-commands.ps1](../../scripts/test-roslynkit-commands.ps1) invokes every runtime command against deterministic fixtures, guards command coverage against runtime help, and aggregates failures.
+- [scripts/test-roslynkit-package.ps1](../../scripts/test-roslynkit-package.ps1) installs and exhaustively tests the exact local package with isolated tool and cache paths.
+- [scripts/install-roslynkit-global.ps1](../../scripts/install-roslynkit-global.ps1) explicitly replaces the global tool with the exact staged local package, while [scripts/test-roslynkit-global.ps1](../../scripts/test-roslynkit-global.ps1) runs the same exhaustive suite through the global command path.
 - [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md) owns stable release and smoke-test instructions.
+- [.agents/skills/dotnet-tool-release/SKILL.md](../../.agents/skills/dotnet-tool-release/SKILL.md) orchestrates explicit local packaging, isolated and global installed-package testing, opt-in global replacement, and upload-readiness checks without publishing.
 - [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/) is the canonical embedded stable skill bundle.
-- [src/RoslynKit/SkillScaffoldService.cs](../../src/RoslynKit/SkillScaffoldService.cs) scaffolds that bundle for supported coding agents.
+- [src/RoslynKit/InitCommandExecutor.cs](../../src/RoslynKit/InitCommandExecutor.cs) scaffolds that bundle for supported coding agents.
 - [docs/agents/skill-maintenance.md](../../docs/agents/skill-maintenance.md) defines synchronization rules.
 
 ## Validation Routes

@@ -88,6 +88,30 @@ function Get-RoslynKitToolCommandPath
     return Join-Path $ToolPath (Get-RoslynKitToolCommandName)
 }
 
+function Get-RoslynKitGlobalToolPath
+{
+    $globalToolHome = if ([string]::IsNullOrWhiteSpace($env:DOTNET_CLI_HOME))
+    {
+        [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
+    }
+    else
+    {
+        Resolve-FullPath $env:DOTNET_CLI_HOME
+    }
+
+    if ([string]::IsNullOrWhiteSpace($globalToolHome))
+    {
+        throw "Unable to resolve the home directory for the global .NET tool path."
+    }
+
+    return Join-Path (Join-Path $globalToolHome ".dotnet") "tools"
+}
+
+function Get-RoslynKitGlobalToolCommandPath
+{
+    return Get-RoslynKitToolCommandPath -ToolPath (Get-RoslynKitGlobalToolPath)
+}
+
 function Resolve-FullPath
 {
     param(
@@ -96,6 +120,31 @@ function Resolve-FullPath
     )
 
     return [System.IO.Path]::GetFullPath($Path)
+}
+
+function Write-RoslynKitLocalNuGetConfig
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PackageFeedPath,
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath
+    )
+
+    $configDirectory = Split-Path -Parent $ConfigPath
+    New-Item -ItemType Directory -Path $configDirectory -Force | Out-Null
+
+    $escapedPackageFeedPath = [System.Security.SecurityElement]::Escape($PackageFeedPath)
+    $nugetConfig = @"
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="roslynkit-local" value="$escapedPackageFeedPath" />
+  </packageSources>
+</configuration>
+"@
+    Set-Content -LiteralPath $ConfigPath -Value $nugetConfig -Encoding utf8NoBOM
 }
 
 function Test-IsPrereleaseVersion
@@ -295,6 +344,51 @@ function Invoke-DotNet
     }
 }
 
+function Test-RoslynKitCommandVersionOutput
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$VersionText,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedVersion
+    )
+
+    $escapedExpectedVersion = [Regex]::Escape($ExpectedVersion)
+    $versionPattern = "\Aroslynkit version $escapedExpectedVersion(?:\+[0-9A-Za-z.-]+)?\z"
+    return [Regex]::IsMatch(
+        $VersionText.Trim(),
+        $versionPattern,
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
+}
+
+function Assert-RoslynKitCommandVersion
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$CommandPath,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedVersion
+    )
+
+    if (-not (Test-Path -LiteralPath $CommandPath -PathType Leaf))
+    {
+        throw "Expected installed RoslynKit command was not found: $CommandPath"
+    }
+
+    $versionOutput = @(& $CommandPath "--version" 2>&1)
+    if ($LASTEXITCODE -ne 0)
+    {
+        throw "The installed roslynkit command failed with exit code $LASTEXITCODE."
+    }
+
+    $versionOutput | ForEach-Object { Write-Host $_ }
+    $versionText = $versionOutput -join [Environment]::NewLine
+    if (-not (Test-RoslynKitCommandVersionOutput -VersionText $versionText -ExpectedVersion $ExpectedVersion))
+    {
+        throw "Expected RoslynKit $ExpectedVersion, but received: $versionText"
+    }
+}
+
 function Invoke-RoslynKitBuild
 {
     param(
@@ -372,10 +466,9 @@ function Show-RoslynKitDogfoodCommands
     Write-Host "Local folder-feed package:"
     Write-Host $packagePath
     Write-Host ""
-    Write-Host "Global install commands:"
-    Write-Host "dotnet tool install --global $($Context.PackageId) --add-source `"$($Context.PackageFeedPath)`" --version $($Context.PackageVersion) --ignore-failed-sources"
-    Write-Host "dotnet tool update --global $($Context.PackageId) --add-source `"$($Context.PackageFeedPath)`" --version $($Context.PackageVersion) --ignore-failed-sources"
-    Write-Host "roslynkit version"
+    Write-Host "Exact global replacement and exhaustive smoke test:"
+    Write-Host "pwsh ./scripts/install-roslynkit-global.ps1"
+    Write-Host "pwsh ./scripts/test-roslynkit-global.ps1"
 
     Write-Host ""
     Write-Host "Side-by-side dev install:"
