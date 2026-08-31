@@ -33,10 +33,15 @@ Update [artifacts/commit-context.md](../../../artifacts/commit-context.md) as a 
    - first line: subject
    - second line: blank
    - remaining lines: body paragraphs matching recent commit structure
-   - determine which coding agents materially produced the current change set from session evidence; do not infer authorship from the skill location or from the agent refreshing the file
-   - add one `Co-authored-by` trailer per contributing coding agent, using each agent's canonical identity from current runtime instructions
-   - when the active coding agent produced changes, use that agent's required trailer verbatim
-   - omit a trailer when either the contribution or canonical identity is unknown rather than guessing
+   - determine which coding agents materially produced the current change set from session evidence; do not infer contribution from the skill location or from an agent that only refreshes the file
+   - detect the active coding agent from explicit system or developer runtime identity; do not infer it from Git configuration, commit history, the branch name, environment variables, or executable paths
+   - prefer an exact canonical identity supplied by the runtime; otherwise map a recognized runtime identity to the repository-approved trailer identity:
+     - `Codex` -> `codex <242516109+codex@users.noreply.github.com>`
+     - `GitHub Copilot` or `Copilot` -> `Copilot <223556219+Copilot@users.noreply.github.com>`
+     - `Cursor` -> `Cursor <cursoragent@cursor.com>`
+   - when the detected active agent materially produced changes, add its mapped `Co-authored-by` trailer automatically without requiring an invocation modifier
+   - add one `Co-authored-by` trailer per contributing coding agent; include other materially contributing agents when session evidence supplies a canonical identity or matches the known mapping
+   - omit a trailer when either the contribution or canonical identity remains unknown rather than guessing
    - keep one blank line between the final body paragraph and the trailers
    - include the whole current change set, not only the latest edit
    - do not include status headings, verification logs, risk lists, or template labels unless they belong in the commit message itself

@@ -92,7 +92,10 @@ Assert-True -Condition $agentsInstructions.Contains("pwsh -Command 'Get-Content 
 
 $commitContextSkill = Get-Content -Raw -LiteralPath (Join-Path $repoRoot ".agents/skills/commit-context/SKILL.md")
 Assert-True -Condition $commitContextSkill.Contains('one `Co-authored-by` trailer per contributing coding agent') -Message "The commit-context skill did not select trailers from contributing coding agents."
-Assert-True -Condition (-not $commitContextSkill.Contains('Co-authored-by: codex <242516109+codex@users.noreply.github.com>')) -Message "The commit-context skill still hardcoded Codex attribution."
+Assert-True -Condition $commitContextSkill.Contains('`Codex` -> `codex <242516109+codex@users.noreply.github.com>`') -Message "The commit-context skill did not map the Codex runtime identity."
+Assert-True -Condition $commitContextSkill.Contains('`GitHub Copilot` or `Copilot` -> `Copilot <223556219+Copilot@users.noreply.github.com>`') -Message "The commit-context skill did not map the Copilot runtime identity."
+Assert-True -Condition $commitContextSkill.Contains('`Cursor` -> `Cursor <cursoragent@cursor.com>`') -Message "The commit-context skill did not map the Cursor runtime identity."
+Assert-True -Condition $commitContextSkill.Contains('automatically without requiring an invocation modifier') -Message "The commit-context skill did not automatically attribute a materially contributing active agent."
 
 $securityAuditSkill = Get-Content -Raw -LiteralPath (Join-Path $repoRoot ".agents/skills/security-audit/SKILL.md")
 $securityAuditScannerProbe = "pwsh -NoProfile -Command 'Get-Command gitleaks,trufflehog -ErrorAction SilentlyContinue'"

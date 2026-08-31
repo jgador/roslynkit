@@ -9,6 +9,7 @@ description: Use the side-by-side prerelease RoslynKit dev tool first when seman
 
 These override every other section when they conflict. They exist because reading whole files and re-reading files is the dominant token cost.
 
+- Treat `--target` as an opt-in scope override. Omit it from ordinary commands run inside a standard Git repository, even when a solution or project path is known. Add it only when the requested evidence must be restricted to a particular solution, solution filter, project, or repository directory, or when a generated-document lookup needs that explicit boundary.
 - Never read a whole `.cs` file when a position-based command (`quick-info`, `definition`, `references`) answers the question.
 - Never read the same file twice. Capture needed context the first time.
 - Resolve positions with RoslynKit instead of falling back to `Read`/grep on `.cs` source once the file is loaded.
@@ -33,7 +34,7 @@ Use `search` when an English-oriented question describes a C# responsibility but
 & $roslynkitDev search --query "where is configuration validated during startup" --max-results 25
 ```
 
-`search` validates and refreshes the index automatically. Use `index` to prepare the index deliberately, and add `--rebuild` only when the selected partition must be recreated. Use `--target` only to narrow evaluation to a `.slnx`, `.sln`, `.slnf`, `.csproj`, or repository-directory scope; use `--index-path` only for an advanced ignored-path override.
+`search` validates and refreshes the index automatically. Use `index` to prepare the index deliberately, and add `--rebuild` only when the selected partition must be recreated. Start discovery without `--target`; the presence of a `.slnx`, `.sln`, `.slnf`, or `.csproj` does not by itself justify narrowing the repository scope. Use the opt-in override only under the explicit-boundary rule above, and use `--index-path` only for an advanced ignored-path override.
 
 Treat the first 25-result search as the normal discovery pass. If it returns no useful method or location, refine the query and/or add `--kind method` while increasing to `--max-results 50`. If the refined ranking still has no reliable jump target, run one third and final search with `--max-results 200`.
 
@@ -104,7 +105,7 @@ $roslynkitDev = Join-Path $roslynkitDev ($(if ($IsWindows) { "roslynkit.exe" } e
 & $roslynkitDev <command>
 ```
 
-RoslynKit infers the nearest Git repository, all Git-visible `.csproj` files, and the default catalog path. Pass `--target` only when a narrower solution or project scope is required.
+RoslynKit infers the nearest Git repository, all Git-visible `.csproj` files, and the default catalog path. The normal `& $roslynkitDev <command>` shape therefore omits `--target`; apply the opt-in override only under the explicit-boundary rule above.
 When a command accepts `--file`, pass a `.cs` path by default.
 Use `& $roslynkitDev help <command>` for exact runtime syntax and options. In the RoslynKit repository, [.agents/skills/roslynkit/references/commands.md](../roslynkit/references/commands.md) is the generated checked-in command reference.
 
@@ -287,10 +288,10 @@ Use the generated path surfaced by `workspace --include-generated`.
 
 1. Run `workspace --include-generated`.
 2. Copy the generated document `path`.
-3. Read it with `document-text --file`; add `--document-kind sourceGenerated` if the same path is ambiguous.
+3. Read it with `document-text --file`; add `--document-kind sourceGenerated` if the same path is ambiguous. Add `--project` for an ambiguous loaded project context. Add `--target` only when the generated document must be resolved inside an explicitly selected solution or project boundary.
 
 ```powershell
-& $roslynkitDev document-text --target ./SomeProject.csproj --file ./obj/Debug/net10.0/Generated.g.cs --document-kind sourceGenerated
+& $roslynkitDev document-text --file ./obj/Debug/net10.0/Generated.g.cs --document-kind sourceGenerated
 ```
 
 ## Fallbacks

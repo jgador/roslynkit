@@ -9,6 +9,7 @@ RoslynKit is a compact, read-only semantic navigator for C# declarations, source
 
 ## Non-negotiable limits
 
+- Treat `--target` as an opt-in scope override. Omit it from ordinary commands run inside a standard Git repository, even when a solution or project path is known. Add it only when the requested evidence must be restricted to a particular solution, solution filter, project, or repository directory, or when a generated-document lookup needs that explicit boundary.
 - Treat the investigation budget as hard: use at most 8 RoslynKit invocations total, including discovery and source/test reads; aim to finish in six. Stop and synthesize once the requested implementation and focused-test evidence is complete.
 - Never read an entire C# file or type when a declaration or position command can answer the question.
 - Never read the same file twice. Capture the useful source and test evidence on the first pass.
@@ -44,7 +45,7 @@ Use the stable global command from anywhere inside a standard Git repository:
 roslynkit search --query "where is configuration validated during startup" --max-results 25
 ```
 
-RoslynKit finds the nearest standard `.git/` directory, discovers every tracked or unignored `.csproj`, and stores the catalog in `.roslynkit/roslynkit.db`. `search` validates and refreshes that repository partition automatically. The first request waits when no coherent partition exists; a coherent partition may answer `stale` while a writer refreshes. Use `index` for deliberate preparation and `--rebuild` only when a partition must be recreated. Pass `--target` only to narrow evaluation to a `.slnx`, `.sln`, `.slnf`, `.csproj`, or repository-directory scope; pass `--index-path` only for an advanced ignored-path override. The generated [references/commands.md](references/commands.md) file is authoritative for options and usage.
+RoslynKit finds the nearest standard `.git/` directory, discovers every tracked or unignored `.csproj`, and stores the catalog in `.roslynkit/roslynkit.db`. `search` validates and refreshes that repository partition automatically. The first request waits when no coherent partition exists; a coherent partition may answer `stale` while a writer refreshes. Use `index` for deliberate preparation and `--rebuild` only when a partition must be recreated. Start `search`, `index`, and semantic follow-up commands without `--target`; the presence of a `.slnx`, `.sln`, `.slnf`, or `.csproj` does not by itself justify narrowing the repository scope. Use the opt-in override only under the explicit-boundary rule above, and pass `--index-path` only for an advanced ignored-path override. The generated [references/commands.md](references/commands.md) file is authoritative for options and usage.
 
 Search supports repository-local physical C# projects and non-generated source documents with one target framework. It skips source-generated documents, `bin`/`obj` paths, standard generated-code markers, external projects, and external linked non-generated files. Narrow with `--project`, `--kind`, or `--max-results` only when needed.
 
