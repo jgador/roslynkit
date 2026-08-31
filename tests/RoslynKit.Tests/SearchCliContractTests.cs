@@ -12,13 +12,13 @@ public sealed class SearchCliContractTests
         [
             "index",
             "--target", "repo.slnx",
-            "--index-path", "artifacts\\roslynkit.db",
+            "--index-path", "artifacts/roslynkit.db",
             "--rebuild",
         ]);
 
         Assert.Equal("index", command.Name);
         Assert.Equal("repo.slnx", command.Required("target"));
-        Assert.Equal("artifacts\\roslynkit.db", command.Required("index-path"));
+        Assert.Equal("artifacts/roslynkit.db", command.Required("index-path"));
         Assert.True(command.Flag("rebuild"));
     }
 
@@ -38,16 +38,16 @@ public sealed class SearchCliContractTests
         [
             "search",
             "--target", "repo.slnx",
-            "--index-path", "artifacts\\roslynkit.db",
+            "--index-path", "artifacts/roslynkit.db",
             "--query", "workspace daemon session",
-            "--project", "src\\RoslynKit\\RoslynKit.csproj",
+            "--project", "src/RoslynKit/RoslynKit.csproj",
             "--kind", "class",
             "--max-results", "7",
         ]);
 
         Assert.Equal("search", command.Name);
         Assert.Equal("workspace daemon session", command.Required("query"));
-        Assert.Equal("src\\RoslynKit\\RoslynKit.csproj", command.Required("project"));
+        Assert.Equal("src/RoslynKit/RoslynKit.csproj", command.Required("project"));
         Assert.Equal("class", command.Required("kind"));
         Assert.Equal(7, command.OptionalInt("max-results", CommandDefaults.MaxResults, 1));
     }
@@ -59,7 +59,7 @@ public sealed class SearchCliContractTests
         [
             "search",
             "--target", "repo.slnx",
-            "--index-path", "artifacts\\roslynkit.db",
+            "--index-path", "artifacts/roslynkit.db",
             "--query", "workspace daemon session",
         ]);
 
@@ -85,7 +85,7 @@ public sealed class SearchCliContractTests
         [
             "index",
             "--target", "repo.slnx",
-            "--index-path", "artifacts\\roslynkit.db",
+            "--index-path", "artifacts/roslynkit.db",
         ]);
 
         Assert.False(command.Flag("rebuild"));
@@ -94,7 +94,7 @@ public sealed class SearchCliContractTests
     [Theory]
     [InlineData("search")]
     [InlineData("search", "--target", "repo.slnx")]
-    [InlineData("search", "--target", "repo.slnx", "--index-path", "artifacts\\roslynkit.db")]
+    [InlineData("search", "--target", "repo.slnx", "--index-path", "artifacts/roslynkit.db")]
     public void Parse_RejectsMissingRequiredSearchQuery(params string[] arguments)
     {
         var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(arguments));
@@ -109,7 +109,7 @@ public sealed class SearchCliContractTests
         [
             "index",
             "--target", "repo.slnx",
-            "--index-path", "artifacts\\roslynkit.db",
+            "--index-path", "artifacts/roslynkit.db",
             "--query", "workspace daemon",
         ]));
 
@@ -118,8 +118,8 @@ public sealed class SearchCliContractTests
     }
 
     [Theory]
-    [InlineData("index", "--target", "repo.slnx", "--index-path", "artifacts\\roslynkit.db", "--include-generated")]
-    [InlineData("search", "--target", "repo.slnx", "--index-path", "artifacts\\roslynkit.db", "--query", "workspace daemon", "--include-generated")]
+    [InlineData("index", "--target", "repo.slnx", "--index-path", "artifacts/roslynkit.db", "--include-generated")]
+    [InlineData("search", "--target", "repo.slnx", "--index-path", "artifacts/roslynkit.db", "--query", "workspace daemon", "--include-generated")]
     public void Parse_IndexAndSearchRejectIncludeGenerated(params string[] arguments)
     {
         var exception = Assert.Throws<CliUsageException>(() => CliParser.Parse(arguments));
@@ -147,7 +147,7 @@ public sealed class SearchCliContractTests
         [
             "search",
             "--target", "not-loaded.slnx",
-            "--index-path", "artifacts\\roslynkit.db",
+            "--index-path", "artifacts/roslynkit.db",
             "--query", "workspace daemon session",
             "--kind", "Class",
         ]);

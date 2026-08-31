@@ -281,7 +281,7 @@ if (-not (Test-Path -LiteralPath $resolvedCommandPath -PathType Leaf))
 
 $resolvedValidationRoot = if ([string]::IsNullOrWhiteSpace($ValidationRoot))
 {
-    Join-Path $context.RepoRoot "artifacts\command-validation\roslynkit"
+    Join-Path $context.RepoRoot "artifacts/command-validation/roslynkit"
 }
 else
 {
@@ -294,10 +294,10 @@ Reset-Directory `
     -Label "RoslynKit command validation root"
 
 $fixtureRoot = Join-Path $resolvedValidationRoot "init-repository"
-$projectPath = Join-Path $context.RepoRoot "tests\FixtureWorkspace\App\App.csproj"
-$sourcePath = Join-Path $context.RepoRoot "tests\FixtureWorkspace\App\Source.cs"
+$projectPath = Join-Path $context.RepoRoot "tests/FixtureWorkspace/App/App.csproj"
+$sourcePath = Join-Path $context.RepoRoot "tests/FixtureWorkspace/App/Source.cs"
 $indexPath = Join-Path $resolvedValidationRoot "roslynkit.db"
-$initSkillPath = Join-Path $fixtureRoot ".agents\skills\roslynkit\SKILL.md"
+$initSkillPath = Join-Path $fixtureRoot ".agents/skills/roslynkit/SKILL.md"
 
 New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $fixtureRoot ".git") -Force | Out-Null

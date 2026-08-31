@@ -12,9 +12,9 @@ function Get-RoslynKitToolingContext
     $repoRoot = (Resolve-Path (Join-Path $scriptsRoot "..")).Path
     $dotnet = (Get-Command dotnet -ErrorAction Stop).Source
     $solutionPath = Join-Path $repoRoot "RoslynKit.slnx"
-    $packageProjectPath = Join-Path $repoRoot "src\RoslynKit\RoslynKit.csproj"
-    $packageFeedPath = Join-Path $repoRoot "artifacts\packages\roslynkit"
-    $devPackageFeedPath = Join-Path $repoRoot "artifacts\packages\roslynkit-dev"
+    $packageProjectPath = Join-Path $repoRoot "src/RoslynKit/RoslynKit.csproj"
+    $packageFeedPath = Join-Path $repoRoot "artifacts/packages/roslynkit"
+    $devPackageFeedPath = Join-Path $repoRoot "artifacts/packages/roslynkit-dev"
     $devToolPath = Join-Path (Join-Path (Join-Path $HOME ".roslynkit") "tools") "roslynkit-dev"
     $devToolCommandPath = Join-Path $devToolPath (Get-RoslynKitToolCommandName)
 

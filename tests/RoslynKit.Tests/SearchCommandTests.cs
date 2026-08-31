@@ -33,7 +33,12 @@ public sealed class SearchCommandTests
         await using var area = SearchCommandTestArea.Create();
         await ExecuteSearchAsync(area, "where is configuration validation performed");
 
-        await using (var connection = new SqliteConnection($"Data Source={area.DatabasePath}"))
+        await using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = area.DatabasePath,
+            Mode = SqliteOpenMode.ReadWrite,
+            Pooling = false,
+        }.ToString()))
         {
             await connection.OpenAsync(TestContext.Current.CancellationToken);
             await using var command = connection.CreateCommand();
@@ -49,7 +54,12 @@ public sealed class SearchCommandTests
 
         await ExecuteSearchAsync(area, "where is configuration validation performed");
 
-        await using var verificationConnection = new SqliteConnection($"Data Source={area.DatabasePath}");
+        await using var verificationConnection = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = area.DatabasePath,
+            Mode = SqliteOpenMode.ReadOnly,
+            Pooling = false,
+        }.ToString());
         await verificationConnection.OpenAsync(TestContext.Current.CancellationToken);
         await using var verificationCommand = verificationConnection.CreateCommand();
         verificationCommand.CommandText = "SELECT COUNT(*) FROM semantic_catalog_symbols;";

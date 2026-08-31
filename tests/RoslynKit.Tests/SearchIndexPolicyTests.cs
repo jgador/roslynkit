@@ -21,7 +21,7 @@ public sealed class SearchIndexPolicyTests
             repository.GetPath(".roslynkit/roslynkit.db"),
             result.Path.DatabasePath);
         Assert.Equal(
-            $"/.gitignore{Environment.NewLine}/roslynkit.db{Environment.NewLine}/roslynkit.db-*{Environment.NewLine}",
+            "/.gitignore\n/roslynkit.db\n/roslynkit.db-*\n",
             await File.ReadAllTextAsync(
                 repository.GetPath(".roslynkit/.gitignore"),
                 TestContext.Current.CancellationToken));
@@ -49,7 +49,8 @@ public sealed class SearchIndexPolicyTests
         await using var repository = await GitRepository.CreateAsync("artifacts/\n");
         var indexPath = Path.GetRelativePath(
             Environment.CurrentDirectory,
-            repository.GetPath("artifacts/roslynkit.db"));
+            repository.GetPath("artifacts/roslynkit.db"))
+            .Replace(Path.DirectorySeparatorChar, '/');
 
         var result = await new SearchIndexPathPolicy().ResolveAsync(
             repository.GetPath("src/App.csproj"),
@@ -279,7 +280,7 @@ public sealed class SearchIndexPolicyTests
 
         public string GetPath(string relativePath)
         {
-            return Path.Combine(RootPath, relativePath);
+            return Path.GetFullPath(relativePath, RootPath);
         }
 
         public async Task WriteAsync(string relativePath, string content)

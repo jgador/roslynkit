@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\RoslynKit\RoslynKit.csproj" />
+    <ProjectReference Include="../../src/RoslynKit/RoslynKit.csproj" />
   </ItemGroup>
 
 </Project>

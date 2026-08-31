@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 
 $context = Get-RoslynKitToolingContext -ScriptPath $PSCommandPath
 $globalCommandPath = Get-RoslynKitGlobalToolCommandPath
-$validationRoot = Join-Path $context.RepoRoot "artifacts\global-command-validation\roslynkit"
+$validationRoot = Join-Path $context.RepoRoot "artifacts/global-command-validation/roslynkit"
 
 Assert-RoslynKitCommandVersion `
     -CommandPath $globalCommandPath `

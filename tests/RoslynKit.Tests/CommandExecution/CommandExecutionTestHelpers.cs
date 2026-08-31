@@ -52,7 +52,7 @@ public sealed partial class CommandExecutionTests
                 <Nullable>enable</Nullable>
               </PropertyGroup>
               <ItemGroup>
-                <Compile Include="..\Shared.cs" Link="Shared.cs" />
+                <Compile Include="../Shared.cs" Link="Shared.cs" />
               </ItemGroup>
             </Project>
             """;

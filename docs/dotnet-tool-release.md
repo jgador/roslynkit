@@ -76,7 +76,7 @@ That script:
 1. Resolves the repo root and `dotnet` executable.
 2. Reads and validates `<Version>` from `Directory.Build.props`.
 3. Recreates the local folder feed at `./artifacts/packages/roslynkit`.
-4. Packs `src\RoslynKit\RoslynKit.csproj` in `Release` into that folder feed.
+4. Packs [src/RoslynKit/RoslynKit.csproj](../src/RoslynKit/RoslynKit.csproj) in `Release` into that folder feed.
 5. Verifies that `roslynkit.<version>.nupkg` exists.
 6. Prints the exact global replacement, automated smoke-test, and manual-checklist commands for the packed version and, when the packed version is prerelease, the side-by-side dev install command.
 
@@ -100,7 +100,7 @@ The script:
 2. Uses a local-only NuGet configuration and isolated package cache.
 3. Stage-installs and version-checks the exact package before changing the global tool.
 4. Uninstalls any existing global `roslynkit`, even when it has the same version.
-5. Installs the package into the active global tool location, normally `$HOME/.dotnet/tools` on Linux and macOS or `%USERPROFILE%\.dotnet\tools` on Windows, and otherwise the global path rooted at `DOTNET_CLI_HOME` when that variable is configured.
+5. Installs the package into the active global tool location, normally `$HOME/.dotnet/tools` on Linux and macOS or `%USERPROFILE%/.dotnet/tools` on Windows, and otherwise the global path rooted at `DOTNET_CLI_HOME` when that variable is configured.
 6. Verifies the global command version and confirms that the package hash did not change.
 
 The uninstall/install sequence guarantees that the global command comes from the current local package. A same-version `dotnet tool update` may reuse the existing installation and therefore does not prove that the current package bytes were installed.
@@ -125,7 +125,7 @@ After replacing the global tool, run the same exhaustive checks through the glob
 pwsh ./scripts/test-roslynkit-global.ps1
 ```
 
-This wrapper resolves the command in the active global `.dotnet\tools` directory, including a configured `DOTNET_CLI_HOME`, verifies that it reports the version from [Directory.Build.props](../Directory.Build.props), and runs [scripts/test-roslynkit-commands.ps1](../scripts/test-roslynkit-commands.ps1) against that exact path.
+This wrapper resolves the command in the active global `.dotnet/tools` directory, including a configured `DOTNET_CLI_HOME`, verifies that it reports the version from [Directory.Build.props](../Directory.Build.props), and runs [scripts/test-roslynkit-commands.ps1](../scripts/test-roslynkit-commands.ps1) against that exact path.
 
 To pack, validate in isolation, replace the global tool, and exhaustively test the global installation in one skill action, run `$dotnet-tool-release local-release`.
 
@@ -150,9 +150,9 @@ That script:
 1. Resolves the repo root and `dotnet` executable.
 2. Verifies that the requested version is prerelease.
 3. Builds the current checkout before packing.
-4. Packs `src\RoslynKit\RoslynKit.csproj` with `/p:Version=<prerelease>`.
+4. Packs [src/RoslynKit/RoslynKit.csproj](../src/RoslynKit/RoslynKit.csproj) with `/p:Version=<prerelease>`.
 5. Uses `./artifacts/packages/roslynkit-dev` as the default dev-only folder feed, unless `-PackageFeedPath` is supplied.
-6. Installs or updates `roslynkit` into the fixed tool path `$HOME\.roslynkit\tools\roslynkit-dev`.
+6. Installs or updates `roslynkit` into the fixed tool path `$HOME/.roslynkit/tools/roslynkit-dev`.
 7. Prints the exact command path and smoke-test command for the installed dev tool.
 
 The stable global `roslynkit` install can remain in place. The dev tool path is intentionally separate so stable and prerelease builds stay side-by-side, and `Directory.Build.props` can stay on the stable release version while the installer packs a temporary prerelease override.

@@ -106,7 +106,12 @@ public sealed class SqliteSemanticCatalogTests
                     1,
                     cancellationToken));
 
-            await using var connection = new SqliteConnection($"Data Source={databasePath}");
+            await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = databasePath,
+                Mode = SqliteOpenMode.ReadOnly,
+                Pooling = false,
+            }.ToString());
             await connection.OpenAsync(cancellationToken);
             await using var command = connection.CreateCommand();
             command.CommandText = """

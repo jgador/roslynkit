@@ -9,12 +9,12 @@ It is intentionally separate from [.agents/skills/roslynkit-dev/SKILL.md](../.ag
 The default side-by-side dev install path is:
 
 ```text
-$HOME\.roslynkit\tools\roslynkit-dev
+$HOME/.roslynkit/tools/roslynkit-dev
 ```
 
 The installed command path is:
 
-- Windows: `$HOME\.roslynkit\tools\roslynkit-dev\roslynkit.exe`
+- Windows: `$HOME/.roslynkit/tools/roslynkit-dev/roslynkit.exe`
 - macOS/Linux: `$HOME/.roslynkit/tools/roslynkit-dev/roslynkit`
 
 This install is intentionally separate from the stable global `roslynkit` tool so both can exist side by side.
@@ -23,7 +23,7 @@ This install is intentionally separate from the stable global `roslynkit` tool s
 
 - .NET 10 SDK installed
 - the current RoslynKit checkout
-- the install script at `scripts\install-roslynkit-dev.ps1`
+- the install script at [scripts/install-roslynkit-dev.ps1](../scripts/install-roslynkit-dev.ps1)
 
 ## One-command dev install
 
@@ -37,9 +37,9 @@ The script now does the full side-by-side prerelease flow from the current check
 
 1. Verifies that `-Version` is a prerelease such as `0.2.0-dev.1`.
 2. Builds the repo.
-3. Packs `src\RoslynKit\RoslynKit.csproj` with `/p:Version=<prerelease>`.
+3. Packs [src/RoslynKit/RoslynKit.csproj](../src/RoslynKit/RoslynKit.csproj) with `/p:Version=<prerelease>`.
 4. Uses the dedicated dev-only folder feed `./artifacts/packages/roslynkit-dev` by default.
-5. Installs or updates `roslynkit` into `$HOME\.roslynkit\tools\roslynkit-dev`.
+5. Installs or updates `roslynkit` into `$HOME/.roslynkit/tools/roslynkit-dev`.
 6. Prints the exact smoke-test command for the installed dev tool.
 
 This flow does not edit `Directory.Build.props`. The requested prerelease is a pack-time override for the current checkout.

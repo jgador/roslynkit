@@ -31,7 +31,7 @@ Do not check in `.claude/skills/roslynkit/` or `.github/skills/roslynkit/` dupli
 Keep the ownership boundaries explicit:
 
 - [AGENTS.md](../../AGENTS.md) is the source of truth for which skill is the default route in this repo and for repo-specific workflow policy.
-- `.codex\atlas\` is the home for durable repo-specific tracing or routing guidance when Atlas coverage exists.
+- [.codex/atlas/](../../.codex/atlas/) is the home for durable repo-specific tracing or routing guidance when Atlas coverage exists.
 - [.agents/skills/roslynkit/SKILL.md](../../.agents/skills/roslynkit/SKILL.md) and [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md) are reusable usage-only guides. Do not embed repo-owned routing sequences, repo-local source paths, or project-specific symbol chains inside either skill.
 - [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md) and [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md) are shared stable-bundle references and must remain suitable for installed copies in other repositories.
 - [.agents/skills/commit-context/SKILL.md](../../.agents/skills/commit-context/SKILL.md) and [.agents/skills/git-commit-push/SKILL.md](../../.agents/skills/git-commit-push/SKILL.md) are repo-specific workflow guides and may reference [artifacts/commit-context.md](../../artifacts/commit-context.md) and RoslynKit commit policy directly.
@@ -89,7 +89,7 @@ If the dev tool path or install script contract changes, update:
 - [.agents/skills/roslynkit-dev/SKILL.md](../../.agents/skills/roslynkit-dev/SKILL.md)
 - [AGENTS.md](../../AGENTS.md) if the repo-default route changed
 - [docs/dev-install.md](../dev-install.md)
-- `scripts\install-roslynkit-dev.ps1`
+- [scripts/install-roslynkit-dev.ps1](../../scripts/install-roslynkit-dev.ps1)
 - [README.md](../../README.md) when the user-facing install story changed
 - [docs/dotnet-tool-release.md](../dotnet-tool-release.md) when the maintainer packaging story changed
 

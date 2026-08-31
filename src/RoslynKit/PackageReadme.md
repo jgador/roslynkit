@@ -19,7 +19,7 @@ roslynkit version
 
 `roslynkit version` confirms that the installed tool is callable from the current shell. If the install succeeds but `roslynkit` is not found, open a new shell or add the .NET global tools directory to `PATH`:
 
-- Windows: `%USERPROFILE%\.dotnet\tools`
+- Windows: `%USERPROFILE%/.dotnet/tools`
 - macOS/Linux: `$HOME/.dotnet/tools`
 
 To update an existing install:
@@ -48,7 +48,7 @@ roslynkit version
 After installing the tool, run `init` once in each Git repository where coding agents should use RoslynKit. Run it from the repository root, because `init` checks the current directory for a `.git` directory or file.
 
 ```powershell
-cd C:\repo\MyApp
+cd ./path/to/MyApp
 Test-Path .git
 roslynkit init
 ```

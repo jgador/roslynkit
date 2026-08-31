@@ -37,7 +37,7 @@ dotnet tool update --global roslynkit
 Set up RoslynKit for coding-agent use from a Git repository root:
 
 ```powershell
-cd C:\repo\MyApp
+cd ./path/to/MyApp
 roslynkit init
 ```
 
@@ -72,7 +72,7 @@ For exact command syntax, use `roslynkit help`, `roslynkit help <command>`, or [
 Start with repository setup, then confirm RoslynKit can load a solution or project:
 
 ```powershell
-cd C:\repo\MyApp
+cd ./path/to/MyApp
 roslynkit init
 roslynkit workspace
 roslynkit diagnostics
@@ -178,7 +178,7 @@ For AI coding tools, pair the CLI with a skill file that teaches the tool which 
 Scaffold the stable skill bundle from the Git repository root:
 
 ```powershell
-cd C:\repo\MyApp
+cd ./path/to/MyApp
 roslynkit init
 roslynkit init --agent claude
 roslynkit init --agent copilot

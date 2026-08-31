@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 
 $context = Get-RoslynKitToolingContext -ScriptPath $PSCommandPath
 $packagePath = Get-RoslynKitPackagePath -Context $context
-$validationRoot = Join-Path $context.RepoRoot "artifacts\global-install-validation\roslynkit"
+$validationRoot = Join-Path $context.RepoRoot "artifacts/global-install-validation/roslynkit"
 $stagingToolPath = Join-Path $validationRoot "tool"
 $nugetPackagesPath = Join-Path $validationRoot "nuget-packages"
 $dotnetCliHome = Join-Path $validationRoot "dotnet-cli-home"

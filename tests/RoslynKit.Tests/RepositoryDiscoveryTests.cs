@@ -140,6 +140,15 @@ public sealed class RepositoryDiscoveryTests
         {
             if (Directory.Exists(RootPath))
             {
+                foreach (var file in Directory.EnumerateFiles(RootPath, "*", SearchOption.AllDirectories))
+                {
+                    var attributes = File.GetAttributes(file);
+                    if ((attributes & FileAttributes.ReadOnly) != 0)
+                    {
+                        File.SetAttributes(file, attributes & ~FileAttributes.ReadOnly);
+                    }
+                }
+
                 Directory.Delete(RootPath, recursive: true);
             }
 
