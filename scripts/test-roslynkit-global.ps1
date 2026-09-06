@@ -1,7 +1,5 @@
 [CmdletBinding()]
-param(
-    [switch]$PrintManualCommands
-)
+param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -19,17 +17,6 @@ Assert-RoslynKitCommandVersion `
 & (Join-Path $PSScriptRoot "test-roslynkit-commands.ps1") `
     -CommandPath $globalCommandPath `
     -ExpectedVersion $context.PackageVersion `
-    -ValidationRoot $validationRoot `
-    -PrintManualCommands:$PrintManualCommands
+    -ValidationRoot $validationRoot
 
-Write-Host ""
-if ($PrintManualCommands)
-{
-    Write-Host "RoslynKit $($context.PackageVersion) manual global command checklist prepared."
-}
-else
-{
-    Write-Host "RoslynKit $($context.PackageVersion) global command smoke test passed."
-}
-
-Write-Host "Installed command: $globalCommandPath"
+Write-Verbose "Installed command: $globalCommandPath"

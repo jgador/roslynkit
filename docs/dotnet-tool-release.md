@@ -4,6 +4,8 @@ Build and test the repository, create one local NuGet package, replace the works
 
 The commands below are for **Bash on Windows Subsystem for Linux (WSL)** or Linux. Start at the repository root and keep the same terminal open so the variables remain available. PowerShell 7 (`pwsh`), the .NET SDK selected by [global.json](../global.json), and Git must be installed. The PowerShell helper scripts run directly from Bash; there is no need to switch shells, use a file manager, or copy a package to install it locally.
 
+Scripts print concise progress and results by default. Add `-Verbose` for command lines, successful .NET output, and per-command smoke-test progress, for example `pwsh -NoProfile ./scripts/test-roslynkit-package.ps1 -Verbose`. Failures always include diagnostic output; verbose mode is not required to see errors.
+
 ## 1. Choose the version and build
 
 Set `<Version>` in [Directory.Build.props](../Directory.Build.props) to an unused bare NuGet version, for example `0.2.9`, not `v0.2.9`. Review the package ID, tool command name, repository URL, license, and readme metadata in [src/RoslynKit/RoslynKit.csproj](../src/RoslynKit/RoslynKit.csproj). Update [README.md](../README.md) and [src/RoslynKit/PackageReadme.md](../src/RoslynKit/PackageReadme.md) when the public usage or installation instructions changed.
@@ -209,7 +211,7 @@ pwsh -NoProfile ./scripts/test-roslynkit-global.ps1
 
 It compares its command cases with runtime help and fails for missing or stale cases, then checks representative output for every built-in command. It does not replace manual inspection or cover every option permutation. If it fails, do not upload.
 
-For a dynamically generated **PowerShell** checklist instead of these Bash examples, [scripts/test-roslynkit-global.ps1](../scripts/test-roslynkit-global.ps1) also supports `-PrintManualCommands`. That mode prepares fixture paths and prints expected results without running the representative commands; its output must be run in PowerShell, not pasted into Bash.
+The Bash examples above are the manual checklist. The scripts only run automated checks; they no longer generate a separate PowerShell checklist.
 
 ## 5. Approve and copy the exact package
 

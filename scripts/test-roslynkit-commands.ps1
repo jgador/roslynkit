@@ -5,8 +5,7 @@ param(
     [string]$ExpectedVersion,
     [string]$ValidationRoot,
     [ValidateRange(1, 1800)]
-    [int]$CommandTimeoutSeconds = 180,
-    [switch]$PrintManualCommands
+    [int]$CommandTimeoutSeconds = 180
 )
 
 Set-StrictMode -Version Latest
@@ -143,62 +142,6 @@ function Format-Invocation
     $quotedFilePath = "'$($FilePath.Replace("'", "''"))'"
     $quotedArguments = $Arguments | ForEach-Object { "'$($_.Replace("'", "''"))'" }
     return "& $quotedFilePath $($quotedArguments -join ' ')".TrimEnd()
-}
-
-function Format-ManualInvocation
-{
-    param(
-        [Parameter(Mandatory = $true)]
-        [string[]]$Arguments
-    )
-
-    $formattedArguments = $Arguments | ForEach-Object {
-        if ($_ -match "^[A-Za-z0-9_./:\\-]+$")
-        {
-            $_
-        }
-        else
-        {
-            "'$($_.Replace("'", "''"))'"
-        }
-    }
-
-    return "roslynkit $($formattedArguments -join ' ')".TrimEnd()
-}
-
-function Write-ManualTestCase
-{
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Name,
-        [Parameter(Mandatory = $true)]
-        [string[]]$Arguments,
-        [Parameter(Mandatory = $true)]
-        [AllowEmptyCollection()]
-        [string[]]$ExpectedText,
-        [string]$ExpectedCommandVersion,
-        [string[]]$ExpectedPaths = @()
-    )
-
-    Write-Host "    # $Name"
-    Write-Host "    # Expect exit code: 0"
-    foreach ($expected in $ExpectedText)
-    {
-        Write-Host "    # Expect stdout containing: $expected"
-    }
-
-    if (-not [string]::IsNullOrWhiteSpace($ExpectedCommandVersion))
-    {
-        Write-Host "    # Expect RoslynKit package version: $ExpectedCommandVersion (an optional +build metadata suffix is valid)"
-    }
-
-    foreach ($expectedPath in $ExpectedPaths)
-    {
-        Write-Host "    # Expect created path: $expectedPath"
-    }
-
-    Write-Host "    $(Format-ManualInvocation -Arguments $Arguments)"
-    Write-Host ""
 }
 
 function Invoke-RoslynKitCase
@@ -528,63 +471,10 @@ $results.Add([pscustomobject]@{
     Passed = $coverageReasons.Count -eq 0
 })
 
-if ($PrintManualCommands)
-{
-    if (-not $helpResult.Passed)
-    {
-        throw "Unable to prepare the manual command checklist because 'roslynkit help' failed validation: $($helpResult.Reasons -join '; ')`nstdout:`n$($helpResult.StandardOutput)`nstderr:`n$($helpResult.StandardError)"
-    }
-
-    if ($coverageReasons.Count -gt 0)
-    {
-        throw "Unable to prepare the manual command checklist because exhaustive command coverage is stale: $($coverageReasons -join '; ')"
-    }
-
-    $manualCommandCount = $commandCases.Count + 1
-    $quotedFixtureRoot = "'$($fixtureRoot.Replace("'", "''"))'"
-
-    Write-Host ""
-    Write-Host "RoslynKit manual exhaustive command checklist"
-    Write-Host "Command: $resolvedCommandPath"
-    Write-Host "Expected version: $ExpectedVersion"
-    Write-Host "Commands discovered: $($discoveredCommands.Count)"
-    Write-Host "Manual commands printed: $manualCommandCount"
-    Write-Host "Validation workspace: $fixtureRoot"
-    Write-Host ""
-    Write-Host "Copy and run this PowerShell block in order:"
-    Write-Host ""
-    Write-Host "Push-Location -LiteralPath $quotedFixtureRoot"
-    Write-Host "try"
-    Write-Host "{"
-    Write-ManualTestCase `
-        -Name "help" `
-        -Arguments @("help") `
-        -ExpectedText @("tool: roslynkit", "- command:")
-
-    foreach ($commandCase in $commandCases)
-    {
-        $caseExpectedVersion = if ($commandCase.Name -eq "version") { $ExpectedVersion } else { $null }
-        Write-ManualTestCase `
-            -Name $commandCase.Name `
-            -Arguments $commandCase.Arguments `
-            -ExpectedText $commandCase.ExpectedText `
-            -ExpectedCommandVersion $caseExpectedVersion `
-            -ExpectedPaths $commandCase.ExpectedPaths
-    }
-
-    Write-Host "}"
-    Write-Host "finally"
-    Write-Host "{"
-    Write-Host "    Pop-Location"
-    Write-Host "}"
-    Write-Host ""
-    Write-Host "No representative RoslynKit command was executed; run the printed block to perform the manual test."
-    return
-}
-
+Write-Host "Testing $($discoveredCommands.Count) RoslynKit commands..."
 foreach ($commandCase in $commandCases)
 {
-    Write-Host "Testing roslynkit $($commandCase.Name)..."
+    Write-Verbose "Testing roslynkit $($commandCase.Name)..."
     $caseExpectedVersion = if ($commandCase.Name -eq "version") { $ExpectedVersion } else { $null }
     $caseResult = Invoke-RoslynKitCase `
         -Name $commandCase.Name `
@@ -600,13 +490,9 @@ $failures = @($results | Where-Object { -not $_.Passed })
 $passedCommands = @($commandResults | Where-Object { $_.Passed }).Count
 
 Write-Host ""
-Write-Host "RoslynKit exhaustive command smoke-test summary"
-Write-Host "Command: $resolvedCommandPath"
-Write-Host "Expected version: $ExpectedVersion"
-Write-Host "Commands discovered: $($discoveredCommands.Count)"
-Write-Host "Commands exercised: $($commandResults.Count)"
-Write-Host "Commands passed: $passedCommands"
-Write-Host "Failed checks: $($failures.Count)"
+Write-Verbose "Command: $resolvedCommandPath"
+Write-Verbose "Expected version: $ExpectedVersion"
+Write-Host "RoslynKit commands passed: $passedCommands/$($discoveredCommands.Count); failed checks: $($failures.Count)"
 
 if ($failures.Count -gt 0)
 {
@@ -633,6 +519,3 @@ if ($failures.Count -gt 0)
 
     throw "RoslynKit exhaustive command smoke test failed with $($failures.Count) error(s)."
 }
-
-Write-Host ""
-Write-Host "RoslynKit exhaustive command smoke test passed."

@@ -335,13 +335,14 @@ function Invoke-DotNet
         [string[]]$Arguments
     )
 
-    Write-Host "$($Context.DotNet) $($Arguments -join ' ')"
-    & $Context.DotNet @Arguments
-
+    Write-Verbose "$($Context.DotNet) $($Arguments -join ' ')"
+    $output = @(& $Context.DotNet @Arguments 2>&1)
     if ($LASTEXITCODE -ne 0)
     {
-        throw "dotnet $($Arguments[0]) failed with exit code $LASTEXITCODE."
+        throw "dotnet $($Arguments -join ' ') failed with exit code $LASTEXITCODE.`n$($output -join [Environment]::NewLine)"
     }
+
+    $output | ForEach-Object { Write-Verbose "$_" }
 }
 
 function Test-RoslynKitCommandVersionOutput
@@ -378,10 +379,10 @@ function Assert-RoslynKitCommandVersion
     $versionOutput = @(& $CommandPath "--version" 2>&1)
     if ($LASTEXITCODE -ne 0)
     {
-        throw "The installed roslynkit command failed with exit code $LASTEXITCODE."
+        throw "The installed roslynkit command failed with exit code $LASTEXITCODE.`n$($versionOutput -join [Environment]::NewLine)"
     }
 
-    $versionOutput | ForEach-Object { Write-Host $_ }
+    $versionOutput | ForEach-Object { Write-Verbose "$_" }
     $versionText = $versionOutput -join [Environment]::NewLine
     if (-not (Test-RoslynKitCommandVersionOutput -VersionText $versionText -ExpectedVersion $ExpectedVersion))
     {
@@ -453,39 +454,92 @@ function Assert-RoslynKitPackageExists
     }
 }
 
-function Show-RoslynKitDogfoodCommands
+function Invoke-RoslynKitPackageValidation
 {
     param(
         [Parameter(Mandatory = $true)]
-        [pscustomobject]$Context
+        [pscustomobject]$Context,
+        [Parameter(Mandatory = $true)]
+        [string]$ValidationRoot,
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$Action
     )
 
+    Assert-RoslynKitPackageExists -Context $Context
     $packagePath = Get-RoslynKitPackagePath -Context $Context
+    $packageHash = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash
+    Reset-Directory -Path $ValidationRoot -RootPath $Context.RepoRoot -Label "RoslynKit package validation root"
 
-    Write-Host ""
-    Write-Host "Local folder-feed package:"
-    Write-Host $packagePath
-    Write-Host ""
-    Write-Host "Exact global replacement and automated exhaustive smoke test:"
-    Write-Host "pwsh ./scripts/install-roslynkit-global.ps1"
-    Write-Host "pwsh ./scripts/test-roslynkit-global.ps1"
-    Write-Host ""
-    Write-Host "Manual exhaustive command checklist:"
-    Write-Host "pwsh ./scripts/test-roslynkit-global.ps1 -PrintManualCommands"
+    $toolPath = Join-Path $ValidationRoot "tool"
+    $nugetConfigPath = Join-Path $ValidationRoot "NuGet.Config"
+    Write-RoslynKitLocalNuGetConfig -PackageFeedPath $Context.PackageFeedPath -ConfigPath $nugetConfigPath
 
-    Write-Host ""
-    Write-Host "Side-by-side dev install:"
-    $devVersionExample = if (Test-IsPrereleaseVersion -Version $Context.PackageVersion)
-    {
-        $Context.PackageVersion
+    $environment = @{
+        NUGET_PACKAGES = (Join-Path $ValidationRoot "nuget-packages")
+        DOTNET_CLI_HOME = (Join-Path $ValidationRoot "dotnet-cli-home")
+        DOTNET_CLI_TELEMETRY_OPTOUT = "1"
+        DOTNET_NOLOGO = "1"
+        DOTNET_SKIP_FIRST_TIME_EXPERIENCE = "1"
     }
-    else
+    $previousEnvironment = @{}
+    foreach ($name in $environment.Keys)
     {
-        "$($Context.PackageVersion)-dev.1"
+        $previousEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
     }
 
-    Write-Host "pwsh ./scripts/install-roslynkit-dev.ps1 -Version $devVersionExample"
-    Write-Host "The dev installer builds, packs, and installs the requested prerelease from the current checkout."
-    Write-Host "& `"$($Context.DevToolCommandPath)`" version"
-    Write-Host "& `"$($Context.DevToolCommandPath)`" help"
+    try
+    {
+        foreach ($name in $environment.Keys)
+        {
+            [Environment]::SetEnvironmentVariable($name, $environment[$name])
+        }
+        New-Item -ItemType Directory -Path $env:NUGET_PACKAGES, $env:DOTNET_CLI_HOME -Force | Out-Null
+
+        Write-Verbose "Stage-installing $packagePath into $toolPath"
+        Invoke-DotNet -Context $Context -Arguments @(
+            "tool", "install", $Context.PackageId,
+            "--tool-path", $toolPath,
+            "--configfile", $nugetConfigPath,
+            "--version", $Context.PackageVersion,
+            "--ignore-failed-sources"
+        )
+
+        $commandPath = Get-RoslynKitToolCommandPath -ToolPath $toolPath
+        Assert-RoslynKitCommandVersion -CommandPath $commandPath -ExpectedVersion $Context.PackageVersion
+
+        # Keep the isolated cache active while the caller tests or promotes the staged package.
+        & $Action ([pscustomobject]@{
+            CommandPath = $commandPath
+            NuGetConfigPath = $nugetConfigPath
+            OriginalDotNetCliHome = $previousEnvironment["DOTNET_CLI_HOME"]
+        }) | Out-Null
+
+        if ((Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash -ne $packageHash)
+        {
+            throw "The package changed during validation: $packagePath"
+        }
+
+        return [pscustomobject]@{
+            PackagePath = $packagePath
+            PackageHash = $packageHash
+            CommandPath = $commandPath
+        }
+    }
+    finally
+    {
+        foreach ($name in $previousEnvironment.Keys)
+        {
+            if ($null -eq $previousEnvironment[$name])
+            {
+                if (Test-Path -LiteralPath "Env:$name")
+                {
+                    Remove-Item -LiteralPath "Env:$name"
+                }
+            }
+            else
+            {
+                [Environment]::SetEnvironmentVariable($name, $previousEnvironment[$name])
+            }
+        }
+    }
 }

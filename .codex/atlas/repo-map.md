@@ -119,9 +119,10 @@ Implicit repository index and search output uses `scope: repository` plus `repos
 
 - [src/RoslynKit/RoslynKit.csproj](../../src/RoslynKit/RoslynKit.csproj) defines the .NET tool package.
 - [scripts/prepare-roslynkit-package.ps1](../../scripts/prepare-roslynkit-package.ps1) prepares release artifacts.
-- [scripts/test-roslynkit-commands.ps1](../../scripts/test-roslynkit-commands.ps1) invokes every runtime command against deterministic fixtures or prints the same command inventory as a copy-ready manual checklist, guards command coverage against runtime help, and aggregates automated failures.
-- [scripts/test-roslynkit-package.ps1](../../scripts/test-roslynkit-package.ps1) installs and exhaustively tests the exact local package with isolated tool and cache paths.
-- [scripts/install-roslynkit-global.ps1](../../scripts/install-roslynkit-global.ps1) explicitly replaces the global tool with the exact staged local package, while [scripts/test-roslynkit-global.ps1](../../scripts/test-roslynkit-global.ps1) runs the same exhaustive suite through the global command path or prepares its manual command checklist.
+- [scripts/test-roslynkit-commands.ps1](../../scripts/test-roslynkit-commands.ps1) invokes every runtime command against deterministic fixtures, guards command coverage against runtime help, and aggregates automated failures. Manual Bash commands live only in the release guide.
+- [scripts/RoslynKit.Packaging.ps1](../../scripts/RoslynKit.Packaging.ps1) shares isolated package installation, scoped environment restoration, and unchanged-package verification between package testing and global replacement.
+- [scripts/test-roslynkit-package.ps1](../../scripts/test-roslynkit-package.ps1) exhaustively tests the exact local package through that isolated installation.
+- [scripts/install-roslynkit-global.ps1](../../scripts/install-roslynkit-global.ps1) explicitly replaces the global tool with the exact staged local package, while [scripts/test-roslynkit-global.ps1](../../scripts/test-roslynkit-global.ps1) runs the same exhaustive suite through the global command path.
 - [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md) owns release preparation, WSL global replacement, grouped manual Bash command checks, and the separate manual NuGet.org upload. There is no release workflow skill; existing scripts own package creation and installation, while the guide owns the operator's sequence and acceptance criteria.
 - [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/) is the canonical embedded stable skill bundle.
 - [src/RoslynKit/InitCommandExecutor.cs](../../src/RoslynKit/InitCommandExecutor.cs) scaffolds that bundle for supported coding agents.
