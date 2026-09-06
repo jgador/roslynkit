@@ -52,7 +52,7 @@ Search ranking is heuristic. Inspect several top results and compare excerpts, `
 
 Search requires projects with one target framework and repository-local physical project and non-generated source paths; missing paths, external projects, and external linked non-generated source paths are rejected. It skips generated source documents, including source-generated documents, paths below `bin` or `obj`, and sources with standard generated-code markers injected from extracted NuGet packages outside the worktree. Use `--project`, `--kind`, or `--max-results` only when a narrower target, symbol kind, or result limit is needed. In the RoslynKit repository, the generated [.agents/skills/roslynkit/references/commands.md](../roslynkit/references/commands.md) file contains the exact options.
 
-The semantic partition persists exact symbols, declaration spans, comments, project references, and key relationships. With a fresh catalog, exact `symbols`, symbol-based `definition`, `symbol-source`, and `implementations` can avoid workspace loading. The first exact `references` request runs Roslyn and caches its bounded result; an identical later request can use that result. Position-based and compiler-context commands continue to load Roslyn.
+SQLite persists search retrieval and navigation metadata, not a semantic catalog or completed query answers. Exact semantics use live Roslyn. The standalone CLI pays cold workspace startup; a client-owned Model Context Protocol (MCP) server started with `serve` retains workspaces across queries. Its two tools are `help` and `query`; every `query` supplies an explicit absolute `repositoryRoot` and a CLI-shaped `args` array. After a build attempt completes, await `query` with `args: ["refresh"]` for the same repository and target scope before further analysis. Saved-file watching and background reconciliation also detect changes. This integration does not require a third tool or a standalone `refresh` command. Use `--no-restore` when automatic dependency restore is unwanted. Legacy .NET Framework, multi-targeted projects, non-Git repositories, and linked Git worktrees are unsupported.
 
 ## Selector Choice
 
@@ -127,7 +127,7 @@ $roslynkitDev = Join-Path $roslynkitDev ($(if ($IsWindows) { "roslynkit.exe" } e
 & $roslynkitDev workspace --include-generated --include-additional --include-analyzer-config
 ```
 
-If a document command reports multiple document contexts for the same path, retry with the concrete context from the error hint. Use `--project <path>` for linked files, `--tfm <framework>` for multi-targeted projects, and `--document-kind <source|sourceGenerated|additional|analyzerConfig>` only when the same path still maps to multiple document kinds.
+If a document command reports multiple document contexts for the same path, retry with the concrete context from the error hint. Use `--project <path>` for linked files and `--document-kind <source|sourceGenerated|additional|analyzerConfig>` only when the same path still maps to multiple document kinds. Multi-targeted projects are unsupported; `--tfm` cannot enable them.
 
 ## Cursor Choice
 

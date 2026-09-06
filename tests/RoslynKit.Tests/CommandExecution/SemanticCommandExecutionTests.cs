@@ -117,9 +117,9 @@ public sealed partial class CommandExecutionTests
             "--file", programPath);
 
         var programSymbol = Assert.Single(result.Symbols, symbol => symbol.Name == "Program");
-        Assert.Contains("Runs the ordinary RoslynKit command-line application", programSymbol.Documentation!, StringComparison.Ordinal);
+        Assert.Contains("Routes standalone commands and client-owned", programSymbol.Documentation!, StringComparison.Ordinal);
         Assert.Contains(
-            "\n  documentation: Runs the ordinary RoslynKit command-line application",
+            "\n  documentation: Routes standalone commands and client-owned",
             MarkdownProjection.Render(result).Replace("\r\n", "\n", StringComparison.Ordinal),
             StringComparison.Ordinal);
     }

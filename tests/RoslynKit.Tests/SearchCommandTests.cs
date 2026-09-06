@@ -28,44 +28,29 @@ public sealed class SearchCommandTests
     }
 
     [Fact]
-    public async Task Search_RefreshesAFreshPartitionWhenItsSemanticCatalogIsMissing()
+    public async Task Search_ReusesSearchFieldsWithoutCreatingSemanticOrAnswerTables()
     {
         await using var area = SearchCommandTestArea.Create();
         await ExecuteSearchAsync(area, "where is configuration validation performed");
+        var index = new SqliteSearchIndex(area.DatabasePath);
+        var target = RepositoryRelativePath.FromStoredValue(
+            "tests/FixtureWorkspace/App/App.csproj", "test target");
+        var initial = await index.ReadMetadataAsync(target, TestContext.Current.CancellationToken);
 
-        await using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder
-        {
-            DataSource = area.DatabasePath,
-            Mode = SqliteOpenMode.ReadWrite,
-            Pooling = false,
-        }.ToString()))
-        {
-            await connection.OpenAsync(TestContext.Current.CancellationToken);
-            await using var command = connection.CreateCommand();
-            command.CommandText =
-                """
-                DELETE FROM semantic_catalog_operation_cache;
-                DELETE FROM semantic_catalog_relations;
-                DELETE FROM semantic_catalog_symbols;
-                DELETE FROM semantic_catalog_projects;
-                """;
-            await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
-        }
+        await ExecuteSearchAsync(area, "configuration snapshot");
 
-        await ExecuteSearchAsync(area, "where is configuration validation performed");
-
-        await using var verificationConnection = new SqliteConnection(new SqliteConnectionStringBuilder
+        var reused = await index.ReadMetadataAsync(target, TestContext.Current.CancellationToken);
+        Assert.Equal(initial!.IndexedAtUtc, reused!.IndexedAtUtc);
+        await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
         {
             DataSource = area.DatabasePath,
             Mode = SqliteOpenMode.ReadOnly,
             Pooling = false,
         }.ToString());
-        await verificationConnection.OpenAsync(TestContext.Current.CancellationToken);
-        await using var verificationCommand = verificationConnection.CreateCommand();
-        verificationCommand.CommandText = "SELECT COUNT(*) FROM semantic_catalog_symbols;";
-        var symbolCount = (long)(await verificationCommand.ExecuteScalarAsync(
-            TestContext.Current.CancellationToken))!;
-        Assert.True(symbolCount > 0);
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE name LIKE 'semantic_catalog_%';";
+        Assert.Equal(0L, await command.ExecuteScalarAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -200,34 +185,41 @@ public sealed class SearchCommandTests
     }
 
     [Fact]
-    public async Task Search_ReturnsTheExistingPartitionAsStaleWhileAnotherWriterOwnsTheDatabase()
+    public async Task Search_WaitsForAWriterBeforeReturningChangedSourceMatches()
     {
         await using var area = SearchCommandTestArea.Create();
-        await ExecuteIndexAsync(area);
-
-        var markerPath = TestPaths.RepoFile(
-            "tests",
-            "FixtureWorkspace",
-            "App",
-            $"search-stale-{Guid.NewGuid():N}.marker");
-
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = new RepositoryWorkspaceSession(
+            TestPaths.RepositoryRoot(), TestPaths.FixtureProjectPath(), automaticRestore: false);
+        await using var liveIndex = new LiveSearchIndex(
+            session, TestPaths.RepositoryRoot(), TestPaths.FixtureProjectPath());
+        var command = CliParser.Parse([
+            "search", "--target", TestPaths.FixtureProjectPath(), "--index-path", area.DatabasePath,
+            "--query", "pending writer sentinel", "--max-results", "50",
+        ]);
+        await liveIndex.SearchAsync(command, cancellationToken);
+        var sourcePath = TestPaths.RepoFile(
+            "tests", "FixtureWorkspace", "App", $"SearchPending{Guid.NewGuid():N}.cs");
         try
         {
-            await File.WriteAllTextAsync(markerPath, "stale index marker", TestContext.Current.CancellationToken);
-
             var index = new SqliteSearchIndex(area.DatabasePath);
-            await using var writerLease = await index.AcquireWriterLeaseAsync(
-                TimeSpan.FromSeconds(1),
-                TestContext.Current.CancellationToken);
+            await using var writer = await index.AcquireWriterLeaseAsync(TimeSpan.FromSeconds(1), cancellationToken);
+            await File.WriteAllTextAsync(
+                sourcePath, "namespace FixtureApp; class PendingWriterSentinel { }", cancellationToken);
+            await session.SynchronizeAsync(cancellationToken);
 
-            var result = await ExecuteSearchAsync(area, "configuration validation", "--max-results", "50");
+            var pending = liveIndex.SearchAsync(command, cancellationToken);
+            await Task.Delay(100, cancellationToken);
+            Assert.False(pending.IsCompleted);
+            await writer.DisposeAsync();
+            var result = await pending.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
-            Assert.Equal(SearchIndexState.Stale, result.IndexState);
-            Assert.Contains(result.Hits, hit => hit.DisplayName == ConfigurationMethodDisplayName);
+            Assert.Equal(SearchIndexState.Fresh, result.IndexState);
+            Assert.Contains(result.Hits, hit => hit.DisplayName == "FixtureApp.PendingWriterSentinel");
         }
         finally
         {
-            File.Delete(markerPath);
+            File.Delete(sourcePath);
         }
     }
 

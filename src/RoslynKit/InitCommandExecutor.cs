@@ -35,7 +35,7 @@ public static class InitCommandExecutor
         {
             throw new CliUsageException(
                 "init",
-                "Current directory must be a Git repository root containing a .git directory or file.",
+                "Current directory must be a Git repository root containing a .git directory. Linked worktrees and .git indirection files are unsupported.",
                 "Run roslynkit init from the repository root.");
         }
 
@@ -62,7 +62,7 @@ public static class InitCommandExecutor
     private static bool HasCurrentDirectoryGitMarker(string repositoryRoot)
     {
         var gitPath = Path.Combine(repositoryRoot, ".git");
-        return Directory.Exists(gitPath) || File.Exists(gitPath);
+        return Directory.Exists(gitPath);
     }
 
     private static IReadOnlyList<InitAgentTarget> ResolveTargets(string agentSelection)

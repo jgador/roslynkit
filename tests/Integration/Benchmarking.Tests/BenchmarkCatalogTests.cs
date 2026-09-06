@@ -126,7 +126,7 @@ public sealed class BenchmarkCatalogTests
         Assert.Equal(
             [
                 "repository-project-forest",
-                "semantic-catalog-navigation",
+                "retained-workspace-navigation",
                 "stale-search-index",
                 "symbol-comments",
             ],

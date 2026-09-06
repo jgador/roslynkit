@@ -5,6 +5,7 @@
 Use one source of truth per topic:
 
 - [README.md](README.md): user-facing overview, output format, packaging, and quick-start commands.
+- [docs/architecture.md](docs/architecture.md): accepted retained-workspace architecture decisions and rewrite acceptance criteria.
 - [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md): canonical stable RoslynKit skill bundle source and `roslynkit init` scaffold input.
 - [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md): generated runtime command reference from `BuiltinCommandRegistry`; regenerate with `dotnet run --file ./tools/RoslynKit.CommandDocs.cs -- --write`.
 - [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md): shared command output contract for humans, scripts, tests, and agents.
@@ -164,7 +165,8 @@ Follow the existing style in touched files. Prefer clear names and structure ove
 Navigation comments should help RoslynKit documentation-enabled navigation output guide the next hop. Add or refine public-method summaries only for entrypoints, orchestration points, cross-boundary adapters, Roslyn workspace/symbol/position resolution boundaries, or helpers whose name alone does not explain when to jump there. Keep summaries architectural and specific; avoid generic comments such as "Executes the method" and avoid documenting every public member for coverage.
 
 - Keep C# files under 1000 lines of code when practical. This is guidance, not a hard rule: when a `.cs` file grows beyond 1000 lines, consider whether it mixes concerns or has a natural refactor seam before splitting it.
-- Preserve the short-lived CLI-first architecture: no background daemon, Model Context Protocol (MCP) server, Language Server Protocol (LSP) client, named-pipe transport, or editor-specific protocol coupling. Persist reusable semantic state in the repository-local SQLite catalog.
+- Follow the accepted architecture in [docs/architecture.md](docs/architecture.md): a client-owned standard-input/output (stdio) Model Context Protocol (MCP) server retains Roslyn workspaces and exposes only `help` and `query`. Keep the standalone CLI on the shared engine. Persist rebuildable search indexes, not semantic catalogs or completed query answers. No independent daemon or Language Server Protocol (LSP) dependency is required; internal Roslyn/MSBuild pipes are permitted.
+- After an agent-initiated build attempt finishes, await the active MCP scope's `query` synchronization operation before further Roslyn analysis. This guidance is not an MSBuild hook; file watching and background reconciliation remain required.
 - Prefer direct Roslyn/MSBuild APIs over shelling out to editors, language servers, or IDEs.
 - Prioritize read-only Roslyn intelligence: inspect, navigate, understand, and verify C# code before edit-producing workflows.
 - If formatting, rename, or code-action features are added, return deterministic proposed edits before adding any source-mutating apply mode.

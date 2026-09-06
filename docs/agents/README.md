@@ -11,6 +11,10 @@ These docs are for repo-maintenance guidance that coding agents should discover 
 - [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md): generated runtime command names, usage strings, and options from `BuiltinCommandRegistry`.
 - [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md): deterministic command output contract, including documentation-comment ID prefix meanings.
 
+## Retained Workspace Workflow
+
+[docs/architecture.md](../architecture.md) owns the accepted retained-workspace design and rewrite acceptance criteria, including Model Context Protocol (MCP) process ownership, repository selection, synchronization after successful or failed builds, and search freshness. Read that contract before maintaining the retained runtime. Command-routing skill files do not define its architecture. Follow [README.md](../../README.md) for connection setup, supported projects, restore controls, and repository requirements.
+
 ## Not Agent-Autoloaded
 
 Keep manual references, roadmap inventories, and benchmark procedures outside this folder. They may mention agents, but they should be used only when the user explicitly names or tags them:
@@ -24,6 +28,7 @@ Keep manual references, roadmap inventories, and benchmark procedures outside th
 Do not duplicate shared runtime or workflow facts in hand-written agent docs. Link to the canonical source instead:
 
 - [docs/dev-install.md](../dev-install.md): side-by-side prerelease development install.
+- [docs/architecture.md](../architecture.md): accepted architecture decisions and validation criteria for the retained-workspace rewrite.
 - [docs/dotnet-tool-release.md](../dotnet-tool-release.md): release-candidate packaging, exhaustive command testing, and opt-in global tool replacement.
 
 When command metadata changes, regenerate [.agents/skills/roslynkit/references/commands.md](../../.agents/skills/roslynkit/references/commands.md) with:

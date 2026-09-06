@@ -266,6 +266,12 @@ $signaturePosition = Find-TextPosition `
 
 $commandCases = @(
     [pscustomobject]@{
+        Name = "serve"
+        Arguments = @("serve", "--help")
+        ExpectedText = @("command: serve", "--max-workspaces")
+        ExpectedPaths = @()
+    }
+    [pscustomobject]@{
         Name = "version"
         Arguments = @("version")
         ExpectedText = @()

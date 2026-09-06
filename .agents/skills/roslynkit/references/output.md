@@ -1,6 +1,6 @@
 # Markdown Output Format
 
-This document is the output contract for RoslynKit. Every command writes this token-saving markdown-flavored text to stdout; there is no JSON output.
+This document is the output contract for RoslynKit. Analysis commands return compact markdown-flavored text. The standalone command-line interface (CLI) writes that text to stdout. The Model Context Protocol (MCP) server carries the same payload in protocol tool-result text; it does not introduce a second semantic output format.
 
 The output stays close to GitHub Flavored Markdown, but it uses only the smallest useful subset for coding-agent consumption.
 
@@ -9,7 +9,7 @@ The output stays close to GitHub Flavored Markdown, but it uses only the smalles
 - Keep output compact enough for coding-agent context windows.
 - Preserve exact source text in fenced code blocks.
 - Keep output deterministic: stable ordering, stable labels, stable locations, and stable section order.
-- Keep failures machine-detectable through exit codes instead of output parsing.
+- Keep failures machine-detectable through CLI exit codes or MCP `isError` rather than output parsing.
 
 ## Supported Markdown
 
@@ -21,7 +21,7 @@ Output uses only these constructs:
 - inline code spans for paths, symbols, command names, options, IDs, and short code fragments;
 - fenced code blocks for source text and longer display text.
 
-Do not use headings in CLI output. The command name is a key-value line:
+Do not use headings in command payloads. The command name is a key-value line:
 
 ```markdown
 command: symbols
@@ -30,7 +30,7 @@ returned: 2/2
 truncated: false
 ```
 
-Do not use bold, italic, strikethrough, tables, links, blockquotes, task lists, raw HTML, images, diagrams, alerts, emoji, or footnotes in CLI output.
+Do not use bold, italic, strikethrough, tables, links, blockquotes, task lists, raw HTML, images, diagrams, alerts, emoji, or footnotes in command payloads.
 
 ## Location Format
 
@@ -55,7 +55,7 @@ src/MyApp/Program.cs:10:20-10:20
 
 ## Format Contract
 
-On success, the command writes a compact markdown fragment to stdout and exits `0`. On failure, it writes a plain-text error to stdout and exits non-zero:
+On success, a standalone CLI command writes a compact markdown fragment to stdout and exits `0`. On failure, it writes a plain-text error to stdout and exits non-zero:
 
 ```text
 error: usage
@@ -72,7 +72,7 @@ hint: Retry with --line between 1 and 13, or run document-lines to inspect valid
 
 Exit codes: `0` success, `2` usage error, `130` canceled, `1` any other failure. The `error:` value is `usage`, `canceled`, or the exception type name. A zero exit code means stdout is command output; a non-zero exit code means stdout is the plain-text error.
 
-Success output starts with `command: <name>` followed by command-specific key-value lines, then a blank line before bullets or fences:
+Ordinary command success output starts with `command: <name>` followed by command-specific key-value lines, then a blank line before bullets or fences. Compact search and version output have the exceptions described below:
 
 ```markdown
 command: <command>
@@ -127,6 +127,41 @@ workspace-diagnostics: 1
 - severity: Warning message: `Project skipped because ...`
 ```
 
+## MCP Transport
+
+`roslynkit serve` uses standard input and standard output (stdio) for MCP. Server stdout contains only protocol messages; server diagnostics go to stderr. The public tools are exactly `help` and `query`.
+
+`help` accepts an optional `command` and returns the corresponding help text. `query` requires `repositoryRoot`, an absolute ordinary Git repository root, and `args`, an array of command arguments. Relative path options resolve from that root. The protocol envelope carries text content and marks failed operations with `isError: true`.
+
+For a resolved query, the text begins with `repository: <absolute-root>` followed by the existing command payload:
+
+```markdown
+repository: /absolute/path/to/MyApp
+command: symbols
+query: `MyService`
+returned: 1/1
+truncated: false
+
+- kind: NamedType name: `MyApp.MyService` loc: `src/MyApp/MyService.cs:8:14-8:23` id: `T:MyApp.MyService`
+```
+
+The outer `repository:` line identifies the normalized root and is separate from command-specific `repository:`, `target:`, or `scope:` fields. It also precedes compact search output. Command failures retain the `error:` and `message:` text described above. When command execution supplies separate diagnostic text, the result can append a `stderr:` section. Protocol-level failures use the MCP error envelope.
+
+### `query` Synchronization
+
+`refresh` is an operation of `query`, not a standalone CLI command or a third MCP tool. Use `args: ["refresh"]`, optionally followed by `--target <target>` and `--no-restore`. A successful result reports the synchronized scope revision:
+
+```markdown
+repository: /absolute/path/to/MyApp
+command: refresh
+revision: 3
+status: synchronized
+```
+
+The revision is local to the retained scope; it is not a cross-process ordering token. Synchronization checks saved inputs and waits for workspace updates, without running a full build or requiring a replacement when nothing changed. It does not wait for background search indexing. A later search waits if the index is known to be outdated.
+
+After an agent-initiated build attempt completes, including a failed build, the agent awaits this operation for the same repository and optional target before further analysis. Watchers and background reconciliation remain necessary; no MSBuild hook is installed.
+
 ## Command Shapes
 
 ### `workspace`
@@ -143,7 +178,7 @@ documents: 1
 
 ### `init`
 
-`init` scaffolds the embedded RoslynKit skill bundle into the current Git repository. The command requires a `.git` directory or file in the current directory. Existing files are preserved when content is identical, rejected when content differs, and replaced only when `--overwrite` is supplied.
+`init` scaffolds the embedded RoslynKit skill bundle into the current Git repository. The command requires a `.git` directory in the current directory. Linked worktrees and other `.git` indirection files are unsupported. Existing files are preserved when content is identical, rejected when content differs, and replaced only when `--overwrite` is supplied.
 
 ```markdown
 command: init
@@ -164,7 +199,7 @@ Agent values map only the outer target folder. The scaffolded bundle-relative fi
 
 ### `index`
 
-`index` prepares or refreshes a partition in the repository-local SQLite Full-Text Search 5 (FTS5) database. Without `--target`, RoslynKit finds the nearest standard Git repository, discovers all tracked or unignored `.csproj` files, and stores the catalog at `.roslynkit/roslynkit.db`. An explicit `--target` narrows the scope to a solution, solution filter, project, or repository directory; an explicit `--index-path` is an advanced override that must be inside the repository and ignored by Git. One database can contain partitions for multiple scopes in that repository. SQLite persists project paths and declaration source paths relative to the repository, then reconstructs public locations from the resolved repository root.
+`index` prepares or refreshes a partition in the repository-local SQLite Full-Text Search 5 (FTS5) database. Without `--target`, the CLI finds the nearest standard Git repository; an MCP query uses its explicit repository root. Repository discovery includes all tracked or unignored `.csproj` files, and the default index lives at `.roslynkit/roslynkit.db`. An explicit `--target` narrows the scope to a solution, solution filter, project, or repository directory; an explicit `--index-path` is an advanced override that must be inside the repository and ignored by Git. One database can contain partitions for multiple scopes in that repository. SQLite persists project paths and declaration source paths relative to the repository, then reconstructs public locations from the resolved repository root.
 
 `index` waits for a stable workspace before reporting success. `--rebuild` recreates the selected partition. The generated `.roslynkit/.gitignore` covers the database and its write-ahead logging (WAL) sidecars. Multi-targeted projects, missing physical project or non-generated source paths, external projects, and external linked non-generated source files are rejected. Generated source documents are skipped, including source-generated documents, generated paths below `bin` or `obj`, and sources with standard generated-code markers injected from extracted NuGet packages outside the worktree.
 
@@ -182,7 +217,7 @@ rebuilt: false
 
 ### `search`
 
-`search` finds C# declarations from an English-oriented query. It infers the repository scope and default catalog unless those values are explicitly overridden. It validates the selected partition and refreshes stale data automatically. The first request waits for indexing; when a prior coherent index exists, a concurrent refresh can return that data with `index-state: stale`.
+`search` finds C# declarations from an English-oriented query. The CLI infers the repository scope; MCP uses the query's explicit repository root. Search prepares the selected partition automatically and waits when its index is known to be outdated. A previously committed index is not served as fresh after a relevant change has been observed. Saved-file detection delay still applies.
 
 ```markdown
 command: search
@@ -202,7 +237,7 @@ truncated: false
 
 Results are ordered by the internal Best Matching 25 (BM25) ranking but do not expose raw scores. `rank:` starts at one. `excerpt:` is optional and is a bounded source-derived excerpt with normalized whitespace; it is never generated or paraphrased. Whenever `excerpt:` is present, `excerpt-source:` immediately follows it and is one of `documentation`, `comment`, `signature`, or `body`. `id:` and `loc:` are navigation inputs for an agent-selected follow-up command, not a standard-input pipeline. Rank and excerpt provenance are routing metadata, so agents compare several excerpts, kinds, identities, and locations before choosing a next navigation target and verify the selected route with source evidence.
 
-The same semantic partition stores exact symbol metadata, declaration spans, structured comments, project references, and containment, inheritance, interface implementation, and override relationships. A fresh catalog can answer exact `symbols`, symbol-based `definition`, `symbol-source`, and `implementations` without loading an MSBuild workspace. The first bounded exact `references` request runs Roslyn and stores the result for an identical later invocation.
+The index persists search retrieval fields, navigation identities, locations, excerpts, and input metadata used to detect outdated data. Exact `symbols`, `definition`, `symbol-source`, `implementations`, and `references` are resolved from live Roslyn snapshots. No separate semantic catalog or application-level cache of completed query answers is retained. Semantic operations do not wait for background indexing once workspace synchronization has finished.
 
 With `--compact`, search emits a judgment-only shape with repository-relative locations:
 
@@ -213,7 +248,7 @@ results: 2/17
 - 2 method `MyApp.Tests.ConfigurationValidatorTests.RejectsMissingEndpoint` `tests/MyApp.Tests/ConfigurationValidatorTests.cs:18:17-18:39`
 ```
 
-Compact output omits the command header, target and index metadata, stale/fresh state, truncation flag, symbol IDs, and excerpt provenance. Use it when an LLM will judge bounded search evidence directly, not when the next command must chain through `id:`. `--balanced` changes only bounded selection: when both source and test paths match, half of the result capacity is reserved for tests and unused capacity is filled from the original ranking.
+Compact output omits the command header, target and index metadata, freshness state, truncation flag, symbol IDs, and excerpt provenance. An MCP result still carries its outer `repository:` line. Use compact output when a large language model (LLM) will judge bounded search evidence directly, not when the next command must chain through `id:`. `--balanced` changes only bounded selection: when both source and test paths match, half of the result capacity is reserved for tests and unused capacity is filled from the original ranking.
 
 ### `symbol-context`
 

@@ -2,9 +2,11 @@
 
 [![Total lines](https://sloc.xyz/github/jgador/roslynkit/)](https://github.com/jgador/roslynkit)
 
-RoslynKit is an independent Roslyn-powered command-line tool plus the [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md) workflow that helps coding agents navigate C# solutions through Roslyn instead of relying only on grep-style text search.
+RoslynKit is an independent Roslyn-powered tool for read-only C# analysis. Its Model Context Protocol (MCP) server retains loaded workspaces across requests, and its standalone command-line interface (CLI) uses the same execution engine.
 
-Install the CLI, point it at a `.slnx`, `.sln`, or `.csproj` file, and it can answer source questions that normally require an IDE:
+The initial retained-workspace implementation is in place. [docs/architecture.md](docs/architecture.md) records the accepted design, current tradeoffs, and release acceptance criteria. Windows execution and large-repository performance validation remain pending.
+
+Select a Git repository containing modern .NET C# projects to answer source questions such as:
 
 - What projects and source files does this solution load?
 - Where is this class or method defined?
@@ -13,9 +15,9 @@ Install the CLI, point it at a `.slnx`, `.sln`, or `.csproj` file, and it can an
 - What type, signature, or XML documentation is available at this call site?
 - What compiler diagnostics does Roslyn report for the loaded code?
 
-The CLI loads .NET projects with MSBuild and asks Roslyn for source information. Roslyn is the official .NET compiler platform for C# and Visual Basic; RoslynKit currently focuses on C# inspection.
+RoslynKit loads .NET projects with MSBuild and asks Roslyn for source information. Roslyn is the official .NET compiler platform for C# and Visual Basic; RoslynKit currently focuses on C# inspection. Solution files are optional: repository discovery loads every tracked or unignored `.csproj`, including disconnected project components.
 
-RoslynKit prints stable terminal output so people can read it, copy it into issues, or use it in scripts.
+Results use compact, deterministic Markdown. The CLI prints that text to the terminal, and MCP returns it as tool-result text.
 
 ![RoslynKit source navigation overview](docs/images/roslynkit-overview.png)
 
@@ -34,21 +36,71 @@ Update an existing install:
 dotnet tool update --global roslynkit
 ```
 
-Set up RoslynKit for coding-agent use from a Git repository root:
+Optionally scaffold the standalone CLI skill bundle from a Git repository root:
 
 ```powershell
 cd ./path/to/MyApp
 roslynkit init
 ```
 
-`roslynkit init` scaffolds the RoslynKit skill bundle for Codex by default. Use `--agent claude`, `--agent copilot`, or `--agent all` when another supported agent should receive the same bundle. The command checks for a `.git` directory or file in the current directory so setup happens at the repository root.
+`roslynkit init` scaffolds the RoslynKit skill bundle for Codex by default. Use `--agent claude`, `--agent copilot`, or `--agent all` when another supported agent should receive the same bundle. The command requires a `.git` directory in the current directory so setup happens at an ordinary Git repository root.
 
 For local package feeds and side-by-side prerelease development installs, see [docs/dev-install.md](docs/dev-install.md). For maintainer packaging and release steps, see [docs/dotnet-tool-release.md](docs/dotnet-tool-release.md).
+
+## MCP Quick Start
+
+Configure an MCP client to launch this command over standard input and standard output (stdio):
+
+```text
+roslynkit serve
+```
+
+The client owns the server lifetime. The server loads scopes lazily, retains up to four by default, and stops its owned workers when the connection closes. Least-recently-used idle scopes can be evicted and reloaded; active scopes remain retained. `--max-workspaces <count>` changes the retained-scope limit; it limits scope count rather than total memory. `--no-restore` disables automatic dependency restore.
+
+The server exposes exactly two tools:
+
+- `help`, with optional `command`, lists operations or describes one operation.
+- `query`, with required `repositoryRoot` and `args`, runs an operation in the selected repository.
+
+For example, pass these arguments to `query`:
+
+```json
+{
+  "repositoryRoot": "/absolute/path/to/MyApp",
+  "args": ["symbols", "--query", "MyService", "--exact"]
+}
+```
+
+Every query supplies an absolute root for an ordinary Git checkout with a `.git` directory. Paths use the server's filesystem namespace, including for Windows drive paths. Relative `--file`, `--project`, and `--target` options resolve from that root. Results identify the resolved root. An optional `--target` restricts the operation to a solution, solution filter, project, or repository directory; it does not replace `repositoryRoot`.
+
+After an agent-initiated build attempt finishes, including a failed build, await synchronization before further analysis of that scope:
+
+```json
+{
+  "repositoryRoot": "/absolute/path/to/MyApp",
+  "args": ["refresh"]
+}
+```
+
+Include the same `--target` when the work uses an explicit scope. `refresh` is an operation of `query`; it is not a third tool or a standalone CLI command. It checks saved inputs and waits for workspace synchronization without running a full build. A later search waits separately for its index if needed. There is no build hook.
+
+## Workspace Lifetime and Requirements
+
+Semantic queries use immutable Roslyn snapshots retained by server-owned workers. Saved text edits update existing C# documents; additions, deletions, renames, and changes to project membership, configuration, or references replace the loaded workspace. Existing readers can finish on their captured snapshot while new queries wait for an observed update. A failed replacement is reported to new queries until synchronization succeeds.
+
+File watchers coalesce changes, and background reconciliation repairs missed events and watcher overflow. Detection delay is possible; ordinary queries do not rescan every input. Explicit `refresh` performs a stronger saved-input check. Semantic availability is independent of background search indexing.
+
+Each repository uses its installed .NET Software Development Kit (SDK), selected by normal rules including `global.json`. Server-owned worker processes isolate repositories that need different SDKs. RoslynKit reports missing or unsupported SDKs and does not install them. Missing or outdated dependencies are restored when needed; an ordinary source edit does not trigger restore. Use server-wide `--no-restore` or the same option on a workspace operation to opt out. Full builds remain caller initiated.
+
+Supported projects target a single modern .NET framework. Different projects may target different supported versions. Legacy .NET Framework, multi-targeted projects, non-Git repositories, linked worktrees, and other `.git` indirection layouts are unsupported. Platform-specific workloads require the corresponding host capabilities. Windows and Linux are validation priorities; the rewrite status above does not claim completed platform testing.
+
+RoslynKit provides no repository trust registry or approval gate. Normal filesystem permissions apply. Read-only analysis does not sandbox MSBuild evaluation or package restore, which can execute repository build logic with the process's permissions.
 
 ## Common Tasks
 
 | Command | Use it to |
 | --- | --- |
+| `serve` | Start the client-owned stdio MCP server. |
 | `init` | Scaffold the RoslynKit skill bundle into a Git repository for Codex, Claude, GitHub Copilot, or all supported agents. |
 | `workspace` | See which projects and documents load. |
 | `diagnostics` | Check compiler diagnostics. |
@@ -67,7 +119,7 @@ For local package feeds and side-by-side prerelease development installs, see [d
 
 For exact command syntax, use `roslynkit help`, `roslynkit help <command>`, or [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md).
 
-## Quick Start
+## CLI Quick Start
 
 Start with repository setup, then confirm RoslynKit can load a solution or project:
 
@@ -95,7 +147,7 @@ Read a small source window from the workspace Roslyn loaded:
 roslynkit document-lines --file ./src/MyApp/Service.cs --start-line 40 --end-line 52
 ```
 
-By default, RoslynKit finds the nearest standard `.git/` directory and loads every tracked or unignored `.csproj` file in that repository, including disconnected project components. Use optional `--target` only to narrow a command to a `.slnx`, `.sln`, `.slnf`, `.csproj`, or repository-directory scope. Source positions are one-based, matching editor line and column numbers. Implicit repository and catalog discovery does not yet support linked worktrees, submodule `.git` indirection files, bare repositories, or non-Git repositories.
+By default, the CLI finds the nearest standard `.git/` directory and loads every tracked or unignored `.csproj` file in that repository. Use optional `--target` only to narrow a command to a `.slnx`, `.sln`, `.slnf`, `.csproj`, or repository-directory scope. Source positions are one-based, matching editor line and column numbers. Each CLI invocation owns a short-lived workspace and may incur cold startup; it does not attach to an existing MCP server. Workspace operations accept `--no-restore`.
 
 ## Search Index
 
@@ -108,11 +160,11 @@ roslynkit index
 roslynkit search --query "where is configuration validated during startup"
 ```
 
-RoslynKit stores the repository catalog at `.roslynkit/roslynkit.db` and creates `.roslynkit/.gitignore` for the database, its write-ahead logging (WAL) sidecars, and that generated ignore file. It never writes inside `.git/` or modifies the repository's root `.gitignore`. `--index-path` remains an advanced override and must resolve to an ignored path inside the repository.
+RoslynKit stores the repository search index at `.roslynkit/roslynkit.db` and creates `.roslynkit/.gitignore` for the database, its write-ahead logging (WAL) sidecars, and that generated ignore file. It never writes inside `.git/` or modifies the repository's root `.gitignore`. `--index-path` remains an advanced override and must resolve to an ignored path inside the repository.
 
-One database belongs to one repository and stores separate partitions for repository and explicit-target scopes. In addition to Full-Text Search 5 (FTS5) fields, it persists project references, exact symbol metadata, declaration spans, structured comments, and containment, inheritance, interface implementation, and override relationships. Paths remain repository-relative in SQLite and are reconstructed from the current repository root for output.
+One database belongs to one repository and stores separate partitions for repository and explicit-target scopes. It persists declaration retrieval fields, navigation identities, paths, locations, excerpts, and input metadata needed to detect outdated data. Paths remain repository-relative in SQLite and are reconstructed from the current repository root for output. Exact symbols, references, implementations, and compiler context come from live Roslyn snapshots. There is no separate persistent semantic catalog or application-level cache of completed query answers.
 
-`search` checks the repository fingerprint, refreshes stale records when needed, and queries SQLite first. `index` is the strict preparation command; use `--rebuild` to recreate the selected partition. With a fresh catalog, exact `symbols`, symbol-based `definition`, `symbol-source`, and `implementations` can complete without loading an MSBuild workspace. `references` remains a compiler operation on its first exact request and persists that bounded result for subsequent identical requests. Position-based context, quick info, signature help, diagnostics, and generated documents remain live Roslyn operations.
+`search` prepares the index automatically and waits when relevant inputs are known to have changed. Retained scopes update their indexes in the background; semantic queries do not wait for indexing once workspace synchronization finishes. `index` explicitly prepares the selected partition; use `--rebuild` to recreate it. Independent local clients keep separate workspaces and coordinate publication to compatible partitions in the same database. Shared databases on network filesystems are outside the supported scope.
 
 For a search-only workflow on a host that cannot load an MSBuild workspace, add `--text-only` to both `index` and `search`. This mode scans repository C# files into a separate in-process partition without MSBuild. Add `--compact` when a large language model (LLM) should judge ranked evidence without navigation metadata, and `--balanced` to reserve half of a bounded result set for focused tests when both production and test declarations match. `--text-only` cannot be combined with `--project`; use normal search when exact project evaluation or a follow-up `id:` is required.
 
@@ -169,11 +221,11 @@ flowchart TD
 
 This diagram describes the semantic workflow rather than the execution transport. RoslynKit provides deterministic results and stable identities. The LLM retains the intent, selects the next relationship, records visited identities or locations to avoid cycles, and stops after evidence satisfies that intent. Documentation and ordinary comments are routing hints, not proof; confirm a route with `definition`, `references`, `implementations`, `symbol-source`, or a narrow `document-lines` read.
 
-## CLI Plus Skill Files
+## Standalone CLI and Skill Files
 
-RoslynKit remains a normal short-lived command-line experience. It is not an MCP server, a Language Server Protocol (LSP) client, an editor service, or a background daemon. Performance state lives in the repository-local SQLite catalog rather than a persistent process, named pipe, or socket.
+The standalone CLI remains available for terminal and script workflows through the shared execution engine. Retained workspaces belong to the MCP client session; no independently discoverable daemon or Language Server Protocol (LSP) dependency is required.
 
-For AI coding tools, pair the CLI with a skill file that teaches the tool which commands to run. The stable skill lives at [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md), and the repo-local development skill lives at [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). The integration model is still just command-line execution: install `roslynkit`, scaffold the skill bundle with `init`, then run `roslynkit <command> ...`.
+The stable CLI skill lives at [.agents/skills/roslynkit/SKILL.md](.agents/skills/roslynkit/SKILL.md), and the repo-local development skill lives at [.agents/skills/roslynkit-dev/SKILL.md](.agents/skills/roslynkit-dev/SKILL.md). These bundles provide command-routing guidance. [docs/architecture.md](docs/architecture.md) owns the retained-workspace architecture, and MCP clients discover operations through `help`.
 
 Scaffold the stable skill bundle from the Git repository root:
 
@@ -185,7 +237,7 @@ roslynkit init --agent copilot
 roslynkit init --agent all
 ```
 
-`roslynkit init` requires a `.git` directory or file in the current directory and refuses to replace changed files unless `--overwrite` is supplied. Running the command from a parent folder or nested source folder fails unless that folder is itself the Git root. The selected agent controls only the outer folder:
+`roslynkit init` requires a `.git` directory in the current directory and refuses to replace changed files unless `--overwrite` is supplied. Running the command from a parent folder or nested source folder fails unless that folder is itself the Git root. Linked worktrees and other `.git` indirection files are unsupported. The selected agent controls only the outer folder:
 
 - `codex` -> `.agents/skills/roslynkit/`
 - `claude` -> `.claude/skills/roslynkit/`
@@ -195,13 +247,13 @@ The bundle contents stay the same for every agent: `SKILL.md` plus the `referenc
 
 ## Selecting Documents
 
-Document commands accept `--file <path>` and infer the repository from that file when `--target` is omitted.
+Standalone document commands accept `--file <path>` and infer the repository from that file when `--target` is omitted. MCP queries always require `repositoryRoot`.
 
-Relative `--file` values resolve from the current working directory. Absolute paths are accepted unchanged.
+Relative `--file` values resolve from the CLI's current working directory or the MCP query's explicit repository root. Absolute paths are accepted.
 
-Use `workspace` first when the same file appears in multiple project contexts, when a project targets multiple frameworks, or when you need generated, additional, or analyzer-config documents. If one path maps to multiple documents, retry with `--project <path>`, `--tfm <framework>`, or `--document-kind <source|sourceGenerated|additional|analyzerConfig>` from the usage error.
+Use `workspace` first when the same file appears in multiple project contexts or when generated, additional, or analyzer configuration documents are needed. If one path maps to multiple documents, retry with `--project <path>`, `--tfm <framework>`, or `--document-kind <source|sourceGenerated|additional|analyzerConfig>` from the usage error. The framework selector can distinguish supported project contexts; it does not enable multi-targeted projects.
 
-Use `document-lines` when you only need a small source range. Use `document-text` when you need the full resolved document, including source-generated, additional, or analyzer-config documents.
+Use `document-lines` for a small source range. Use `document-text` for the full resolved document, including source-generated, additional, or analyzer configuration documents.
 
 ## Selecting Symbols
 
@@ -215,11 +267,11 @@ roslynkit symbol-context --symbol "M:MyApp.MyService.Execute(System.String)"
 
 The `--symbol` selector can be a Roslyn documentation-comment ID emitted as `id:` in command output, such as `T:MyApp.MyService` or `M:MyApp.MyService.Execute(System.String)`, or a qualified symbol name such as `MyApp.MyService.Execute`. Prefix meanings are defined in [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md).
 
-If a qualified name is ambiguous, RoslynKit fails with candidate documentation-comment IDs so you can rerun the command with the exact symbol. Symbol IDs are more stable than saved line and column coordinates when files are changing.
+If a qualified name is ambiguous, RoslynKit fails with candidate documentation-comment IDs for a retry with the exact symbol. Symbol IDs are more stable than saved line and column coordinates when files are changing.
 
 ## Output
 
-Successful commands print compact markdown-flavored text:
+Successful CLI commands print compact markdown-flavored text:
 
 ```markdown
 command: symbols
@@ -231,17 +283,18 @@ truncated: false
   documentation: Runs application work for the current request.
 ```
 
-Failures print a short error block and exit non-zero:
+CLI failures print a short error block and exit non-zero:
 
 ```text
 error: usage
 message: Missing required option '--query'.
 ```
 
-Exit codes are `0` for success, `2` for usage errors, `130` for cancellation, and `1` for other failures. See [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md) for the complete output contract.
+CLI exit codes are `0` for success, `2` for usage errors, `130` for cancellation, and `1` for other failures. MCP returns the same Markdown in text content, identifies the resolved repository root, and marks failed tool results with `isError: true`. During `serve`, stdout carries only protocol messages and stderr carries diagnostics. See [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md) for the complete output contract.
 
 ## Documentation
 
+- [docs/architecture.md](docs/architecture.md): accepted retained-workspace architecture and rewrite acceptance criteria.
 - [.agents/skills/roslynkit/references/commands.md](.agents/skills/roslynkit/references/commands.md): generated command names, usage strings, and options.
 - [.agents/skills/roslynkit/references/output.md](.agents/skills/roslynkit/references/output.md): command output contract.
 - [docs/dev-install.md](docs/dev-install.md): side-by-side prerelease development install.
@@ -252,8 +305,8 @@ Exit codes are `0` for success, `2` for usage errors, `130` for cancellation, an
 
 ## Non-Goals
 
-- No MCP transport.
-- No LSP transport.
-- No background server or persistent inter-process communication transport.
+- No independent daemon or public worker endpoint.
+- No separate semantic catalog or completed-query answer cache.
+- No LSP dependency.
 - No editor-specific protocol coupling.
 - No source mutation by default. If edit-producing features are added later, they should return deterministic proposed edits before any apply mode exists.

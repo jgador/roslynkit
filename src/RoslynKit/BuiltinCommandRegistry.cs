@@ -5,13 +5,21 @@ namespace RoslynKit;
 /// </summary>
 public static class BuiltinCommandRegistry
 {
-    private static readonly BuiltinCommand[] Builtins =
+    private static readonly BuiltinCommand[] Builtins = AddRestoreOptions(
     [
         new BuiltinCommand(
             "version",
             "Print the installed RoslynKit version.",
             ["roslynkit version", "roslynkit --version"],
             []),
+        new BuiltinCommand(
+            "serve",
+            "Run the client-owned stdio Model Context Protocol (MCP) server with help and query tools.",
+            ["roslynkit serve [--max-workspaces <count>] [--no-restore]"],
+            [
+                OptionSpec.Integer(null, "max-workspaces", "count", "maximum retained repository scopes (default: 4)"),
+                RestoreOption(),
+            ]),
         new BuiltinCommand(
             "init",
             "Scaffold the RoslynKit coding-agent skill bundle into the current Git repository.",
@@ -42,7 +50,7 @@ public static class BuiltinCommandRegistry
             ]),
         new BuiltinCommand(
             "index",
-            "Build or refresh the repository-local search and semantic catalog.",
+            "Build or refresh the repository-local C# search index.",
             ["roslynkit index [--target <target>] [--index-path <path>] [--rebuild] [--text-only]"],
             [
                 TargetOption(),
@@ -52,7 +60,7 @@ public static class BuiltinCommandRegistry
             ]),
         new BuiltinCommand(
             "search",
-            "Search the repository-local C# catalog using English-oriented text matching and ranking.",
+            "Search the repository-local C# index using English-oriented text matching and ranking.",
             ["roslynkit search --query <text> [--target <target>] [--index-path <path>] [--project <path>] [--kind <kind>] [--max-results <n>] [--text-only] [--compact] [--balanced]"],
             [
                 TargetOption(),
@@ -231,7 +239,23 @@ public static class BuiltinCommandRegistry
                 TargetOption(),
                 SymbolOption(required: true),
             ]),
-    ];
+    ]);
+
+    private static BuiltinCommand[] AddRestoreOptions(BuiltinCommand[] commands)
+    {
+        return commands.Select(command => command.Options.Any(option => option.LongName == "target")
+            ? command with
+            {
+                Usage = command.Usage.Select(usage => usage + " [--no-restore]").ToArray(),
+                Options = [.. command.Options, RestoreOption()],
+            }
+            : command).ToArray();
+    }
+
+    private static OptionSpec RestoreOption()
+    {
+        return OptionSpec.Flag(null, "restore", "allow automatic dependency restore when needed (default); use --no-restore to disable");
+    }
 
     private static readonly IReadOnlyDictionary<string, BuiltinCommand> Lookup =
         Builtins.ToDictionary(command => command.Name, StringComparer.Ordinal);

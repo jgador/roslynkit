@@ -42,34 +42,8 @@ public static partial class RoslynCommandExecutor
             return await SearchCommandService.SearchAsync(command, cancellationToken).ConfigureAwait(false);
         }
 
-        var maintainsCatalog = CatalogCommandService.MaintainsCatalog(command);
-        if (maintainsCatalog)
-        {
-            var cached = await CatalogCommandService.TryExecuteAsync(
-                command,
-                cancellationToken).ConfigureAwait(false);
-            if (cached is not null)
-            {
-                return cached;
-            }
-        }
-
-        using var loaded = maintainsCatalog
-            ? await SearchCommandService.LoadStableWorkspaceAsync(command, cancellationToken).ConfigureAwait(false)
-            : await RoslynWorkspaceLoader.LoadAsync(
-                command.Optional("target"),
-                command.Optional("file"),
-                cancellationToken).ConfigureAwait(false);
-        var result = await ExecuteAsync(command, loaded, cancellationToken).ConfigureAwait(false);
-        if (maintainsCatalog)
-        {
-            await CatalogCommandService.StoreLiveResultAsync(
-                command,
-                result,
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        return result;
+        using var loaded = await StandaloneWorkspaceLoader.LoadAsync(command, cancellationToken).ConfigureAwait(false);
+        return await ExecuteAsync(command, loaded, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -81,6 +55,7 @@ public static partial class RoslynCommandExecutor
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(loaded);
+        ValidateBeforeWorkspaceLoad(command);
 
         return command.Name switch
         {

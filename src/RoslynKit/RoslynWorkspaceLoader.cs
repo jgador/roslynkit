@@ -20,16 +20,23 @@ public sealed class RoslynWorkspaceLoader : IDisposable
 
     private static readonly object MSBuildRegistrationLock = new();
 
+    private static string? _registeredMSBuildPath;
+
     private readonly IReadOnlyDictionary<ProjectId, string?> _projectTargetFrameworks;
 
-    private RoslynWorkspaceLoader(
+    private readonly bool _ownsWorkspace;
+
+    private int _disposed;
+
+    internal RoslynWorkspaceLoader(
         Workspace workspace,
         Solution solution,
         string targetPath,
         string targetKind,
         string rootPath,
         IReadOnlyDictionary<ProjectId, string?> projectTargetFrameworks,
-        IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics)
+        IReadOnlyList<WorkspaceLoadDiagnostic> workspaceDiagnostics,
+        bool ownsWorkspace = true)
     {
         Workspace = workspace;
         Solution = solution;
@@ -38,6 +45,7 @@ public sealed class RoslynWorkspaceLoader : IDisposable
         RootPath = rootPath;
         _projectTargetFrameworks = projectTargetFrameworks;
         WorkspaceDiagnostics = workspaceDiagnostics;
+        _ownsWorkspace = ownsWorkspace;
     }
 
     /// <summary>
@@ -71,6 +79,27 @@ public sealed class RoslynWorkspaceLoader : IDisposable
     public IReadOnlyList<WorkspaceLoadDiagnostic> WorkspaceDiagnostics { get; }
 
     internal GitWorktreeFingerprint? LoadedWorktreeFingerprint { get; private set; }
+
+    internal RoslynWorkspaceLoader WithSolution(Solution solution)
+    {
+        if (!ReferenceEquals(solution.Workspace, Workspace))
+        {
+            throw new ArgumentException("A snapshot must belong to the same Roslyn workspace.", nameof(solution));
+        }
+
+        return new RoslynWorkspaceLoader(
+            Workspace,
+            solution,
+            TargetPath,
+            TargetKind,
+            RootPath,
+            _projectTargetFrameworks,
+            WorkspaceDiagnostics,
+            ownsWorkspace: false)
+        {
+            LoadedWorktreeFingerprint = LoadedWorktreeFingerprint,
+        };
+    }
 
     /// <summary>
     /// Opens the requested solution or project target with <c>MSBuildWorkspace</c> and records workspace load diagnostics.
@@ -113,36 +142,36 @@ public sealed class RoslynWorkspaceLoader : IDisposable
         var progress = new Progress<ProjectLoadProgress>(entry => progressEvents.Enqueue(entry));
         var workspace = CreateMSBuildWorkspace(diagnostics);
 
-        var extension = Path.GetExtension(fullTargetPath);
-        if (extension.Equals(".sln", StringComparison.OrdinalIgnoreCase) || extension.Equals(".slnx", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            var solution = await workspace.OpenSolutionAsync(fullTargetPath, progress, cancellationToken).ConfigureAwait(false);
-            return new RoslynWorkspaceLoader(
-                workspace,
-                solution,
-                fullTargetPath,
-                extension[1..],
-                ResolveRootPath(fullTargetPath),
-                ResolveProjectTargetFrameworks(solution, progressEvents.ToArray()),
-                diagnostics);
-        }
+            var extension = Path.GetExtension(fullTargetPath);
+            if (extension.Equals(".sln", StringComparison.OrdinalIgnoreCase) || extension.Equals(".slnx", StringComparison.OrdinalIgnoreCase))
+            {
+                var solution = await workspace.OpenSolutionAsync(fullTargetPath, progress, cancellationToken).ConfigureAwait(false);
+                return new RoslynWorkspaceLoader(
+                    workspace,
+                    solution,
+                    fullTargetPath,
+                    extension[1..],
+                    ResolveRootPath(fullTargetPath),
+                    ResolveProjectTargetFrameworks(solution, progressEvents.ToArray()),
+                    diagnostics);
+            }
 
-        if (extension.Equals(".csproj", StringComparison.OrdinalIgnoreCase))
-        {
-            var project = await workspace.OpenProjectAsync(fullTargetPath, progress, cancellationToken).ConfigureAwait(false);
-            return new RoslynWorkspaceLoader(
-                workspace,
-                project.Solution,
-                fullTargetPath,
-                "csproj",
-                ResolveRootPath(fullTargetPath),
-                ResolveProjectTargetFrameworks(project.Solution, progressEvents.ToArray()),
-                diagnostics);
-        }
+            if (extension.Equals(".csproj", StringComparison.OrdinalIgnoreCase))
+            {
+                var project = await workspace.OpenProjectAsync(fullTargetPath, progress, cancellationToken).ConfigureAwait(false);
+                return new RoslynWorkspaceLoader(
+                    workspace,
+                    project.Solution,
+                    fullTargetPath,
+                    "csproj",
+                    ResolveRootPath(fullTargetPath),
+                    ResolveProjectTargetFrameworks(project.Solution, progressEvents.ToArray()),
+                    diagnostics);
+            }
 
-        if (extension.Equals(".slnf", StringComparison.OrdinalIgnoreCase))
-        {
-            try
+            if (extension.Equals(".slnf", StringComparison.OrdinalIgnoreCase))
             {
                 var projectPaths = await ReadSolutionFilterProjectsAsync(
                     fullTargetPath,
@@ -162,15 +191,14 @@ public sealed class RoslynWorkspaceLoader : IDisposable
                     ResolveProjectTargetFrameworks(solution, progressEvents.ToArray()),
                     diagnostics);
             }
-            catch
-            {
-                workspace.Dispose();
-                throw;
-            }
-        }
 
-        workspace.Dispose();
-        throw new CliUsageException("unknown", "Target must be a .sln, .slnx, .slnf, or .csproj file.");
+            throw new CliUsageException("unknown", "Target must be a .sln, .slnx, .slnf, or .csproj file.");
+        }
+        catch
+        {
+            workspace.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -546,7 +574,10 @@ public sealed class RoslynWorkspaceLoader : IDisposable
     /// </summary>
     public void Dispose()
     {
-        Workspace.Dispose();
+        if (_ownsWorkspace && Interlocked.Exchange(ref _disposed, 1) == 0)
+        {
+            Workspace.Dispose();
+        }
     }
 
     private static IReadOnlyDictionary<ProjectId, string?> ResolveProjectTargetFrameworks(Solution solution, IReadOnlyList<ProjectLoadProgress> progressEvents)
@@ -678,6 +709,13 @@ public sealed class RoslynWorkspaceLoader : IDisposable
 
     private static void RegisterMSBuild()
     {
+        var configuredPath = Environment.GetEnvironmentVariable("ROSLYNKIT_DOTNET_SDK_PATH");
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+        {
+            RegisterMSBuild(configuredPath);
+            return;
+        }
+
         // Registration must be serialized: with concurrent in-process callers (such as parallel tests),
         // an unguarded check-then-register race lets the loser call RegisterDefaults after MSBuild
         // assemblies are already loaded, which throws.
@@ -688,7 +726,30 @@ public sealed class RoslynWorkspaceLoader : IDisposable
                 return;
             }
 
-            MSBuildLocator.RegisterDefaults();
+            _registeredMSBuildPath = MSBuildLocator.RegisterDefaults().MSBuildPath;
+        }
+    }
+
+    internal static void RegisterMSBuild(string sdkDirectory)
+    {
+        var fullPath = Path.GetFullPath(sdkDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        lock (MSBuildRegistrationLock)
+        {
+            if (MSBuildLocator.IsRegistered)
+            {
+                if (_registeredMSBuildPath is null || !PathComparer.Equals(
+                        Path.GetFullPath(_registeredMSBuildPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                        fullPath))
+                {
+                    throw new InvalidOperationException(
+                        $"MSBuild is already registered from a different SDK. Restart the repository worker to use '{fullPath}'.");
+                }
+
+                return;
+            }
+
+            MSBuildLocator.RegisterMSBuildPath(fullPath);
+            _registeredMSBuildPath = fullPath;
         }
     }
 }

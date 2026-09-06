@@ -155,6 +155,26 @@ public sealed class InitCommandExecutorTests
         }
     }
 
+    [Fact]
+    public void Execute_RejectsGitIndirectionFile()
+    {
+        var root = CreateTestRoot();
+        try
+        {
+            File.WriteAllText(Path.Combine(root, ".git"), "gitdir: elsewhere");
+
+            var exception = Assert.Throws<CliUsageException>(
+                () => InitCommandExecutor.Execute(CliParser.Parse(["init"]), root, typeof(InitCommandExecutor).Assembly));
+
+            Assert.Contains(".git directory", exception.Message, StringComparison.Ordinal);
+            Assert.False(Directory.Exists(Path.Combine(root, ".agents")));
+        }
+        finally
+        {
+            DeleteTestRoot(root);
+        }
+    }
+
     private static string CreateRepositoryRoot()
     {
         var root = CreateTestRoot();

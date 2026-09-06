@@ -5,11 +5,12 @@ This reference lists command names, usage strings, and options exposed by the in
 ## Commands
 
 - `version`: Print the installed RoslynKit version.
+- `serve`: Run the client-owned stdio Model Context Protocol (MCP) server with help and query tools.
 - `init`: Scaffold the RoslynKit coding-agent skill bundle into the current Git repository.
 - `workspace`: List projects and repository-relevant documents in the inferred repository or explicit target.
 - `diagnostics`: Return source compiler diagnostics for the loaded target.
-- `index`: Build or refresh the repository-local search and semantic catalog.
-- `search`: Search the repository-local C# catalog using English-oriented text matching and ranking.
+- `index`: Build or refresh the repository-local C# search index.
+- `search`: Search the repository-local C# index using English-oriented text matching and ranking.
 - `symbols`: Search source declarations by symbol name.
 - `document-text`: Read the full text of one resolved document.
 - `document-lines`: Read a bounded one-based line range from one resolved document.
@@ -38,6 +39,21 @@ roslynkit --version
 
 No options.
 
+## `serve`
+
+Run the client-owned stdio Model Context Protocol (MCP) server with help and query tools.
+
+### Usage
+
+```powershell
+roslynkit serve [--max-workspaces <count>] [--no-restore]
+```
+
+### Options
+
+- `--max-workspaces` `<count>`: maximum retained repository scopes (default: 4)
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
+
 ## `init`
 
 Scaffold the RoslynKit coding-agent skill bundle into the current Git repository.
@@ -60,7 +76,7 @@ List projects and repository-relevant documents in the inferred repository or ex
 ### Usage
 
 ```powershell
-roslynkit workspace [--target <solution.slnx|solution.sln|solution.slnf|project.csproj|repository>] [--include-generated] [--include-additional] [--include-analyzer-config]
+roslynkit workspace [--target <solution.slnx|solution.sln|solution.slnf|project.csproj|repository>] [--include-generated] [--include-additional] [--include-analyzer-config] [--no-restore]
 ```
 
 ### Options
@@ -69,6 +85,7 @@ roslynkit workspace [--target <solution.slnx|solution.sln|solution.slnf|project.
 - `--include-generated`: include source-generated and generated source documents
 - `--include-additional`: include additional files
 - `--include-analyzer-config`: include analyzer config documents such as .editorconfig
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `diagnostics`
 
@@ -77,7 +94,7 @@ Return source compiler diagnostics for the loaded target.
 ### Usage
 
 ```powershell
-roslynkit diagnostics [--target <target>] [--max-results <n>] [--include-hidden] [--include-generated]
+roslynkit diagnostics [--target <target>] [--max-results <n>] [--include-hidden] [--include-generated] [--no-restore]
 ```
 
 ### Options
@@ -86,15 +103,16 @@ roslynkit diagnostics [--target <target>] [--max-results <n>] [--include-hidden]
 - `--max-results` `<n>`: maximum results to return (default: 25)
 - `--include-hidden`: include hidden diagnostics
 - `--include-generated`: include diagnostics from generated, bin, and obj documents
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `index`
 
-Build or refresh the repository-local search and semantic catalog.
+Build or refresh the repository-local C# search index.
 
 ### Usage
 
 ```powershell
-roslynkit index [--target <target>] [--index-path <path>] [--rebuild] [--text-only]
+roslynkit index [--target <target>] [--index-path <path>] [--rebuild] [--text-only] [--no-restore]
 ```
 
 ### Options
@@ -103,15 +121,16 @@ roslynkit index [--target <target>] [--index-path <path>] [--rebuild] [--text-on
 - `--index-path` `<path>`: optional SQLite database override; defaults to .roslynkit/roslynkit.db
 - `--rebuild`: discard the selected partition before indexing
 - `--text-only`: index repository C# source in-process without loading MSBuild
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `search`
 
-Search the repository-local C# catalog using English-oriented text matching and ranking.
+Search the repository-local C# index using English-oriented text matching and ranking.
 
 ### Usage
 
 ```powershell
-roslynkit search --query <text> [--target <target>] [--index-path <path>] [--project <path>] [--kind <kind>] [--max-results <n>] [--text-only] [--compact] [--balanced]
+roslynkit search --query <text> [--target <target>] [--index-path <path>] [--project <path>] [--kind <kind>] [--max-results <n>] [--text-only] [--compact] [--balanced] [--no-restore]
 ```
 
 ### Options
@@ -125,6 +144,7 @@ roslynkit search --query <text> [--target <target>] [--index-path <path>] [--pro
 - `--text-only`: search repository C# source in-process without loading MSBuild
 - `--compact`: emit concise ranked evidence with repository-relative locations
 - `--balanced`: reserve half of bounded results for focused test declarations when both source and tests match
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `symbols`
 
@@ -133,7 +153,7 @@ Search source declarations by symbol name.
 ### Usage
 
 ```powershell
-roslynkit symbols --query <text> [--target <target>] [--max-results <n>] [--case-sensitive] [--exact] [--kind <kind>]
+roslynkit symbols --query <text> [--target <target>] [--max-results <n>] [--case-sensitive] [--exact] [--kind <kind>] [--no-restore]
 ```
 
 ### Options
@@ -144,6 +164,7 @@ roslynkit symbols --query <text> [--target <target>] [--max-results <n>] [--case
 - `--case-sensitive`: match query text case-sensitively
 - `--exact`: match the declaration name exactly
 - `--kind` `<kind>`: filter symbols by kind: namespace, type, member, method, property, field, event, class, interface, struct, enum, delegate
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `document-text`
 
@@ -152,7 +173,7 @@ Read the full text of one resolved document.
 ### Usage
 
 ```powershell
-roslynkit document-text --file <path> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
+roslynkit document-text --file <path> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--no-restore]
 ```
 
 ### Options
@@ -162,6 +183,7 @@ roslynkit document-text --file <path> [--target <target>] [--project <path>] [--
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
 - `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `document-lines`
 
@@ -170,7 +192,7 @@ Read a bounded one-based line range from one resolved document.
 ### Usage
 
 ```powershell
-roslynkit document-lines --file <path> --start-line <n> --end-line <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
+roslynkit document-lines --file <path> --start-line <n> --end-line <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--no-restore]
 ```
 
 ### Options
@@ -182,6 +204,7 @@ roslynkit document-lines --file <path> --start-line <n> --end-line <n> [--target
 - `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
 - `--start-line` `<n>` (required): one-based first document line
 - `--end-line` `<n>` (required): one-based last document line
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `document-symbols`
 
@@ -190,7 +213,7 @@ List declared symbols in one source or source-generated C# document.
 ### Usage
 
 ```powershell
-roslynkit document-symbols --file <path> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
+roslynkit document-symbols --file <path> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--no-restore]
 ```
 
 ### Options
@@ -200,6 +223,7 @@ roslynkit document-symbols --file <path> [--target <target>] [--project <path>] 
 - `--project` `<path>`: owning project file path when a document path is ambiguous
 - `--tfm` `<framework>`: target framework when a document path is ambiguous across project contexts
 - `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `definition`
 
@@ -208,8 +232,8 @@ Resolve a symbol selector or the symbol at a one-based line and column to source
 ### Usage
 
 ```powershell
-roslynkit definition --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
-roslynkit definition --symbol <selector> [--target <target>]
+roslynkit definition --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--no-restore]
+roslynkit definition --symbol <selector> [--target <target>] [--no-restore]
 ```
 
 ### Options
@@ -222,6 +246,7 @@ roslynkit definition --symbol <selector> [--target <target>]
 - `--line` `<n>`: one-based source line
 - `--column` `<n>`: one-based source column
 - `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `type-definition`
 
@@ -230,7 +255,7 @@ Resolve the type of the symbol at a one-based line and column to source definiti
 ### Usage
 
 ```powershell
-roslynkit type-definition --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
+roslynkit type-definition --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--no-restore]
 ```
 
 ### Options
@@ -242,6 +267,7 @@ roslynkit type-definition --file <path> --line <n> --column <n> [--target <targe
 - `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
 - `--line` `<n>` (required): one-based source line
 - `--column` `<n>` (required): one-based source column
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `references`
 
@@ -250,8 +276,8 @@ Find source references for a symbol selector or the symbol at a one-based line a
 ### Usage
 
 ```powershell
-roslynkit references --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--max-results <n>]
-roslynkit references --symbol <selector> [--target <target>] [--max-results <n>]
+roslynkit references --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--max-results <n>] [--no-restore]
+roslynkit references --symbol <selector> [--target <target>] [--max-results <n>] [--no-restore]
 ```
 
 ### Options
@@ -265,6 +291,7 @@ roslynkit references --symbol <selector> [--target <target>] [--max-results <n>]
 - `--column` `<n>`: one-based source column
 - `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
 - `--max-results` `<n>`: maximum results to return (default: 25)
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `implementations`
 
@@ -273,8 +300,8 @@ Find implementations for a symbol selector or the symbol at a one-based line and
 ### Usage
 
 ```powershell
-roslynkit implementations --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--max-results <n>]
-roslynkit implementations --symbol <selector> [--target <target>] [--max-results <n>]
+roslynkit implementations --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--max-results <n>] [--no-restore]
+roslynkit implementations --symbol <selector> [--target <target>] [--max-results <n>] [--no-restore]
 ```
 
 ### Options
@@ -288,6 +315,7 @@ roslynkit implementations --symbol <selector> [--target <target>] [--max-results
 - `--column` `<n>`: one-based source column
 - `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
 - `--max-results` `<n>`: maximum results to return (default: 25)
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `symbol-context`
 
@@ -296,8 +324,8 @@ Return the local syntax node, resolved symbol, ordinary comments, and bounded se
 ### Usage
 
 ```powershell
-roslynkit symbol-context --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--max-results <n>] [--max-comments <n>]
-roslynkit symbol-context --symbol <selector> [--target <target>] [--max-results <n>] [--max-comments <n>]
+roslynkit symbol-context --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--max-results <n>] [--max-comments <n>] [--no-restore]
+roslynkit symbol-context --symbol <selector> [--target <target>] [--max-results <n>] [--max-comments <n>] [--no-restore]
 ```
 
 ### Options
@@ -312,6 +340,7 @@ roslynkit symbol-context --symbol <selector> [--target <target>] [--max-results 
 - `--symbol` `<selector>`: documentation-comment ID or qualified symbol name
 - `--max-results` `<n>`: maximum semantic descendants to return (default: 25)
 - `--max-comments` `<n>`: maximum ordinary comments to return (default: 3)
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `quick-info`
 
@@ -320,7 +349,7 @@ Return Roslyn quick info for the symbol at a one-based line and column.
 ### Usage
 
 ```powershell
-roslynkit quick-info --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
+roslynkit quick-info --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--no-restore]
 ```
 
 ### Options
@@ -332,6 +361,7 @@ roslynkit quick-info --file <path> --line <n> --column <n> [--target <target>] [
 - `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
 - `--line` `<n>` (required): one-based source line
 - `--column` `<n>` (required): one-based source column
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `signature-help`
 
@@ -340,7 +370,7 @@ Return Roslyn signature help for the position at a one-based line and column.
 ### Usage
 
 ```powershell
-roslynkit signature-help --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>]
+roslynkit signature-help --file <path> --line <n> --column <n> [--target <target>] [--project <path>] [--tfm <framework>] [--document-kind <kind>] [--no-restore]
 ```
 
 ### Options
@@ -352,6 +382,7 @@ roslynkit signature-help --file <path> --line <n> --column <n> [--target <target
 - `--document-kind` `<kind>`: document kind when a path maps to source, sourceGenerated, additional, or analyzerConfig
 - `--line` `<n>` (required): one-based source line
 - `--column` `<n>` (required): one-based source column
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable
 
 ## `symbol-source`
 
@@ -360,10 +391,11 @@ Return the full declaration source text for a symbol selector.
 ### Usage
 
 ```powershell
-roslynkit symbol-source --symbol <selector> [--target <target>]
+roslynkit symbol-source --symbol <selector> [--target <target>] [--no-restore]
 ```
 
 ### Options
 
 - `--target` / `-t` `<target>`: optional solution, project, or repository-directory scope; defaults to the nearest repository
 - `--symbol` `<selector>` (required): documentation-comment ID or qualified symbol name
+- `--restore`: allow automatic dependency restore when needed (default); use --no-restore to disable

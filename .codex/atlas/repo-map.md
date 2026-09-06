@@ -2,7 +2,7 @@
 
 Last verified: 2026-09-06
 
-RoslynKit is a .NET 10 command-line tool for deterministic, read-only C# inspection. Each invocation is a short-lived process. Reusable state lives in a repository-local SQLite semantic catalog rather than a daemon, named pipe, socket, or Model Context Protocol (MCP) server.
+RoslynKit is a .NET 10 tool for deterministic, read-only C# inspection. A client-owned standard-input/output (stdio) Model Context Protocol (MCP) server retains live Roslyn workspaces. Standalone commands use the same engine with short-lived ownership. Repository-local SQLite persists search indexes, not semantic catalogs or completed query answers. [docs/architecture.md](../../docs/architecture.md) owns the accepted rewrite decisions.
 
 ## Navigation Strategy
 
@@ -18,29 +18,26 @@ RoslynKit is a .NET 10 command-line tool for deterministic, read-only C# inspect
 ```text
 args
   -> Program
-  -> CliParser
-  -> CliApplication
-  -> RoslynCommandExecutor
-       -> index/search
-            -> RepositoryContext
-            -> RepositoryProjectDiscovery
-            -> SearchCommandService
-            -> RoslynWorkspaceLoader or TextOnlySearchCorpusBuilder
-            -> RoslynSearchCorpusBuilder
-            -> SqliteSearchIndex
-       -> semantic navigation
-            -> RepositoryContext
-            -> CatalogCommandService
-                 -> fresh SQLite answer when supported
-                 -> otherwise fall through
-            -> RoslynWorkspaceLoader
-            -> PositionResolver / RoslynSymbolResolver
-            -> Roslyn operation
-            -> optional lazy operation-cache write
-       -> MarkdownProjection
+       -> serve -> McpServerHost: help / query
+            -> McpQuery: explicit repository and path normalization
+            -> McpWorkspacePool: bounded server-owned workers
+            -> RepositoryWorkerClient / RepositoryWorkerHost: private stdio
+                 -> RepositoryWorkspaceSession: snapshots and reader leases
+                 -> RepositoryFileWatcher / WorkspaceInputManifest: saved inputs
+                 -> LiveSearchIndex: independent background publication
+       -> CLI -> CliParser -> CliApplication -> WorkspaceCommandRouter
+            -> StandaloneWorkspaceLoader or short-lived search session
+
+workspace materialization
+  -> RepositoryContext / RepositoryProjectDiscovery
+  -> WorkspacePreparation / DotnetSdkResolver / WorkspaceSupportValidator
+  -> RoslynWorkspaceLoader -> captured Solution
+       -> RoslynCommandExecutor -> PositionResolver / RoslynSymbolResolver
+       -> RoslynSearchCorpusBuilder -> SqliteSearchIndex
+  -> MarkdownProjection
 ```
 
-The default scope is the nearest standard `.git/` directory. RoslynKit discovers every tracked or unignored `.csproj` and loads the resulting repository project forest, including disconnected components. The default catalog path is `.roslynkit/roslynkit.db`; `.roslynkit/.gitignore` excludes the database and SQLite sidecars without modifying the root `.gitignore`.
+The default CLI scope is the nearest standard `.git/` directory; MCP queries require an explicit absolute root. RoslynKit discovers every tracked or unignored `.csproj` and loads the resulting repository project forest, including disconnected components. The default search index path is `.roslynkit/roslynkit.db`; `.roslynkit/.gitignore` excludes the database and SQLite sidecars without modifying the root `.gitignore`.
 
 Explicit `.slnx`, `.sln`, `.slnf`, `.csproj`, and repository-directory targets remain supported. Linked worktrees and other `.git` indirection files are intentionally unsupported in the initial repository-discovery contract.
 
@@ -68,41 +65,45 @@ Command metadata in `BuiltinCommandRegistry` generates [.agents/skills/roslynkit
 4. [tests/RoslynKit.Tests/RepositoryDiscoveryTests.cs](../../tests/RoslynKit.Tests/RepositoryDiscoveryTests.cs)
 5. [tests/RoslynKit.Tests/CommandExecution/WorkspaceCommandExecutionTests.cs](../../tests/RoslynKit.Tests/CommandExecution/WorkspaceCommandExecutionTests.cs)
 
-`RepositoryContext` establishes the repository and default catalog boundary. `RepositoryProjectDiscovery` uses Git-visible files as the project source of truth. `RoslynWorkspaceLoader` opens the implicit project forest or an explicit target and avoids reopening projects already loaded transitively.
+`RepositoryContext` establishes the repository and index boundary. `RepositoryProjectDiscovery` uses Git-visible projects for initial discovery, not as the complete compiler input manifest. `WorkspacePreparation` evaluates supported single-target SDK-style projects and restores dependencies when needed. `RoslynWorkspaceLoader` opens the project forest or explicit target and avoids reopening transitively loaded projects. Each retained worker isolates process-global SDK registration.
 
-### Search and Semantic Catalog
+### Retained Workspace and MCP Lifecycle
 
 **Read first**
 
-1. [src/RoslynKit/SearchCommandService.cs](../../src/RoslynKit/SearchCommandService.cs)
-2. [src/RoslynKit/SqliteSearchIndex.cs](../../src/RoslynKit/SqliteSearchIndex.cs)
-3. [src/RoslynKit/SqliteSearchIndex.Catalog.cs](../../src/RoslynKit/SqliteSearchIndex.Catalog.cs)
+1. [src/RoslynKit/McpServerHost.cs](../../src/RoslynKit/McpServerHost.cs)
+2. [src/RoslynKit/McpWorkspacePool.cs](../../src/RoslynKit/McpWorkspacePool.cs)
+3. [src/RoslynKit/RepositoryWorkerHost.cs](../../src/RoslynKit/RepositoryWorkerHost.cs)
+4. [src/RoslynKit/RepositoryWorkspaceSession.cs](../../src/RoslynKit/RepositoryWorkspaceSession.cs)
+5. [src/RoslynKit/WorkspaceInputManifest.cs](../../src/RoslynKit/WorkspaceInputManifest.cs)
+
+The public transport exposes only `help` and `query`. The latter includes the logical `refresh` operation. The pool retains bounded idle-evictable repository/scope workers. A session applies existing source text incrementally and replaces workspace owners for structural changes. Queries lease immutable solutions; retired owners live until their last reader releases them. Watcher notifications drive ordinary synchronization; periodic reconciliation and explicit refresh perform broader verification. Ordinary warm queries do not hash the entire input set.
+
+SDK/restore problems route through [src/RoslynKit/WorkspacePreparation.cs](../../src/RoslynKit/WorkspacePreparation.cs); process lifetime problems route through [src/RoslynKit/RepositoryWorkerClient.cs](../../src/RoslynKit/RepositoryWorkerClient.cs). [src/RoslynKit/RepositoryFileWatcher.cs](../../src/RoslynKit/RepositoryFileWatcher.cs) owns filesystem notifications, not polling or compilation.
+
+### Persistent Search
+
+**Read first**
+
+1. [src/RoslynKit/LiveSearchIndex.cs](../../src/RoslynKit/LiveSearchIndex.cs)
+2. [src/RoslynKit/SearchCommandService.cs](../../src/RoslynKit/SearchCommandService.cs)
+3. [src/RoslynKit/SqliteSearchIndex.cs](../../src/RoslynKit/SqliteSearchIndex.cs)
 4. [src/RoslynKit/RoslynSearchCorpusBuilder.cs](../../src/RoslynKit/RoslynSearchCorpusBuilder.cs)
-5. [tests/RoslynKit.Tests/SqliteSemanticCatalogTests.cs](../../tests/RoslynKit.Tests/SqliteSemanticCatalogTests.cs)
+5. [tests/RoslynKit.Tests/SearchCommandTests.cs](../../tests/RoslynKit.Tests/SearchCommandTests.cs)
 
-The catalog owns:
+SQLite owns Full-Text Search 5 (FTS5) and Best Matching 25 (BM25) declaration retrieval, navigation IDs/locations/excerpts, and compatible scope/input metadata. It does not own exact semantic answers, relationships, or an operation-result cache. Schema migration removes obsolete catalog tables. A database writer lease spans corpus construction and validated atomic publication. Search waits for known-outdated data; semantic queries do not wait for index work. Text-only mode uses a separate partition without MSBuild.
 
-- Full-Text Search 5 (FTS5) and Best Matching 25 (BM25) declaration retrieval.
-- Exact symbol identity, project, accessibility, static state, containing symbol, declaration location, and UTF-16 source span.
-- XML summaries and structured ordinary comments.
-- Project references and containment, inheritance, interface implementation, and override edges.
-- Lazy serialized results for bounded live operations such as exact reference queries.
-
-Search validates source fingerprints and republishes search and semantic data atomically. Text-only mode uses a separate repository partition and does not load `MSBuildWorkspace`.
-
-### Cache-First Semantic Navigation
+### Live Semantic Navigation
 
 **Read first**
 
 1. [src/RoslynKit/RoslynCommandExecutor.cs](../../src/RoslynKit/RoslynCommandExecutor.cs)
-2. [src/RoslynKit/CatalogCommandService.cs](../../src/RoslynKit/CatalogCommandService.cs)
+2. [src/RoslynKit/StandaloneWorkspaceLoader.cs](../../src/RoslynKit/StandaloneWorkspaceLoader.cs)
 3. [src/RoslynKit/PositionResolver.cs](../../src/RoslynKit/PositionResolver.cs)
 4. [src/RoslynKit/RoslynSymbolResolver.cs](../../src/RoslynKit/RoslynSymbolResolver.cs)
 5. [tests/RoslynKit.Tests/CommandExecution/SemanticCommandExecutionTests.cs](../../tests/RoslynKit.Tests/CommandExecution/SemanticCommandExecutionTests.cs)
 
-A fresh catalog can answer exact `symbols`, symbol-based `definition`, `symbol-source`, and `implementations`. A matching cached `references` invocation can also complete from SQLite. Missing or unsupported catalog answers fall through to a newly loaded Roslyn workspace; live reference results are persisted only when a fresh catalog already exists.
-
-Position-based operations, fuzzy symbol queries, symbol context, quick info, signature help, diagnostics, and generated-document operations remain live Roslyn paths.
+All semantic commands execute against live Roslyn. The caller-owned executor overload uses a captured loader view without taking ownership; the standalone overload prepares and owns a cold workspace. Neither persists completed results. Snapshot construction must not use Roslyn workspace apply operations that write source files.
 
 ### Rendering and Output Contract
 
@@ -134,7 +135,8 @@ Implicit repository index and search output uses `scope: repository` plus `repos
 |---|---|
 | Parser or command metadata | `CliParserTests`, `CommandReferenceMarkdownTests`, generated command-reference check |
 | Repository discovery | `RepositoryDiscoveryTests`, `WorkspaceCommandExecutionTests` |
-| Search schema or freshness | `SqliteSearchIndexTests`, `SqliteSemanticCatalogTests`, `SearchCliContractTests` |
+| Search schema or freshness | `SqliteSearchIndexTests`, `SearchCommandTests`, `SearchCliContractTests`, migration tests |
+| Retained lifecycle and SDKs | Session, input-manifest, MCP protocol/pool/process, SDK-resolution, and workspace-preparation tests |
 | Semantic navigation | `SemanticCommandExecutionTests`, `SymbolContextCommandExecutionTests` |
 | Rendering | `CliOutputTests`, [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md) |
 | Packaging | `PackagedToolProcessIntegrationTests`, [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md) |

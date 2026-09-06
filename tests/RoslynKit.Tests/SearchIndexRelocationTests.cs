@@ -31,7 +31,9 @@ public sealed class SearchIndexRelocationTests
         var metadataBeforeSearch = await ReadPersistedMetadataAsync(relocatedDatabasePath);
         var search = await ExecuteSearchAsync(repository, relocatedDatabasePath);
 
-        Assert.Equal(metadataBeforeSearch, await ReadPersistedMetadataAsync(relocatedDatabasePath));
+        var relocatedMetadata = await ReadPersistedMetadataAsync(relocatedDatabasePath);
+        Assert.Equal(metadataBeforeSearch.SymbolCount, relocatedMetadata.SymbolCount);
+        Assert.NotEqual(metadataBeforeSearch.Fingerprint, relocatedMetadata.Fingerprint);
         AssertSearchUsesRepositoryPaths(search, repository, relocatedDatabasePath);
     }
 

@@ -54,11 +54,11 @@
     {
       "id": "search-command-flow",
       "isDefault": true,
-      "intent": "Trace the normal search --text-only --compact --balanced flow from command parsing through execution and retrieval to repository-relative Markdown output, including its public contract tests.",
+      "intent": "Trace the shared CLI or MCP search --text-only --compact --balanced flow from command parsing through execution and retrieval to repository-relative Markdown output, including its public contract tests.",
       "query": "trace CliParser Parse search text-only compact balanced through RoslynCommandExecutor SearchCommandService and MarkdownProjection repository-relative output",
       "requiredEvidenceGroups": [
         ["src/RoslynKit/CliParser.cs", "tests/RoslynKit.Tests/CliParserTests.cs", "tests/RoslynKit.Tests/SearchCliContractTests.cs"],
-        ["src/RoslynKit/RoslynCommandExecutor.cs"],
+        ["src/RoslynKit/RoslynCommandExecutor.cs", "src/RoslynKit/RepositoryWorkerHost.cs"],
         ["src/RoslynKit/SearchCommandService.cs"],
         ["src/RoslynKit/MarkdownProjection.cs", "tests/RoslynKit.Tests/SearchMarkdownFormatTests.cs"]
       ]
@@ -75,23 +75,23 @@
       ]
     },
     {
-      "id": "semantic-catalog-navigation",
+      "id": "retained-workspace-navigation",
       "isDefault": false,
-      "intent": "Find the production declarations and focused tests that persist semantic symbol metadata and relationships in SQLite, answer supported navigation from a fresh catalog, and fall back to live Roslyn when catalog data is insufficient.",
-      "query": "SQLite semantic catalog symbols relationships cache first definition implementations references live Roslyn fallback",
+      "intent": "Find the production declarations and focused tests that retain immutable Roslyn workspace snapshots, update saved documents, and execute semantic navigation without cached SQLite answers.",
+      "query": "retained workspace snapshot reader lease incremental saved document semantic navigation Roslyn",
       "requiredEvidenceGroups": [
-        ["src/RoslynKit/SqliteSearchIndex.Catalog.cs", "src/RoslynKit/RoslynSearchCorpusBuilder.cs"],
-        ["src/RoslynKit/CatalogCommandService.cs", "src/RoslynKit/RoslynCommandExecutor.cs"],
-        ["tests/RoslynKit.Tests/SqliteSemanticCatalogTests.cs", "tests/RoslynKit.Tests/CommandExecution/SemanticCommandExecutionTests.cs"]
+        ["src/RoslynKit/RepositoryWorkspaceSession.cs", "src/RoslynKit/WorkspaceSnapshotLease.cs"],
+        ["src/RoslynKit/RepositoryWorkerHost.cs", "src/RoslynKit/RoslynCommandExecutor.cs"],
+        ["tests/RoslynKit.Tests/RepositoryWorkspaceSessionTests.cs", "tests/RoslynKit.Tests/CommandExecution/SemanticCommandExecutionTests.cs"]
       ]
     },
     {
       "id": "stale-search-index",
       "isDefault": false,
-      "intent": "Find the production declarations and focused tests for serving a coherent stale search partition during refresh while preventing partial index updates from becoming visible.",
-      "query": "SearchCommandService SearchAsync RefreshAsync stale partition writer lease coherent transaction committed visibility",
+      "intent": "Find the production declarations and focused tests that wait for a known-outdated search partition and prevent obsolete snapshots or partial index updates from being published.",
+      "query": "LiveSearchIndex SearchAsync RefreshSnapshotAsync outdated partition writer lease snapshot validation atomic committed visibility",
       "requiredEvidenceGroups": [
-        ["src/RoslynKit/SearchCommandService.cs", "src/RoslynKit/RoslynCommandExecutor.cs"],
+        ["src/RoslynKit/LiveSearchIndex.cs", "src/RoslynKit/SearchCommandService.cs"],
         ["src/RoslynKit/SqliteSearchIndex.cs", "src/RoslynKit/SqliteSearchIndexWriterLease.cs"],
         ["tests/RoslynKit.Tests/SearchCommandTests.cs", "tests/RoslynKit.Tests/SqliteSearchIndexTests.cs"]
       ]
