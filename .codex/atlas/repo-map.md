@@ -1,6 +1,6 @@
 # Repository Map
 
-Last verified: 2026-08-31
+Last verified: 2026-09-06
 
 RoslynKit is a .NET 10 command-line tool for deterministic, read-only C# inspection. Each invocation is a short-lived process. Reusable state lives in a repository-local SQLite semantic catalog rather than a daemon, named pipe, socket, or Model Context Protocol (MCP) server.
 
@@ -122,8 +122,7 @@ Implicit repository index and search output uses `scope: repository` plus `repos
 - [scripts/test-roslynkit-commands.ps1](../../scripts/test-roslynkit-commands.ps1) invokes every runtime command against deterministic fixtures or prints the same command inventory as a copy-ready manual checklist, guards command coverage against runtime help, and aggregates automated failures.
 - [scripts/test-roslynkit-package.ps1](../../scripts/test-roslynkit-package.ps1) installs and exhaustively tests the exact local package with isolated tool and cache paths.
 - [scripts/install-roslynkit-global.ps1](../../scripts/install-roslynkit-global.ps1) explicitly replaces the global tool with the exact staged local package, while [scripts/test-roslynkit-global.ps1](../../scripts/test-roslynkit-global.ps1) runs the same exhaustive suite through the global command path or prepares its manual command checklist.
-- [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md) owns stable release and smoke-test instructions.
-- [.agents/skills/dotnet-tool-release/SKILL.md](../../.agents/skills/dotnet-tool-release/SKILL.md) orchestrates ordered action batches with safe same-invocation phase reuse across explicit local packaging, isolated and global installed-package testing, opt-in global replacement, and upload-readiness checks without publishing.
+- [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md) owns release preparation, WSL global replacement, grouped manual Bash command checks, and the separate manual NuGet.org upload. There is no release workflow skill; existing scripts own package creation and installation, while the guide owns the operator's sequence and acceptance criteria.
 - [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/) is the canonical embedded stable skill bundle.
 - [src/RoslynKit/InitCommandExecutor.cs](../../src/RoslynKit/InitCommandExecutor.cs) scaffolds that bundle for supported coding agents.
 - [docs/agents/skill-maintenance.md](../../docs/agents/skill-maintenance.md) defines synchronization rules.

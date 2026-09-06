@@ -1,168 +1,257 @@
-# RoslynKit Dotnet Tool Packaging
+# Build, Try, and Release RoslynKit
 
-Run every command from the repo root.
+Build and test the repository, create one local NuGet package, replace the workstation's global tool with that package, try the commands manually, then upload the **same file** to NuGet.org. Packing into [artifacts/packages/roslynkit/](../artifacts/packages/roslynkit/) does not publish anything publicly.
 
-## What gets produced
+The commands below are for **Bash on Windows Subsystem for Linux (WSL)** or Linux. Start at the repository root and keep the same terminal open so the variables remain available. PowerShell 7 (`pwsh`), the .NET SDK selected by [global.json](../global.json), and Git must be installed. The PowerShell helper scripts run directly from Bash; there is no need to switch shells, use a file manager, or copy a package to install it locally.
 
-RoslynKit currently produces one .NET tool package:
+## 1. Choose the version and build
 
-- `roslynkit`
+Set `<Version>` in [Directory.Build.props](../Directory.Build.props) to an unused bare NuGet version, for example `0.2.9`, not `v0.2.9`. Review the package ID, tool command name, repository URL, license, and readme metadata in [src/RoslynKit/RoslynKit.csproj](../src/RoslynKit/RoslynKit.csproj). Update [README.md](../README.md) and [src/RoslynKit/PackageReadme.md](../src/RoslynKit/PackageReadme.md) when the public usage or installation instructions changed.
 
-The release version comes from `Directory.Build.props`. The public package metadata lives in `src/RoslynKit/RoslynKit.csproj`, and the NuGet package readme lives in [src/RoslynKit/PackageReadme.md](../src/RoslynKit/PackageReadme.md).
-
-## Skill-assisted workflow
-
-The repo-local [.agents/skills/dotnet-tool-release/SKILL.md](../.agents/skills/dotnet-tool-release/SKILL.md) turns the manual steps below into an explicit agent workflow:
-
-- `$dotnet-tool-release`: run the complete validation, local packaging, isolated installed-tool smoke test, and upload-readiness checks.
-- `$dotnet-tool-release pack`: validate the repo and create the local folder-feed package without installing it.
-- `$dotnet-tool-release smoke`: install and exhaustively smoke-test the existing local package without repacking or running the full validation lane.
-- `$dotnet-tool-release install-global`: replace the global `roslynkit` tool with the exact package already in the local folder feed.
-- `$dotnet-tool-release smoke-global`: exhaustively test every command through the current global `roslynkit` installation.
-- `$dotnet-tool-release local-release`: validate, pack, test in isolation, replace the global tool, and test every command globally.
-- `$dotnet-tool-release manual-release`: validate, pack, replace the global tool, and print every exhaustive command for the user to copy and run manually.
-- `$dotnet-tool-release status`: inspect the current version and any existing package without changing local state.
-
-One invocation may contain any ordered combination of actions, with one optional expected version applied to the whole batch:
-
-```text
-$dotnet-tool-release pack smoke
-$dotnet-tool-release pack and manual-release
-$dotnet-tool-release pack, smoke, install-global, smoke-global 0.2.8
+```bash
+set -o pipefail
+repo="$(pwd -P)"
+version="$(pwsh -NoProfile -Command '([xml](Get-Content -Raw ./Directory.Build.props)).Project.PropertyGroup.Version')"
+printf 'Preparing RoslynKit %s from %s\n' "$version" "$repo"
+git status --short --branch
 ```
 
-The skill validates the complete action sequence before starting and stops at the first failure. Successful phases from earlier actions are reused within the same invocation only while the Git snapshot, version, package hash, and installed command state remain unchanged. For example, `pack manual-release` validates and packs once, then installs that exact package globally and prints the manual checklist. Testing or installing a package that existed before the invocation records it for later package-consuming actions, but does not replace validation and packing when a later action requires a package from the current checkout. Actions retain their requested order; the skill does not move a later `pack` ahead of an earlier `smoke`.
+Check that the version is absent from the public [NuGet version index](https://api.nuget.org/v3-flatcontainer/roslynkit/index.json) before continuing. An unavailable index is not confirmation that the version is free. Published versions cannot be replaced, even if unlisted.
 
-The skill never publishes to NuGet.org and never commits, tags, or pushes Git state. The default `ready` action never changes the global tool. Global replacement occurs only through the explicit `install-global`, `local-release`, and `manual-release` actions. The automated complete workflows leave the exact installed and smoke-tested `.nupkg` in `./artifacts/packages/roslynkit`; do not repack after the smoke test, because that would produce an artifact that was not tested. `manual-release` leaves the exact installed package in the same folder but reports it as not upload-ready until the printed checklist has been run and assessed manually.
+Review any working-tree changes: the package will contain the current checkout, including uncommitted source changes. Then run:
 
-The same actions can still be run as separate invocations around one immutable local package:
-
-```text
-$dotnet-tool-release pack
-$dotnet-tool-release smoke
-$dotnet-tool-release install-global
-$dotnet-tool-release smoke-global
-```
-
-`smoke` and `install-global` consume the package produced by `pack` without recreating it.
-
-## 1. Update package metadata
-
-1. Set the new `<Version>` in `Directory.Build.props` using a bare NuGet version such as `0.2.0` or a prerelease such as `0.2.0-dev.1`. Use the leading `v` only for Git tags or release titles such as `v0.2.0`.
-2. Confirm `src/RoslynKit/RoslynKit.csproj` still has the correct public package metadata: `PackageId` is `roslynkit`, `ToolCommandName` is `roslynkit`, and the repository URL, license, tags, and package readme values are still correct.
-3. If the public CLI surface, repo-local skill workflow, or install story changed, update [README.md](../README.md), [docs/agents/skill-maintenance.md](agents/skill-maintenance.md), and [docs/dev-install.md](dev-install.md) in the same change when applicable.
-4. Confirm the selected version is absent from the public [NuGet package version index](https://api.nuget.org/v3-flatcontainer/roslynkit/index.json). Published NuGet versions are immutable and cannot be reused.
-
-## 2. Validate the repo before packing
-
-Run the standard validation lane first:
-
-```powershell
-dotnet restore ./RoslynKit.slnx
-dotnet build ./RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary"
+```bash
+dotnet restore ./RoslynKit.slnx &&
+dotnet build ./RoslynKit.slnx --tl:off --nologo "-clp:ErrorsOnly;NoSummary" &&
 dotnet test ./RoslynKit.slnx
 ```
 
-## 3. Build the local folder feed
+Stop if any command fails. After C# edits, also complete the formatting steps in [AGENTS.md](../AGENTS.md) before this final build and test run.
 
-Use the helper script:
+## 2. Create the local NuGet package
 
-```powershell
-pwsh ./scripts/prepare-roslynkit-package.ps1
+```bash
+pwsh -NoProfile ./scripts/prepare-roslynkit-package.ps1
 ```
 
-That script:
+[scripts/prepare-roslynkit-package.ps1](../scripts/prepare-roslynkit-package.ps1) recreates only the release folder feed and packs in `Release`. It produces `artifacts/packages/roslynkit/roslynkit.<version>.nupkg`; it does not install or publish it.
 
-1. Resolves the repo root and `dotnet` executable.
-2. Reads and validates `<Version>` from `Directory.Build.props`.
-3. Recreates the local folder feed at `./artifacts/packages/roslynkit`.
-4. Packs [src/RoslynKit/RoslynKit.csproj](../src/RoslynKit/RoslynKit.csproj) in `Release` into that folder feed.
-5. Verifies that `roslynkit.<version>.nupkg` exists.
-6. Prints the exact global replacement, automated smoke-test, and manual-checklist commands for the packed version and, when the packed version is prerelease, the side-by-side dev install command.
+After a successful pack, record the exact file and its SHA-256 fingerprint:
 
-If you want the raw command instead of the helper script, this is the equivalent pack step:
-
-```powershell
-dotnet pack ./src/RoslynKit/RoslynKit.csproj -c Release -o ./artifacts/packages/roslynkit
+```bash
+package="$repo/artifacts/packages/roslynkit/roslynkit.$version.nupkg"
+ls -lh "$package" &&
+sha256sum "$package" | tee "$repo/artifacts/packages/roslynkit.sha256"
 ```
 
-## 4. Replace the stable global tool with the local package
+**Do not pack again between testing and upload.** If code, metadata, or package contents need changing, restart from the build step and repeat the package tests.
 
-Use the replacement script after packing:
+### Optional: test in isolation before global replacement
 
-```powershell
-pwsh ./scripts/install-roslynkit-global.ps1
+```bash
+pwsh -NoProfile ./scripts/test-roslynkit-package.ps1
 ```
 
-The script:
+This installs the existing package under [artifacts/package-validation/roslynkit/](../artifacts/package-validation/roslynkit/), using a local-only package source and an isolated cache. It checks the version, invokes every built-in command with representative arguments, and verifies that the package hash did not change. It leaves the global tool untouched.
 
-1. Consumes the existing `roslynkit.<version>.nupkg` without packing again.
-2. Uses a local-only NuGet configuration and isolated package cache.
-3. Stage-installs and version-checks the exact package before changing the global tool.
-4. Uninstalls any existing global `roslynkit`, even when it has the same version.
-5. Installs the package into the active global tool location, normally `$HOME/.dotnet/tools` on Linux and macOS or `%USERPROFILE%/.dotnet/tools` on Windows, and otherwise the global path rooted at `DOTNET_CLI_HOME` when that variable is configured.
-6. Verifies the global command version and confirms that the package hash did not change.
+## 3. Replace the workstation's global tool
 
-The uninstall/install sequence guarantees that the global command comes from the current local package. A same-version `dotnet tool update` may reuse the existing installation and therefore does not prove that the current package bytes were installed.
+Run this **one command from Bash**, without manually finding, copying, or renaming the package:
 
-This is an explicit state-changing operation. The candidate remains installed globally. If installation fails after uninstalling the previous version, the script reports the failure and the global command may be unavailable.
-
-## 5. Smoke-test the packaged tool
-
-The automated package test installs the freshly packed release into an isolated tool path under `./artifacts/package-validation/roslynkit`. It also uses an isolated NuGet package cache and a local-only NuGet configuration so a previously cached package cannot replace the candidate being tested:
-
-```powershell
-pwsh ./scripts/test-roslynkit-package.ps1
+```bash
+pwsh -NoProfile ./scripts/install-roslynkit-global.ps1
 ```
 
-The script verifies the installed version and delegates command coverage to [scripts/test-roslynkit-commands.ps1](../scripts/test-roslynkit-commands.ps1). That runner discovers built-in commands from `roslynkit help`, invokes every discovered command once with representative valid arguments, checks meaningful output and artifacts, and fails if a runtime command has no smoke case. It continues after individual failures and reports each failed invocation, exit code or timeout, standard output, and standard error before returning failure.
+[scripts/install-roslynkit-global.ps1](../scripts/install-roslynkit-global.ps1) reads the version automatically and consumes the existing local package. It first installs and checks the candidate in isolation, then uninstalls any existing global `roslynkit` and installs the candidate from the local-only feed with an isolated cache. It also verifies the global command's version and the package hash.
 
-The exhaustive scope covers every built-in command, not every possible option combination. The checked-in fixture workspace provides deterministic semantic targets, while `init` runs against a disposable repository under `artifacts`.
+Uninstall/install is intentional, including for the same version: `dotnet tool update` can reuse an existing installation instead of the new package bytes. Do not substitute an ordinary install from NuGet.org.
 
-After replacing the global tool, run the same exhaustive checks through the global command:
+**This replaces the global tool and leaves the candidate installed.** If installation fails after uninstall, the global command may be unavailable. Resolve the reported error and rerun the same installer against the unchanged package; do not assume rollback occurred.
 
-```powershell
-pwsh ./scripts/test-roslynkit-global.ps1
+### Make the WSL command available in this terminal
+
+After the installer succeeds:
+
+```bash
+export PATH="${DOTNET_CLI_HOME:-$HOME}/.dotnet/tools:$PATH"
+hash -r
+command -v roslynkit
+roslynkit version
 ```
 
-This wrapper resolves the command in the active global `.dotnet/tools` directory, including a configured `DOTNET_CLI_HOME`, verifies that it reports the version from [Directory.Build.props](../Directory.Build.props), and runs [scripts/test-roslynkit-commands.ps1](../scripts/test-roslynkit-commands.ps1) against that exact path.
+The command path should match the installer's `Installed command` path, normally `$HOME/.dotnet/tools/roslynkit`, and the version should match `$version` (an optional `+` build metadata suffix is valid). If an alias, function, or Windows executable takes precedence, resolve it before continuing; `type -a roslynkit` shows the alternatives. The path change lasts for this terminal; repeat it in a new terminal if necessary.
 
-To pack, validate in isolation, replace the global tool, and exhaustively test the global installation in one skill action, run `$dotnet-tool-release local-release`.
+The WSL global installation is separate from a Windows global .NET tool installation. These commands test the Linux tool inside WSL.
 
-To validate, pack, replace the global tool, and perform the exhaustive command checks manually, run `$dotnet-tool-release manual-release`. The agent runs:
+## 4. Try every command manually
 
-```powershell
-pwsh ./scripts/test-roslynkit-global.ps1 -PrintManualCommands
+Run the following groups in order, **one command at a time**, and inspect the output. Run `echo $?` immediately after a command to see its exit code; expect `0` for every valid invocation below. A zero exit code alone is not enough: compare the output with each group's expectations. Stop release preparation on an error or unexpected result.
+
+This checklist covers all 18 current built-in commands plus `help`, with additional search, index, symbol, and init variants. It is a manual regression check, not proof that every option combination is regression-free. The full option reference is [.agents/skills/roslynkit/references/commands.md](../.agents/skills/roslynkit/references/commands.md); output conventions are in [.agents/skills/roslynkit/references/output.md](../.agents/skills/roslynkit/references/output.md).
+
+### 4.1. Prepare the fixture paths
+
+Use the checked-in fixture rather than machine-specific source paths. Semantic commands deliberately target its `App` project; text-only commands search the whole repository, including tests, without loading projects. Separate databases keep these checks away from the normal repository catalog.
+
+```bash
+manual="$(mktemp -d "$repo/artifacts/manual-release.XXXXXX")"
+project="$repo/tests/FixtureWorkspace/App/App.csproj"
+source="$repo/tests/FixtureWorkspace/App/Source.cs"
+semantic_index="$manual/semantic.db"
+text_index="$manual/text.db"
+mkdir -p "$manual/init/.git"
+dotnet restore "$project"
 ```
 
-This mode verifies the installed version, invokes `help` only to ensure the checklist still covers the current command inventory, prepares a disposable fixture workspace, and prints one ordered PowerShell block. The block contains `help` and every representative built-in command invocation, with each runnable line beginning with the global command name `roslynkit` so it can be copied and pasted directly. Comments identify the expected zero exit code, output text, package version, and created paths to inspect. The resolved global executable path is still verified before the checklist is printed. The agent prints the block without executing it so it can be run manually. Run the whole block in order because later commands reuse artifacts such as the search index created by earlier commands.
+The empty `.git` directory creates a disposable repository boundary, as in the automated command runner. `init` will write only inside that disposable repository. Keep `$manual` until inspection is complete; rerun this setup to start a fresh session without deleting earlier results.
 
-## 6. Install or update the side-by-side prerelease dev tool
+### 4.2. Help, version, and skill initialization
 
-Use a prerelease `<Version>` such as `0.2.0-dev.1` and run the dev installer from the current checkout:
-
-```powershell
-pwsh ./scripts/install-roslynkit-dev.ps1 -Version <prerelease>
+```bash
+roslynkit help
+roslynkit version
+(cd "$manual/init" && roslynkit init --agent all)
+(cd "$manual/init" && roslynkit init --agent all)
+(cd "$manual/init" && roslynkit init --agent all --overwrite)
+find "$manual/init" -type f -name '*.md' | sort
 ```
 
-That script:
+Expect the current command inventory and package version. Initialization should create the stable skill bundle under all three agent roots: `.agents/skills/roslynkit`, `.claude/skills/roslynkit`, and `.github/skills/roslynkit`. The second invocation should leave matching files unchanged; the overwrite invocation should also succeed. The parentheses return Bash to the original directory automatically.
 
-1. Resolves the repo root and `dotnet` executable.
-2. Verifies that the requested version is prerelease.
-3. Builds the current checkout before packing.
-4. Packs [src/RoslynKit/RoslynKit.csproj](../src/RoslynKit/RoslynKit.csproj) with `/p:Version=<prerelease>`.
-5. Uses `./artifacts/packages/roslynkit-dev` as the default dev-only folder feed, unless `-PackageFeedPath` is supplied.
-6. Installs or updates `roslynkit` into the fixed tool path `$HOME/.roslynkit/tools/roslynkit-dev`.
-7. Prints the exact command path and smoke-test command for the installed dev tool.
+### 4.3. Workspace and diagnostics
 
-The stable global `roslynkit` install can remain in place. The dev tool path is intentionally separate so stable and prerelease builds stay side-by-side, and `Directory.Build.props` can stay on the stable release version while the installer packs a temporary prerelease override.
+```bash
+roslynkit workspace --target "$project"
+roslynkit workspace --target "$project" --include-generated --include-additional --include-analyzer-config
+roslynkit diagnostics --target "$project" --max-results 20
+```
 
-See [docs/dev-install.md](dev-install.md) for the operator-facing dev install flow and [docs/agents/skill-maintenance.md](agents/skill-maintenance.md) for the checked-in `roslynkit` and `roslynkit-dev` skill update rules.
+Expect the `App` project and its source documents. The expanded workspace should also include generated documents and the fixture's additional/configuration documents. The unchanged fixture should report zero source diagnostics. Inspect diagnostic severity and messages, not just the exit code: reporting compiler diagnostics can itself succeed. Investigate unexpected workspace-load warnings or missing projects.
 
-## 7. Publish later if needed
+### 4.4. Build and refresh indexes
 
-When you are ready to push a public package, upload the `.nupkg` from `./artifacts/packages/roslynkit` or run `dotnet nuget push` against that file.
+```bash
+roslynkit index --target "$project" --index-path "$semantic_index" --rebuild
+roslynkit index --target "$project" --index-path "$semantic_index"
+roslynkit index --target "$repo" --index-path "$text_index" --text-only --rebuild
+```
 
-Upload the exact package that passed the local installation and smoke test. Do not run `dotnet pack` again between testing and upload.
+Expect fresh indexes and `rebuilt: true` for explicit rebuilds. The text-only index avoids loading MSBuild. Both databases should be under `$manual`, not overwrite the normal repository catalog.
 
-Do not reuse a version number after a bad package. Fix the repo, bump `<Version>`, rebuild the package, and publish a new version instead.
+### 4.5. Search: normal, filtered, compact, balanced, and text-only
+
+```bash
+roslynkit search --target "$project" --index-path "$semantic_index" --query "configuration validation performed" --max-results 10
+roslynkit search --target "$project" --index-path "$semantic_index" --query "configuration validation performed" --project "$project" --kind method --max-results 10
+roslynkit search --target "$project" --index-path "$semantic_index" --query "configuration validation performed" --compact --max-results 10
+roslynkit search --target "$project" --index-path "$semantic_index" --query "configuration validation performed" --balanced --max-results 10
+roslynkit search --target "$repo" --index-path "$text_index" --query "configuration validation performed" --text-only --max-results 10
+roslynkit search --target "$repo" --index-path "$text_index" --query "configuration validation performed" --text-only --compact --balanced --max-results 10
+```
+
+Expect configuration-validation declarations such as `FixtureApp.ConfigurationValidationCatalog.ValidateConfigurationRule01` in semantic results. Text-only searches can also return repository test methods and other matching source declarations. Compare excerpts, symbol kinds, locations, and result counts rather than requiring identical ranking across different scopes. Compact output intentionally omits navigation IDs. `--balanced` only reserves results for tests when matching test declarations exist: compare the whole-repository text-only results for that behavior, not just the small `App` project. Do not combine `--text-only` with `--project`.
+
+### 4.6. Symbols: fuzzy, exact, case-sensitive, and kind-filtered
+
+```bash
+roslynkit symbols --target "$project" --query Message --max-results 10
+roslynkit symbols --target "$project" --query GeneratedMessageSource --exact --kind class --max-results 10
+roslynkit symbols --target "$project" --query GeneratedMessageSource --exact --case-sensitive --max-results 10
+roslynkit symbols --target "$project" --query generatedmessagesource --exact --case-sensitive --max-results 10
+roslynkit symbols --target "$project" --query GetMessage --kind method --max-results 10
+```
+
+Expect message-related declarations, the exact `FixtureApp.GeneratedMessageSource` class, and `GetMessage` methods. The intentionally lowercase case-sensitive query should succeed with zero matches, not an error.
+
+### 4.7. Document text, lines, and declarations
+
+```bash
+roslynkit document-text --target "$project" --file "$source"
+roslynkit document-lines --target "$project" --file "$source" --start-line 36 --end-line 48
+roslynkit document-symbols --target "$project" --file "$source"
+```
+
+Expect the full source, a bounded excerpt containing `Consumer.Run`, and declarations including `T:FixtureApp.GeneratedMessageSource`. The fixture coordinates in this guide must be updated if [tests/FixtureWorkspace/App/Source.cs](../tests/FixtureWorkspace/App/Source.cs) changes.
+
+### 4.8. Definitions, references, and implementations
+
+```bash
+roslynkit definition --target "$project" --symbol T:FixtureApp.GeneratedMessageSource
+roslynkit definition --target "$project" --file "$source" --line 46 --column 23
+roslynkit type-definition --target "$project" --file "$source" --line 45 --column 13
+roslynkit references --target "$project" --symbol 'M:FixtureApp.IMessageSource.GetMessage(System.String)' --max-results 10
+roslynkit references --target "$project" --file "$source" --line 46 --column 23 --max-results 10
+roslynkit implementations --target "$project" --symbol T:FixtureApp.IMessageSource --max-results 10
+```
+
+Expect the class declaration, the interface's `GetMessage` declaration at the call site, `IMessageSource` as the local variable's type, reference locations including the call in `Source.cs`, and `GeneratedMessageSource` as an implementation. Symbol- and position-based reference queries should identify the same member.
+
+### 4.9. Context, quick info, signature help, and declaration source
+
+```bash
+roslynkit symbol-context --target "$project" --symbol M:FixtureApp.Consumer.Run
+roslynkit quick-info --target "$project" --file "$source" --line 46 --column 23
+roslynkit signature-help --target "$project" --file "$source" --line 46 --column 34
+roslynkit symbol-source --target "$project" --symbol M:FixtureApp.Consumer.Run
+```
+
+Expect `Consumer.Run` context and its `GetMessage` invocation, quick info for `GetMessage`, a signature with its string parameter, and the full `Run` method body. These positions select the checked-in fixture call, not arbitrary cursor offsets.
+
+### 4.10. Finish the manual review
+
+Compare `roslynkit help` with the groups above so a newly added command is not missed. Review any changed behavior on a real project too, especially options or output shapes touched by the release.
+
+The existing automated runner remains available as a final coverage guard:
+
+```bash
+pwsh -NoProfile ./scripts/test-roslynkit-global.ps1
+```
+
+It compares its command cases with runtime help and fails for missing or stale cases, then checks representative output for every built-in command. It does not replace manual inspection or cover every option permutation. If it fails, do not upload.
+
+For a dynamically generated **PowerShell** checklist instead of these Bash examples, [scripts/test-roslynkit-global.ps1](../scripts/test-roslynkit-global.ps1) also supports `-PrintManualCommands`. That mode prepares fixture paths and prints expected results without running the representative commands; its output must be run in PowerShell, not pasted into Bash.
+
+## 5. Approve and copy the exact package
+
+Proceed only after the repository tests passed, the global version/path were correct, all manual groups behaved as expected, and any optional automated checks passed. Do not change the source or package metadata while assessing the candidate.
+
+```bash
+sha256sum --check "$repo/artifacts/packages/roslynkit.sha256"
+git status --short --branch
+printf 'Upload this file: %s\n' "$package"
+```
+
+Expect `OK` from the hash check. A changed package must be tested again; do not merely replace the recorded hash to make the check pass. Preserve the tested file before any later pack, because the packaging helper recreates the local feed.
+
+### Copy from WSL to Windows without a file manager
+
+With Windows interoperability enabled, this discovers the Windows profile and copies the file into a dedicated folder without hard-coding a username:
+
+```bash
+windows_profile="$(cmd.exe /C 'echo %USERPROFILE%' | tr -d '\r')" &&
+test -n "$windows_profile" &&
+windows_home="$(wslpath -u "$windows_profile")" &&
+test -d "$windows_home" &&
+upload_dir="$windows_home/RoslynKitUpload" &&
+mkdir -p "$upload_dir" &&
+cp -i -- "$package" "$upload_dir/" &&
+cmp -- "$package" "$upload_dir/$(basename "$package")" &&
+wslpath -w "$upload_dir/$(basename "$package")"
+```
+
+`cp -i` asks before overwriting an existing copy. A successful `cmp` prints nothing and confirms identical bytes. The last line prints the Windows path to choose in the browser's upload dialog. If `cmd.exe` or `wslpath` is unavailable, copy to an accessible mounted Windows directory instead, then compare the copied file with `cmp` before uploading.
+
+## 6. Upload to NuGet.org
+
+1. Recheck the [NuGet version index](https://api.nuget.org/v3-flatcontainer/roslynkit/index.json). Stop if this version already exists.
+2. Sign in to [NuGet.org's upload page](https://www.nuget.org/packages/manage/upload) using an account that owns the `roslynkit` package.
+3. Select the exact tested `.nupkg`, or the byte-identical Windows copy from section 5.
+4. Review the package ID, version, description, license, repository links, and readme preview. If anything needs changing, stop and rebuild/retest a candidate rather than uploading an untested replacement.
+5. Select **Submit**. This is the public publication step; none of the earlier commands publish anything.
+6. Wait for NuGet validation and indexing, then confirm the expected version appears on the [RoslynKit package page](https://www.nuget.org/packages/roslynkit) and in the version index.
+
+NuGet versions are immutable. If a published package is bad, fix the repository, choose a new version, and repeat the workflow. Unlisting a version does not make it reusable. See [NuGet's publishing guide](https://learn.microsoft.com/en-us/nuget/nuget-org/publish-a-package) for portal details.
+
+## Related workflows
+
+For a side-by-side prerelease installation that leaves the stable global tool alone, use [docs/dev-install.md](dev-install.md). The release preparation scripts do not commit, tag, push Git changes, or create GitHub releases; those are separate maintainer actions.
