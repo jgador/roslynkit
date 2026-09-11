@@ -4,7 +4,7 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-. (Join-Path $PSScriptRoot "RoslynKit.Packaging.ps1")
+. (Join-Path $PSScriptRoot "common/packaging.ps1")
 
 $context = Get-RoslynKitToolingContext -ScriptPath $PSCommandPath
 

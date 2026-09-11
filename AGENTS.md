@@ -158,6 +158,8 @@ Before any commit or push:
 
 Follow `.editorconfig`: UTF-8, spaces, final newline, 4-space indentation for C# and PowerShell, 2-space indentation for XML/JSON/YAML. C# uses file-scoped namespaces, nullable reference types, implicit usings, latest language version, and warnings as errors. Use `Cli`, not `CLI`, in C# identifiers. Keep command output deterministic and markdown-first.
 
+Use lowercase, hyphen-separated PowerShell filenames. Start runnable scripts with the action, such as [scripts/pack.ps1](scripts/pack.ps1), [scripts/install-dev.ps1](scripts/install-dev.ps1), and [tests/PowerShell/test-portability.ps1](tests/PowerShell/test-portability.ps1). Keep shared, dot-sourced helpers under [scripts/common/](scripts/common/) with noun filenames such as [scripts/common/packaging.ps1](scripts/common/packaging.ps1).
+
 ## C# Working Rules
 
 Follow the existing style in touched files. Prefer clear names and structure over commentary. Use sparse XML documentation comments in C#: add a brief `summary` comment to each class, do not add comments or XML docs to constructors, add a brief `summary` comment to a public method only when its behavior is complex or non-obvious, and do not add parameter documentation comments.

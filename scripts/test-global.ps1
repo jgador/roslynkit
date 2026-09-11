@@ -4,7 +4,7 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-. (Join-Path $PSScriptRoot "RoslynKit.Packaging.ps1")
+. (Join-Path $PSScriptRoot "common/packaging.ps1")
 
 $context = Get-RoslynKitToolingContext -ScriptPath $PSCommandPath
 $globalCommandPath = Get-RoslynKitGlobalToolCommandPath
@@ -14,7 +14,7 @@ Assert-RoslynKitCommandVersion `
     -CommandPath $globalCommandPath `
     -ExpectedVersion $context.PackageVersion
 
-& (Join-Path $PSScriptRoot "test-roslynkit-commands.ps1") `
+& (Join-Path $PSScriptRoot "test-commands.ps1") `
     -CommandPath $globalCommandPath `
     -ExpectedVersion $context.PackageVersion `
     -ValidationRoot $validationRoot

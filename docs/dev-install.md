@@ -21,17 +21,20 @@ This install is intentionally separate from the stable global `roslynkit` tool s
 
 ## Prerequisites
 
-- .NET 10 SDK installed
+- PowerShell 7 (`pwsh`) on Windows or Linux
+- .NET 10 Software Development Kit (SDK) installed
 - the current RoslynKit checkout
-- the install script at [scripts/install-roslynkit-dev.ps1](../scripts/install-roslynkit-dev.ps1)
+- the install script at [scripts/install-dev.ps1](../scripts/install-dev.ps1)
 
 ## One-command dev install
 
 Run the installer with the prerelease version you want to dogfood:
 
 ```powershell
-pwsh ./scripts/install-roslynkit-dev.ps1 -Version <prerelease>
+pwsh ./scripts/install-dev.ps1 -Version <prerelease>
 ```
+
+Relative path overrides resolve from the current PowerShell location. The script runs .NET commands from the checkout root so [global.json](../global.json) selects the SDK even when the script is invoked from another directory.
 
 The script now does the full side-by-side prerelease flow from the current checkout:
 
@@ -49,7 +52,7 @@ This flow does not edit `Directory.Build.props`. The requested prerelease is a p
 Re-run the install script with the target prerelease version:
 
 ```powershell
-pwsh ./scripts/install-roslynkit-dev.ps1 -Version <prerelease>
+pwsh ./scripts/install-dev.ps1 -Version <prerelease>
 ```
 
 If the dev tool already exists at the target `--tool-path`, the script uses `dotnet tool update`.
@@ -59,13 +62,13 @@ If the dev tool already exists at the target `--tool-path`, the script uses `dot
 Use `-PackageFeedPath` to pack into and install from a different local folder feed:
 
 ```powershell
-pwsh ./scripts/install-roslynkit-dev.ps1 -Version <prerelease> -PackageFeedPath ./artifacts/packages/roslynkit-dev-alt
+pwsh ./scripts/install-dev.ps1 -Version <prerelease> -PackageFeedPath ./artifacts/packages/roslynkit-dev-alt
 ```
 
 Use `-ToolPath` to install the side-by-side tool somewhere other than the default user-profile path:
 
 ```powershell
-pwsh ./scripts/install-roslynkit-dev.ps1 -Version <prerelease> -ToolPath ./artifacts/tool-install/roslynkit-dev
+pwsh ./scripts/install-dev.ps1 -Version <prerelease> -ToolPath ./artifacts/tool-install/roslynkit-dev
 ```
 
 When `-PackageFeedPath` is supplied, the script packs the requested prerelease into that explicit feed before installing from it.

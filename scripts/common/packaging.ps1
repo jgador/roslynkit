@@ -1,6 +1,8 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "process.ps1")
+
 function Get-RoslynKitToolingContext
 {
     param(
@@ -9,16 +11,15 @@ function Get-RoslynKitToolingContext
     )
 
     $scriptsRoot = Split-Path -Parent $ScriptPath
-    $repoRoot = (Resolve-Path (Join-Path $scriptsRoot "..")).Path
+    $repoRoot = (Resolve-Path -LiteralPath (Join-Path $scriptsRoot "..")).Path
     $dotnet = (Get-Command dotnet -ErrorAction Stop).Source
     $solutionPath = Join-Path $repoRoot "RoslynKit.slnx"
     $packageProjectPath = Join-Path $repoRoot "src/RoslynKit/RoslynKit.csproj"
     $packageFeedPath = Join-Path $repoRoot "artifacts/packages/roslynkit"
     $devPackageFeedPath = Join-Path $repoRoot "artifacts/packages/roslynkit-dev"
-    $devToolPath = Join-Path (Join-Path (Join-Path $HOME ".roslynkit") "tools") "roslynkit-dev"
-    $devToolCommandPath = Join-Path $devToolPath (Get-RoslynKitToolCommandName)
+    $devToolPath = Join-Path $HOME ".roslynkit/tools/roslynkit-dev"
 
-    [xml]$versionXml = Get-Content (Join-Path $repoRoot "Directory.Build.props")
+    [xml]$versionXml = Get-Content -LiteralPath (Join-Path $repoRoot "Directory.Build.props") -Raw
     $packageVersion = $versionXml.Project.PropertyGroup.Version
 
     if ([string]::IsNullOrWhiteSpace($packageVersion))
@@ -39,7 +40,6 @@ function Get-RoslynKitToolingContext
         PackageFeedPath = $packageFeedPath
         DevPackageFeedPath = $devPackageFeedPath
         DevToolPath = $devToolPath
-        DevToolCommandPath = $devToolCommandPath
         PackConfiguration = "Release"
         PackageId = "roslynkit"
         PackageVersion = $packageVersion
@@ -104,7 +104,7 @@ function Get-RoslynKitGlobalToolPath
         throw "Unable to resolve the home directory for the global .NET tool path."
     }
 
-    return Join-Path (Join-Path $globalToolHome ".dotnet") "tools"
+    return Join-Path $globalToolHome ".dotnet/tools"
 }
 
 function Get-RoslynKitGlobalToolCommandPath
@@ -119,7 +119,7 @@ function Resolve-FullPath
         [string]$Path
     )
 
-    return [System.IO.Path]::GetFullPath($Path)
+    return $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
 }
 
 function Write-RoslynKitLocalNuGetConfig
@@ -147,16 +147,6 @@ function Write-RoslynKitLocalNuGetConfig
     Set-Content -LiteralPath $ConfigPath -Value $nugetConfig -Encoding utf8NoBOM
 }
 
-function Test-IsPrereleaseVersion
-{
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Version
-    )
-
-    return $Version.Contains("-", [System.StringComparison]::Ordinal)
-}
-
 function Assert-RoslynKitPrereleaseVersion
 {
     param(
@@ -164,7 +154,7 @@ function Assert-RoslynKitPrereleaseVersion
         [string]$Version
     )
 
-    if (-not (Test-IsPrereleaseVersion -Version $Version))
+    if (-not $Version.Contains("-", [System.StringComparison]::Ordinal))
     {
         throw "Version '$Version' is not a prerelease version. Use a bare stable version like 0.2.0 for global installs and a prerelease like 0.2.1-dev.1 for the side-by-side dev tool."
     }
@@ -183,8 +173,8 @@ function Assert-PathUnderRoot
 
     $pathComparison = if ($IsWindows) { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
     $directorySeparators = [char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
-    $normalizedRoot = [System.IO.Path]::GetFullPath($RootPath)
-    $normalizedPath = [System.IO.Path]::GetFullPath($Path)
+    $normalizedRoot = Resolve-FullPath $RootPath
+    $normalizedPath = Resolve-FullPath $Path
 
     $rootVolume = [System.IO.Path]::GetPathRoot($normalizedRoot)
     if ($normalizedRoot.Length -gt $rootVolume.Length)
@@ -332,17 +322,17 @@ function Invoke-DotNet
         [Parameter(Mandatory = $true)]
         [pscustomobject]$Context,
         [Parameter(Mandatory = $true)]
-        [string[]]$Arguments
+        [string[]]$Arguments,
+        [switch]$PassThru
     )
 
-    Write-Verbose "$($Context.DotNet) $($Arguments -join ' ')"
-    $output = @(& $Context.DotNet @Arguments 2>&1)
-    if ($LASTEXITCODE -ne 0)
-    {
-        throw "dotnet $($Arguments -join ' ') failed with exit code $LASTEXITCODE.`n$($output -join [Environment]::NewLine)"
-    }
+    $result = Invoke-CapturedProcess -FilePath $Context.DotNet -Arguments $Arguments -WorkingDirectory $Context.RepoRoot
+    Assert-ProcessSucceeded -Description "dotnet $($Arguments -join ' ')" -Result $result
 
-    $output | ForEach-Object { Write-Verbose "$_" }
+    if ($PassThru)
+    {
+        return $result.StandardOutput
+    }
 }
 
 function Test-RoslynKitCommandVersionOutput
@@ -376,14 +366,9 @@ function Assert-RoslynKitCommandVersion
         throw "Expected installed RoslynKit command was not found: $CommandPath"
     }
 
-    $versionOutput = @(& $CommandPath "--version" 2>&1)
-    if ($LASTEXITCODE -ne 0)
-    {
-        throw "The installed roslynkit command failed with exit code $LASTEXITCODE.`n$($versionOutput -join [Environment]::NewLine)"
-    }
-
-    $versionOutput | ForEach-Object { Write-Verbose "$_" }
-    $versionText = $versionOutput -join [Environment]::NewLine
+    $result = Invoke-CapturedProcess -FilePath $CommandPath -Arguments @("--version")
+    Assert-ProcessSucceeded -Description "The installed roslynkit command" -Result $result
+    $versionText = $result.StandardOutput
     if (-not (Test-RoslynKitCommandVersionOutput -VersionText $versionText -ExpectedVersion $ExpectedVersion))
     {
         throw "Expected RoslynKit $ExpectedVersion, but received: $versionText"

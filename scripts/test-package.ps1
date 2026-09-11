@@ -4,11 +4,11 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-. (Join-Path $PSScriptRoot "RoslynKit.Packaging.ps1")
+. (Join-Path $PSScriptRoot "common/packaging.ps1")
 
 $context = Get-RoslynKitToolingContext -ScriptPath $PSCommandPath
 $validationRoot = Join-Path $context.RepoRoot "artifacts/package-validation/roslynkit"
-$commandTestScript = Join-Path $PSScriptRoot "test-roslynkit-commands.ps1"
+$commandTestScript = Join-Path $PSScriptRoot "test-commands.ps1"
 
 Write-Host "Testing RoslynKit $($context.PackageVersion) from the local package..."
 $validation = Invoke-RoslynKitPackageValidation -Context $context -ValidationRoot $validationRoot -Action {

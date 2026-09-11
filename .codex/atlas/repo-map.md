@@ -1,6 +1,6 @@
 # Repository Map
 
-Last verified: 2026-09-06
+Last verified: 2026-09-11
 
 RoslynKit is a .NET 10 tool for deterministic, read-only C# inspection. A client-owned standard-input/output (stdio) Model Context Protocol (MCP) server retains live Roslyn workspaces. Standalone commands use the same engine with short-lived ownership. Repository-local SQLite persists search indexes, not semantic catalogs or completed query answers. [docs/architecture.md](../../docs/architecture.md) owns the accepted rewrite decisions.
 
@@ -119,11 +119,13 @@ Implicit repository index and search output uses `scope: repository` plus `repos
 ## Packaging and Skill Maintenance
 
 - [src/RoslynKit/RoslynKit.csproj](../../src/RoslynKit/RoslynKit.csproj) defines the .NET tool package.
-- [scripts/prepare-roslynkit-package.ps1](../../scripts/prepare-roslynkit-package.ps1) prepares release artifacts.
-- [scripts/test-roslynkit-commands.ps1](../../scripts/test-roslynkit-commands.ps1) invokes every runtime command against deterministic fixtures, guards command coverage against runtime help, and aggregates automated failures. Manual Bash commands live only in the release guide.
-- [scripts/RoslynKit.Packaging.ps1](../../scripts/RoslynKit.Packaging.ps1) shares isolated package installation, scoped environment restoration, and unchanged-package verification between package testing and global replacement.
-- [scripts/test-roslynkit-package.ps1](../../scripts/test-roslynkit-package.ps1) exhaustively tests the exact local package through that isolated installation.
-- [scripts/install-roslynkit-global.ps1](../../scripts/install-roslynkit-global.ps1) explicitly replaces the global tool with the exact staged local package, while [scripts/test-roslynkit-global.ps1](../../scripts/test-roslynkit-global.ps1) runs the same exhaustive suite through the global command path.
+- PowerShell entrypoints use lowercase, action-first filenames under [scripts/](../../scripts/). Dot-sourced helpers live under [scripts/common/](../../scripts/common/) with noun filenames.
+- [scripts/pack.ps1](../../scripts/pack.ps1) prepares release artifacts.
+- [scripts/test-commands.ps1](../../scripts/test-commands.ps1) invokes every runtime command against deterministic fixtures, guards command coverage against runtime help, and aggregates automated failures. Manual Bash commands live only in the release guide.
+- [scripts/common/packaging.ps1](../../scripts/common/packaging.ps1) shares isolated package installation, scoped environment restoration, and unchanged-package verification between package testing and global replacement.
+- [scripts/common/process.ps1](../../scripts/common/process.ps1) shares native process execution with separate output streams, argument preservation, and optional timeouts across packaging and command tests. Packaging anchors .NET commands to the checkout root; relative path overrides follow the current PowerShell location.
+- [scripts/test-package.ps1](../../scripts/test-package.ps1) exhaustively tests the exact local package through that isolated installation.
+- [scripts/install-global.ps1](../../scripts/install-global.ps1) explicitly replaces the global tool with the exact staged local package, while [scripts/test-global.ps1](../../scripts/test-global.ps1) runs the same exhaustive suite through the global command path.
 - [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md) owns release preparation, WSL global replacement, grouped manual Bash command checks, and the separate manual NuGet.org upload. There is no release workflow skill; existing scripts own package creation and installation, while the guide owns the operator's sequence and acceptance criteria.
 - [.agents/skills/roslynkit/](../../.agents/skills/roslynkit/) is the canonical embedded stable skill bundle.
 - [src/RoslynKit/InitCommandExecutor.cs](../../src/RoslynKit/InitCommandExecutor.cs) scaffolds that bundle for supported coding agents.
@@ -139,6 +141,6 @@ Implicit repository index and search output uses `scope: repository` plus `repos
 | Retained lifecycle and SDKs | Session, input-manifest, MCP protocol/pool/process, SDK-resolution, and workspace-preparation tests |
 | Semantic navigation | `SemanticCommandExecutionTests`, `SymbolContextCommandExecutionTests` |
 | Rendering | `CliOutputTests`, [.agents/skills/roslynkit/references/output.md](../../.agents/skills/roslynkit/references/output.md) |
-| Packaging | `PackagedToolProcessIntegrationTests`, [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md) |
+| Packaging and PowerShell helpers | [tests/PowerShell/test-portability.ps1](../../tests/PowerShell/test-portability.ps1) on Windows and Linux, `PackagedToolProcessIntegrationTests`, [docs/dotnet-tool-release.md](../../docs/dotnet-tool-release.md) |
 
 Run post-change formatting and the smallest targeted test set first. Run the full solution build and test suite before publishing changes.

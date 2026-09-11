@@ -28,7 +28,7 @@ jobs:
       - run: dotnet build ./RoslynKit.slnx --no-restore --tl:off --nologo "-clp:ErrorsOnly;NoSummary"
       - run: dotnet test ./RoslynKit.slnx --no-build --no-restore
       - run: dotnet build ./tests/FixtureWorkspace/IntentNavigation/IntentNavigation.csproj --tl:off --nologo "-clp:ErrorsOnly;NoSummary"
-      - run: pwsh -NoProfile -File ./tests/PowerShell/PortabilityRegressionTests.ps1
+      - run: pwsh -NoProfile -File ./tests/PowerShell/test-portability.ps1
       - shell: bash
         run: |
           bash -n ./scripts/benchmark.sh

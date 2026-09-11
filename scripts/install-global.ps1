@@ -4,7 +4,7 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-. (Join-Path $PSScriptRoot "RoslynKit.Packaging.ps1")
+. (Join-Path $PSScriptRoot "common/packaging.ps1")
 
 $context = Get-RoslynKitToolingContext -ScriptPath $PSCommandPath
 $validationRoot = Join-Path $context.RepoRoot "artifacts/global-install-validation/roslynkit"
@@ -15,13 +15,12 @@ $validation = Invoke-RoslynKitPackageValidation -Context $context -ValidationRoo
     param($installation)
 
     $env:DOTNET_CLI_HOME = $installation.OriginalDotNetCliHome
-    $toolListOutput = @(& $context.DotNet "tool" "list" "--global" "--format" "json" 2>&1)
-    if ($LASTEXITCODE -ne 0)
+    if (-not [string]::IsNullOrWhiteSpace($env:DOTNET_CLI_HOME))
     {
-        throw "Unable to list global .NET tools. Exit code: $LASTEXITCODE. Output: $($toolListOutput -join [Environment]::NewLine)"
+        $env:DOTNET_CLI_HOME = Resolve-FullPath $env:DOTNET_CLI_HOME
     }
-
-    $toolList = ($toolListOutput -join [Environment]::NewLine) | ConvertFrom-Json
+    $toolList = Invoke-DotNet -Context $context -Arguments @("tool", "list", "--global", "--format", "json") -PassThru |
+        ConvertFrom-Json
     $installedTool = @($toolList.data) |
         Where-Object packageId -EQ $context.PackageId |
         Select-Object -First 1

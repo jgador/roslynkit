@@ -2,9 +2,11 @@
 
 Build and test the repository, create one local NuGet package, replace the workstation's global tool with that package, try the commands manually, then upload the **same file** to NuGet.org. Packing into [artifacts/packages/roslynkit/](../artifacts/packages/roslynkit/) does not publish anything publicly.
 
-The commands below are for **Bash on Windows Subsystem for Linux (WSL)** or Linux. Start at the repository root and keep the same terminal open so the variables remain available. PowerShell 7 (`pwsh`), the .NET SDK selected by [global.json](../global.json), and Git must be installed. The PowerShell helper scripts run directly from Bash; there is no need to switch shells, use a file manager, or copy a package to install it locally.
+The commands below are for **Bash on Windows Subsystem for Linux (WSL)** or Linux. Start at the repository root and keep the same terminal open so the variables remain available. PowerShell 7 (`pwsh`), the .NET Software Development Kit (SDK) selected by [global.json](../global.json), and Git must be installed. The PowerShell helper scripts run directly from Bash; there is no need to switch shells, use a file manager, or copy a package to install it locally.
 
-Scripts print concise progress and results by default. Add `-Verbose` for command lines, successful .NET output, and per-command smoke-test progress, for example `pwsh -NoProfile ./scripts/test-roslynkit-package.ps1 -Verbose`. Failures always include diagnostic output; verbose mode is not required to see errors.
+The helper scripts also run with PowerShell 7 on Windows. They run .NET commands from the checkout root to use its SDK selection. The portability regression suite at [tests/PowerShell/test-portability.ps1](../tests/PowerShell/test-portability.ps1) runs on Windows and Linux in continuous integration (CI).
+
+Scripts print concise progress and results by default. Add `-Verbose` for command lines, successful .NET output, and per-command smoke-test progress, for example `pwsh -NoProfile ./scripts/test-package.ps1 -Verbose`. Failures always include diagnostic output; verbose mode is not required to see errors.
 
 ## 1. Choose the version and build
 
@@ -33,10 +35,10 @@ Stop if any command fails. After C# edits, also complete the formatting steps in
 ## 2. Create the local NuGet package
 
 ```bash
-pwsh -NoProfile ./scripts/prepare-roslynkit-package.ps1
+pwsh -NoProfile ./scripts/pack.ps1
 ```
 
-[scripts/prepare-roslynkit-package.ps1](../scripts/prepare-roslynkit-package.ps1) recreates only the release folder feed and packs in `Release`. It produces `artifacts/packages/roslynkit/roslynkit.<version>.nupkg`; it does not install or publish it.
+[scripts/pack.ps1](../scripts/pack.ps1) recreates only the release folder feed and packs in `Release`. It produces `artifacts/packages/roslynkit/roslynkit.<version>.nupkg`; it does not install or publish it.
 
 After a successful pack, record the exact file and its SHA-256 fingerprint:
 
@@ -51,7 +53,7 @@ sha256sum "$package" | tee "$repo/artifacts/packages/roslynkit.sha256"
 ### Optional: test in isolation before global replacement
 
 ```bash
-pwsh -NoProfile ./scripts/test-roslynkit-package.ps1
+pwsh -NoProfile ./scripts/test-package.ps1
 ```
 
 This installs the existing package under [artifacts/package-validation/roslynkit/](../artifacts/package-validation/roslynkit/), using a local-only package source and an isolated cache. It checks the version, invokes every built-in command with representative arguments, and verifies that the package hash did not change. It leaves the global tool untouched.
@@ -61,10 +63,10 @@ This installs the existing package under [artifacts/package-validation/roslynkit
 Run this **one command from Bash**, without manually finding, copying, or renaming the package:
 
 ```bash
-pwsh -NoProfile ./scripts/install-roslynkit-global.ps1
+pwsh -NoProfile ./scripts/install-global.ps1
 ```
 
-[scripts/install-roslynkit-global.ps1](../scripts/install-roslynkit-global.ps1) reads the version automatically and consumes the existing local package. It first installs and checks the candidate in isolation, then uninstalls any existing global `roslynkit` and installs the candidate from the local-only feed with an isolated cache. It also verifies the global command's version and the package hash.
+[scripts/install-global.ps1](../scripts/install-global.ps1) reads the version automatically and consumes the existing local package. It first installs and checks the candidate in isolation, then uninstalls any existing global `roslynkit` and installs the candidate from the local-only feed with an isolated cache. It also verifies the global command's version and the package hash.
 
 Uninstall/install is intentional, including for the same version: `dotnet tool update` can reuse an existing installation instead of the new package bytes. Do not substitute an ordinary install from NuGet.org.
 
@@ -206,7 +208,7 @@ Compare `roslynkit help` with the groups above so a newly added command is not m
 The existing automated runner remains available as a final coverage guard:
 
 ```bash
-pwsh -NoProfile ./scripts/test-roslynkit-global.ps1
+pwsh -NoProfile ./scripts/test-global.ps1
 ```
 
 It compares its command cases with runtime help and fails for missing or stale cases, then checks representative output for every built-in command. It does not replace manual inspection or cover every option permutation. If it fails, do not upload.

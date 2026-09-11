@@ -28,7 +28,113 @@ function Assert-Throws {
 }
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "../..")).Path
-. (Join-Path $repoRoot "scripts/RoslynKit.Packaging.ps1")
+. (Join-Path $repoRoot "scripts/common/packaging.ps1")
+
+& {
+    $processTestRoot = Join-Path $repoRoot ("artifacts/process-regression/" + [Guid]::NewGuid())
+    $powerShellLocation = Join-Path $processTestRoot "PowerShell location [with spaces]"
+    $environmentCurrentDirectory = Join-Path $processTestRoot "Environment current directory [with spaces]"
+    $dotNetWorkingDirectory = Join-Path $processTestRoot "dotnet working directory [with spaces]"
+    $roundTripScript = Join-Path $processTestRoot "argument roundtrip.ps1"
+    $originalLocation = Get-Location
+    $originalCurrentDirectory = [Environment]::CurrentDirectory
+
+    try {
+        New-Item -ItemType Directory -Path $powerShellLocation, $environmentCurrentDirectory, $dotNetWorkingDirectory -Force | Out-Null
+        Set-Content -LiteralPath $roundTripScript -Encoding utf8NoBOM -Value @'
+[Console]::Out.WriteLine((ConvertTo-Json -InputObject $args -Compress))
+[Console]::Error.WriteLine("roundtrip-stderr")
+'@
+
+        Set-Location -LiteralPath $powerShellLocation
+        [Environment]::CurrentDirectory = $environmentCurrentDirectory
+
+        $relativePath = "relative path [from powershell location]"
+        $resolvedRelativePath = Resolve-FullPath -Path $relativePath
+        $expectedRelativePath = Join-Path $powerShellLocation $relativePath
+        Assert-True -Condition ($resolvedRelativePath -ceq $expectedRelativePath) -Message "Resolve-FullPath did not resolve a relative path from the PowerShell location."
+
+        $defaultWorkingDirectory = Invoke-CapturedProcess `
+            -FilePath (Get-Command pwsh -ErrorAction Stop).Source `
+            -Arguments @("-NoProfile", "-Command", '[Console]::Out.Write([Environment]::CurrentDirectory)')
+        Assert-False -Condition $defaultWorkingDirectory.TimedOut -Message "The default-working-directory process timed out."
+        Assert-True -Condition ($defaultWorkingDirectory.ExitCode -eq 0) -Message "The default-working-directory process failed."
+        Assert-True -Condition ($defaultWorkingDirectory.StandardOutput -ceq $powerShellLocation) -Message "Invoke-CapturedProcess did not default to the PowerShell location."
+
+        $roundTripValues = @(
+            "value with spaces",
+            "ampersand&value",
+            'literal "quotes" and ''apostrophe''',
+            "",
+            'backslash\and trailing\'
+        )
+        $roundTripResult = Invoke-CapturedProcess `
+            -FilePath (Get-Command pwsh -ErrorAction Stop).Source `
+            -Arguments (@("-NoProfile", "-File", $roundTripScript) + $roundTripValues)
+        Assert-False -Condition $roundTripResult.TimedOut -Message "The argument-roundtrip process timed out."
+        Assert-True -Condition ($roundTripResult.ExitCode -eq 0) -Message "The argument-roundtrip process failed."
+        Assert-True -Condition ($roundTripResult.StandardError -ceq "roundtrip-stderr$([Environment]::NewLine)") -Message "Invoke-CapturedProcess did not retain stderr separately."
+        Assert-False -Condition $roundTripResult.StandardOutput.Contains("roundtrip-stderr", [System.StringComparison]::Ordinal) -Message "Invoke-CapturedProcess mixed stderr into stdout."
+        $roundTrippedValues = ConvertFrom-Json -InputObject $roundTripResult.StandardOutput -NoEnumerate
+        Assert-True -Condition ($roundTrippedValues.Count -eq $roundTripValues.Count) -Message "Invoke-CapturedProcess changed the number of arguments."
+        for ($index = 0; $index -lt $roundTripValues.Count; $index++) {
+            Assert-True -Condition ($roundTrippedValues[$index] -ceq $roundTripValues[$index]) -Message "Invoke-CapturedProcess changed argument $index."
+        }
+
+        $formatInvocation = Format-Invocation -FilePath "tool path" -Arguments @("space argument", "contains'quote", "")
+        Assert-True -Condition ($formatInvocation -ceq "& 'tool path' 'space argument' 'contains''quote' ''") -Message "Format-Invocation did not quote a process invocation safely."
+
+        $nonzeroResult = & {
+            $PSNativeCommandUseErrorActionPreference = $true
+            Invoke-CapturedProcess `
+                -FilePath (Get-Command pwsh -ErrorAction Stop).Source `
+                -Arguments @("-NoProfile", "-Command", '[Console]::Out.WriteLine("nonzero-stdout"); [Console]::Error.WriteLine("nonzero-stderr"); exit 23')
+        }
+        Assert-False -Condition $nonzeroResult.TimedOut -Message "The nonzero process unexpectedly timed out."
+        Assert-True -Condition ($nonzeroResult.ExitCode -eq 23) -Message "Invoke-CapturedProcess did not return the native exit code while PSNativeCommandUseErrorActionPreference was enabled."
+        $nonzeroFailure = @{ Error = $null }
+        Assert-Throws -Action {
+            try {
+                Assert-ProcessSucceeded -Description "Nonzero process" -Result $nonzeroResult
+            }
+            catch {
+                $nonzeroFailure.Error = $_
+                throw
+            }
+        } -Message "Assert-ProcessSucceeded accepted a nonzero exit code."
+        foreach ($expectedText in @("exit code 23", "nonzero-stdout", "nonzero-stderr")) {
+            Assert-True -Condition $nonzeroFailure.Error.Exception.Message.Contains($expectedText) -Message "Assert-ProcessSucceeded omitted '$expectedText' from a nonzero failure."
+        }
+
+        $timeoutStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        $timeoutResult = Invoke-CapturedProcess `
+            -FilePath (Get-Command pwsh -ErrorAction Stop).Source `
+            -Arguments @("-NoProfile", "-Command", "Start-Sleep -Seconds 10") `
+            -TimeoutSeconds 1
+        $timeoutStopwatch.Stop()
+        Assert-True -Condition $timeoutResult.TimedOut -Message "Invoke-CapturedProcess did not report its timeout."
+        Assert-True -Condition ($timeoutStopwatch.Elapsed.TotalSeconds -lt 8) -Message "Invoke-CapturedProcess did not terminate its timed-out child promptly."
+        Assert-Throws -Action { Assert-ProcessSucceeded -Description "Timed out process" -Result $timeoutResult } -Message "Assert-ProcessSucceeded accepted a timed-out process."
+
+        $nativeContext = [pscustomobject]@{
+            DotNet = (Get-Command pwsh -ErrorAction Stop).Source
+            RepoRoot = $dotNetWorkingDirectory
+        }
+        $passThruOutput = @(Invoke-DotNet -Context $nativeContext -Arguments @(
+            "-NoProfile", "-Command", '[Console]::Out.Write("pass-through:" + [Environment]::CurrentDirectory); [Console]::Error.Write("pass-through-stderr")'
+        ) -PassThru)
+        $passThruText = ($passThruOutput | ForEach-Object { $_.ToString() }) -join "`n"
+        Assert-True -Condition ($passThruText -ceq "pass-through:$dotNetWorkingDirectory") -Message "Invoke-DotNet did not return stdout from its configured working directory."
+        Assert-False -Condition $passThruText.Contains("pass-through-stderr", [System.StringComparison]::Ordinal) -Message "Invoke-DotNet -PassThru returned stderr."
+    }
+    finally {
+        Set-Location -LiteralPath $originalLocation.Path
+        [Environment]::CurrentDirectory = $originalCurrentDirectory
+        if (Test-Path -LiteralPath $processTestRoot) {
+            Remove-Item -LiteralPath $processTestRoot -Recurse -Force
+        }
+    }
+}
 
 $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) "roslynkit-portability-regression"
 $childPath = Join-Path $testRoot "packages"
@@ -134,7 +240,10 @@ foreach ($claudeWrapperPath in $claudeWrapperPaths) {
 
     try {
         New-Item -ItemType Directory -Path $packagingTestRoot | Out-Null
-        $nativeContext = [pscustomobject]@{ DotNet = (Get-Command pwsh -ErrorAction Stop).Source }
+        $nativeContext = [pscustomobject]@{
+            DotNet = (Get-Command pwsh -ErrorAction Stop).Source
+            RepoRoot = $packagingTestRoot
+        }
         $quietOutput = @(& {
             $VerbosePreference = "SilentlyContinue"
             Invoke-DotNet -Context $nativeContext -Arguments @(
@@ -171,7 +280,7 @@ foreach ($claudeWrapperPath in $claudeWrapperPaths) {
             Assert-True -Condition $failureMessage.Contains($expectedText) -Message "Invoke-DotNet failure omitted '$expectedText'."
         }
 
-        foreach ($testScriptName in @("test-roslynkit-global.ps1", "test-roslynkit-commands.ps1")) {
+        foreach ($testScriptName in @("test-global.ps1", "test-commands.ps1")) {
             $tokens = $null
             $parseErrors = $null
             $scriptAst = [System.Management.Automation.Language.Parser]::ParseFile(
@@ -181,7 +290,7 @@ foreach ($claudeWrapperPath in $claudeWrapperPaths) {
             $parameterAttributes = ($scriptAst.ParamBlock.Attributes | ForEach-Object { $_.Extent.Text }) -join "`n"
             $bindingProbe = [scriptblock]::Create($parameterAttributes + "`n" + $scriptAst.ParamBlock.Extent.Text + "`nthrow 'Parameter probe body was reached.'")
             $probeArguments = @{ PrintManualCommands = $true }
-            if ($testScriptName -eq "test-roslynkit-commands.ps1") {
+            if ($testScriptName -eq "test-commands.ps1") {
                 $probeArguments.CommandPath = "unused-command"
             }
             $bindingFailure = @{ Error = $null }
@@ -210,7 +319,9 @@ foreach ($claudeWrapperPath in $claudeWrapperPaths) {
         $packagePath = Get-RoslynKitPackagePath -Context $context
         $validationRoot = Join-Path $context.RepoRoot "validation"
         $toolPath = Join-Path $validationRoot "tool"
-        $expectedCommandPath = Get-RoslynKitToolCommandPath -ToolPath $toolPath
+        $expectedCommandName = if ($IsWindows) { "roslynkit.exe" } else { "roslynkit" }
+        $expectedCommandPath = Join-Path $toolPath $expectedCommandName
+        Assert-True -Condition ((Get-RoslynKitToolCommandPath -ToolPath $toolPath) -ceq $expectedCommandPath) -Message "The RoslynKit tool command path did not use the platform executable name."
         $configPath = Join-Path $validationRoot "NuGet.Config"
         $sentinelPath = Join-Path $context.RepoRoot "preserved.txt"
         Set-Content -LiteralPath $sentinelPath -Value "preserved"

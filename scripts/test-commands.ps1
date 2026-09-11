@@ -11,97 +11,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-. (Join-Path $PSScriptRoot "RoslynKit.Packaging.ps1")
-
-function Invoke-CapturedProcess
-{
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$FilePath,
-        [Parameter(Mandatory = $true)]
-        [string[]]$Arguments,
-        [Parameter(Mandatory = $true)]
-        [string]$WorkingDirectory,
-        [Parameter(Mandatory = $true)]
-        [int]$TimeoutSeconds
-    )
-
-    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
-    $startInfo.FileName = $FilePath
-    $startInfo.WorkingDirectory = $WorkingDirectory
-    $startInfo.UseShellExecute = $false
-    $startInfo.CreateNoWindow = $true
-    $startInfo.RedirectStandardOutput = $true
-    $startInfo.RedirectStandardError = $true
-    foreach ($argument in $Arguments)
-    {
-        $startInfo.ArgumentList.Add($argument)
-    }
-
-    $process = [System.Diagnostics.Process]::new()
-    $process.StartInfo = $startInfo
-    try
-    {
-        if (-not $process.Start())
-        {
-            throw "Unable to start process '$FilePath'."
-        }
-
-        $standardOutputTask = $process.StandardOutput.ReadToEndAsync()
-        $standardErrorTask = $process.StandardError.ReadToEndAsync()
-        $timedOut = -not $process.WaitForExit($TimeoutSeconds * 1000)
-        if ($timedOut)
-        {
-            if (-not $process.HasExited)
-            {
-                $process.Kill($true)
-            }
-
-            $process.WaitForExit()
-        }
-
-        $standardOutput = $standardOutputTask.GetAwaiter().GetResult()
-        $standardError = $standardErrorTask.GetAwaiter().GetResult()
-        $exitCode = if ($timedOut) { -1 } else { $process.ExitCode }
-
-        return [pscustomobject]@{
-            ExitCode = $exitCode
-            TimedOut = $timedOut
-            StandardOutput = $standardOutput
-            StandardError = $standardError
-        }
-    }
-    finally
-    {
-        $process.Dispose()
-    }
-}
-
-function Assert-SetupCommandSucceeded
-{
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Description,
-        [Parameter(Mandatory = $true)]
-        [pscustomobject]$Result
-    )
-
-    if (-not $Result.TimedOut -and $Result.ExitCode -eq 0)
-    {
-        return
-    }
-
-    $reason = if ($Result.TimedOut)
-    {
-        "timed out"
-    }
-    else
-    {
-        "failed with exit code $($Result.ExitCode)"
-    }
-
-    throw "$Description $reason.`nstdout:`n$($Result.StandardOutput)`nstderr:`n$($Result.StandardError)"
-}
+. (Join-Path $PSScriptRoot "common/packaging.ps1")
 
 function Find-TextPosition
 {
@@ -130,25 +40,9 @@ function Find-TextPosition
     }
 }
 
-function Format-Invocation
-{
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$FilePath,
-        [Parameter(Mandatory = $true)]
-        [string[]]$Arguments
-    )
-
-    $quotedFilePath = "'$($FilePath.Replace("'", "''"))'"
-    $quotedArguments = $Arguments | ForEach-Object { "'$($_.Replace("'", "''"))'" }
-    return "& $quotedFilePath $($quotedArguments -join ' ')".TrimEnd()
-}
-
 function Invoke-RoslynKitCase
 {
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$Name,
         [Parameter(Mandatory = $true)]
         [string[]]$Arguments,
         [Parameter(Mandatory = $true)]
@@ -199,7 +93,7 @@ function Invoke-RoslynKitCase
     }
 
     return [pscustomobject]@{
-        Name = $Name
+        Name = $Arguments[0]
         Invocation = Format-Invocation -FilePath $resolvedCommandPath -Arguments $Arguments
         ExitCode = $result.ExitCode
         TimedOut = $result.TimedOut
@@ -250,7 +144,7 @@ $restoreResult = Invoke-CapturedProcess `
     -Arguments @("restore", $projectPath, "--nologo") `
     -WorkingDirectory $context.RepoRoot `
     -TimeoutSeconds $CommandTimeoutSeconds
-Assert-SetupCommandSucceeded -Description "Fixture restore" -Result $restoreResult
+Assert-ProcessSucceeded -Description "Fixture restore" -Result $restoreResult
 
 $sourceContent = Get-Content -LiteralPath $sourcePath -Raw
 $classPosition = Find-TextPosition -Content $sourceContent -Marker "public sealed partial class GeneratedMessageSource"
@@ -265,44 +159,34 @@ $signaturePosition = Find-TextPosition `
     -ColumnOffset "return source.GetMessage(".Length
 
 $commandCases = @(
-    [pscustomobject]@{
-        Name = "serve"
+    @{
         Arguments = @("serve", "--help")
         ExpectedText = @("command: serve", "--max-workspaces")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "version"
+    @{
         Arguments = @("version")
         ExpectedText = @()
-        ExpectedPaths = @()
+        ExpectedCommandVersion = $ExpectedVersion
     }
-    [pscustomobject]@{
-        Name = "init"
+    @{
         Arguments = @("init", "--agent", "codex")
         ExpectedText = @("command: init")
         ExpectedPaths = @($initSkillPath)
     }
-    [pscustomobject]@{
-        Name = "workspace"
+    @{
         Arguments = @("workspace", "--target", $projectPath)
         ExpectedText = @("command: workspace", 'project: `App`')
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "diagnostics"
+    @{
         Arguments = @("diagnostics", "--target", $projectPath, "--max-results", "20")
         ExpectedText = @("command: diagnostics")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "index"
+    @{
         Arguments = @("index", "--target", $projectPath, "--index-path", $indexPath, "--rebuild")
         ExpectedText = @("command: index", "index-state: fresh", "rebuilt: true")
         ExpectedPaths = @($indexPath)
     }
-    [pscustomobject]@{
-        Name = "search"
+    @{
         Arguments = @(
             "search",
             "--target", $projectPath,
@@ -311,10 +195,8 @@ $commandCases = @(
             "--max-results", "50"
         )
         ExpectedText = @("command: search", "FixtureApp.ConfigurationValidator.ValidateConfiguration")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "symbols"
+    @{
         Arguments = @(
             "symbols",
             "--target", $projectPath,
@@ -323,16 +205,12 @@ $commandCases = @(
             "--kind", "class"
         )
         ExpectedText = @("command: symbols", "FixtureApp.GeneratedMessageSource")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "document-text"
+    @{
         Arguments = @("document-text", "--target", $projectPath, "--file", $sourcePath)
         ExpectedText = @("command: document-text", "public sealed partial class GeneratedMessageSource")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "document-lines"
+    @{
         Arguments = @(
             "document-lines",
             "--target", $projectPath,
@@ -341,26 +219,20 @@ $commandCases = @(
             "--end-line", ($classPosition.Line + 14).ToString()
         )
         ExpectedText = @("command: document-lines", "public sealed partial class GeneratedMessageSource")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "document-symbols"
+    @{
         Arguments = @("document-symbols", "--target", $projectPath, "--file", $sourcePath)
         ExpectedText = @("command: document-symbols", "T:FixtureApp.GeneratedMessageSource")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "definition"
+    @{
         Arguments = @(
             "definition",
             "--target", $projectPath,
             "--symbol", "T:FixtureApp.GeneratedMessageSource"
         )
         ExpectedText = @("command: definition", "FixtureApp.GeneratedMessageSource")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "type-definition"
+    @{
         Arguments = @(
             "type-definition",
             "--target", $projectPath,
@@ -369,10 +241,8 @@ $commandCases = @(
             "--column", $typePosition.Column.ToString()
         )
         ExpectedText = @("command: type-definition", "FixtureApp.IMessageSource")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "references"
+    @{
         Arguments = @(
             "references",
             "--target", $projectPath,
@@ -380,10 +250,8 @@ $commandCases = @(
             "--max-results", "10"
         )
         ExpectedText = @("command: references", "Source.cs")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "implementations"
+    @{
         Arguments = @(
             "implementations",
             "--target", $projectPath,
@@ -391,20 +259,16 @@ $commandCases = @(
             "--max-results", "10"
         )
         ExpectedText = @("command: implementations", "FixtureApp.GeneratedMessageSource")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "symbol-context"
+    @{
         Arguments = @(
             "symbol-context",
             "--target", $projectPath,
             "--symbol", "M:FixtureApp.Consumer.Run"
         )
         ExpectedText = @("command: symbol-context", "FixtureApp.Consumer.Run")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "quick-info"
+    @{
         Arguments = @(
             "quick-info",
             "--target", $projectPath,
@@ -413,10 +277,8 @@ $commandCases = @(
             "--column", $quickInfoPosition.Column.ToString()
         )
         ExpectedText = @("command: quick-info", "GetMessage")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "signature-help"
+    @{
         Arguments = @(
             "signature-help",
             "--target", $projectPath,
@@ -425,33 +287,28 @@ $commandCases = @(
             "--column", $signaturePosition.Column.ToString()
         )
         ExpectedText = @("command: signature-help", "- signature:", "GetMessage")
-        ExpectedPaths = @()
     }
-    [pscustomobject]@{
-        Name = "symbol-source"
+    @{
         Arguments = @(
             "symbol-source",
             "--target", $projectPath,
             "--symbol", "M:FixtureApp.Consumer.Run"
         )
         ExpectedText = @("command: symbol-source", "public string Run()")
-        ExpectedPaths = @()
     }
 )
 
 $results = [System.Collections.Generic.List[object]]::new()
 $helpResult = Invoke-RoslynKitCase `
-    -Name "help" `
     -Arguments @("help") `
-    -ExpectedText @("tool: roslynkit", "- command:") `
-    -ExpectedPaths @()
+    -ExpectedText @("tool: roslynkit", "- command:")
 $results.Add($helpResult)
 
 $discoveredCommands = @(
     [Regex]::Matches($helpResult.StandardOutput, '(?m)^- command: `([^`]+)`') |
         ForEach-Object { $_.Groups[1].Value }
 )
-$caseNames = @($commandCases | ForEach-Object { $_.Name })
+$caseNames = @($commandCases | ForEach-Object { $_.Arguments[0] })
 $missingCases = @($discoveredCommands | Where-Object { $_ -notin $caseNames })
 $staleCases = @($caseNames | Where-Object { $_ -notin $discoveredCommands })
 
@@ -480,14 +337,8 @@ $results.Add([pscustomobject]@{
 Write-Host "Testing $($discoveredCommands.Count) RoslynKit commands..."
 foreach ($commandCase in $commandCases)
 {
-    Write-Verbose "Testing roslynkit $($commandCase.Name)..."
-    $caseExpectedVersion = if ($commandCase.Name -eq "version") { $ExpectedVersion } else { $null }
-    $caseResult = Invoke-RoslynKitCase `
-        -Name $commandCase.Name `
-        -Arguments $commandCase.Arguments `
-        -ExpectedText $commandCase.ExpectedText `
-        -ExpectedCommandVersion $caseExpectedVersion `
-        -ExpectedPaths $commandCase.ExpectedPaths
+    Write-Verbose "Testing roslynkit $($commandCase.Arguments[0])..."
+    $caseResult = Invoke-RoslynKitCase @commandCase
     $results.Add($caseResult)
 }
 
