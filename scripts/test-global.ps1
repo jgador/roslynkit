@@ -10,6 +10,7 @@ $context = Get-RoslynKitToolingContext -ScriptPath $PSCommandPath
 $globalCommandPath = Get-RoslynKitGlobalToolCommandPath
 $validationRoot = Join-Path $context.RepoRoot "artifacts/global-command-validation/roslynkit"
 
+# Reject a stale global command before spending time on the complete smoke suite.
 Assert-RoslynKitCommandVersion `
     -CommandPath $globalCommandPath `
     -ExpectedVersion $context.PackageVersion

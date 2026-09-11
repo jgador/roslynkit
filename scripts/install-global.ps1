@@ -1,3 +1,4 @@
+# Check an isolated installation of the local package before replacing the global tool.
 [CmdletBinding()]
 param()
 
@@ -14,9 +15,11 @@ Write-Host "Installing RoslynKit $($context.PackageVersion) from the local packa
 $validation = Invoke-RoslynKitPackageValidation -Context $context -ValidationRoot $validationRoot -Action {
     param($installation)
 
+    # The staged version check passed; select the caller's tool home while keeping the isolated package cache.
     $env:DOTNET_CLI_HOME = $installation.OriginalDotNetCliHome
     if (-not [string]::IsNullOrWhiteSpace($env:DOTNET_CLI_HOME))
     {
+        # Anchor relative overrides here before dotnet runs with the checkout as its working directory.
         $env:DOTNET_CLI_HOME = Resolve-FullPath $env:DOTNET_CLI_HOME
     }
     $toolList = Invoke-DotNet -Context $context -Arguments @("tool", "list", "--global", "--format", "json") -PassThru |

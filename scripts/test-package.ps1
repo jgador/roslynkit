@@ -11,6 +11,7 @@ $validationRoot = Join-Path $context.RepoRoot "artifacts/package-validation/rosl
 $commandTestScript = Join-Path $PSScriptRoot "test-commands.ps1"
 
 Write-Host "Testing RoslynKit $($context.PackageVersion) from the local package..."
+# Run the suite through the staged executable so it checks the packaged tool and its bundled files.
 $validation = Invoke-RoslynKitPackageValidation -Context $context -ValidationRoot $validationRoot -Action {
     param($installation)
 

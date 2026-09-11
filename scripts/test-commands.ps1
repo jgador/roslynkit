@@ -1,3 +1,4 @@
+# Check every command listed by runtime help and report failures together.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
@@ -23,6 +24,7 @@ function Find-TextPosition
         [int]$ColumnOffset
     )
 
+    # Derive one-based positions from fixture text so edits above a marker do not break navigation checks.
     $index = $Content.IndexOf($Marker, [System.StringComparison]::Ordinal)
     if ($index -lt 0)
     {
@@ -57,6 +59,7 @@ function Invoke-RoslynKitCase
         -Arguments $Arguments `
         -WorkingDirectory $fixtureRoot `
         -TimeoutSeconds $CommandTimeoutSeconds
+    # Collect failed expectations instead of throwing, allowing the remaining command cases to run.
     $reasons = [System.Collections.Generic.List[string]]::new()
 
     if ($result.TimedOut)
@@ -136,9 +139,11 @@ $sourcePath = Join-Path $context.RepoRoot "tests/FixtureWorkspace/App/Source.cs"
 $indexPath = Join-Path $resolvedValidationRoot "roslynkit.db"
 $initSkillPath = Join-Path $fixtureRoot ".agents/skills/roslynkit/SKILL.md"
 
+# A real repository marker lets default repository discovery run without modifying this checkout.
 New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $fixtureRoot ".git") -Force | Out-Null
 
+# Restore once so case failures describe command behavior instead of missing dependencies.
 $restoreResult = Invoke-CapturedProcess `
     -FilePath $context.DotNet `
     -Arguments @("restore", $projectPath, "--nologo") `
@@ -158,6 +163,7 @@ $signaturePosition = Find-TextPosition `
     -Marker "return source.GetMessage(" `
     -ColumnOffset "return source.GetMessage(".Length
 
+# Case names come from Arguments[0], keeping this list comparable with runtime help.
 $commandCases = @(
     @{
         Arguments = @("serve", "--help")
@@ -308,6 +314,7 @@ $discoveredCommands = @(
     [Regex]::Matches($helpResult.StandardOutput, '(?m)^- command: `([^`]+)`') |
         ForEach-Object { $_.Groups[1].Value }
 )
+# Runtime help is the command inventory; this detects missing and stale smoke cases.
 $caseNames = @($commandCases | ForEach-Object { $_.Arguments[0] })
 $missingCases = @($discoveredCommands | Where-Object { $_ -notin $caseNames })
 $staleCases = @($caseNames | Where-Object { $_ -notin $discoveredCommands })
@@ -353,6 +360,7 @@ Write-Host "RoslynKit commands passed: $passedCommands/$($discoveredCommands.Cou
 
 if ($failures.Count -gt 0)
 {
+    # Emit every captured failure before throwing so one run provides the full diagnosis.
     Write-Host ""
     Write-Host "Failures:"
     foreach ($failure in $failures)

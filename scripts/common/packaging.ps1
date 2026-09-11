@@ -1,3 +1,4 @@
+# Shared path, build, and isolated-install helpers for the scripts in the parent directory.
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -10,6 +11,7 @@ function Get-RoslynKitToolingContext
         [string]$ScriptPath
     )
 
+    # Anchor paths to the calling script in scripts/, regardless of the current directory or this helper's location.
     $scriptsRoot = Split-Path -Parent $ScriptPath
     $repoRoot = (Resolve-Path -LiteralPath (Join-Path $scriptsRoot "..")).Path
     $dotnet = (Get-Command dotnet -ErrorAction Stop).Source
@@ -90,6 +92,7 @@ function Get-RoslynKitToolCommandPath
 
 function Get-RoslynKitGlobalToolPath
 {
+    # Match dotnet's global tool home, including an explicit DOTNET_CLI_HOME override.
     $globalToolHome = if ([string]::IsNullOrWhiteSpace($env:DOTNET_CLI_HOME))
     {
         [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
@@ -119,6 +122,7 @@ function Resolve-FullPath
         [string]$Path
     )
 
+    # Resolve from Set-Location even when the target does not exist yet; .NET's current directory can lag behind.
     return $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
 }
 
@@ -134,6 +138,7 @@ function Write-RoslynKitLocalNuGetConfig
     $configDirectory = Split-Path -Parent $ConfigPath
     New-Item -ItemType Directory -Path $configDirectory -Force | Out-Null
 
+    # Escape feed paths containing characters such as '&'; clear inherited feeds to select only local packages.
     $escapedPackageFeedPath = [System.Security.SecurityElement]::Escape($PackageFeedPath)
     $nugetConfig = @"
 <?xml version="1.0" encoding="utf-8"?>
@@ -162,6 +167,8 @@ function Assert-RoslynKitPrereleaseVersion
 
 function Assert-PathUnderRoot
 {
+    # Check both directory boundaries and link targets before recursive cleanup.
+    # The target may not exist yet, but its existing parents must still stay inside the root.
     param(
         [Parameter(Mandatory = $true)]
         [string]$Path,
@@ -176,6 +183,7 @@ function Assert-PathUnderRoot
     $normalizedRoot = Resolve-FullPath $RootPath
     $normalizedPath = Resolve-FullPath $Path
 
+    # Normalize trailing separators without stripping the separator from a filesystem root.
     $rootVolume = [System.IO.Path]::GetPathRoot($normalizedRoot)
     if ($normalizedRoot.Length -gt $rootVolume.Length)
     {
@@ -193,6 +201,7 @@ function Assert-PathUnderRoot
         throw "$Label cannot target the protected root path $normalizedRoot."
     }
 
+    # Include a directory separator so a sibling such as 'artifacts-old' cannot match 'artifacts'.
     $rootBoundary = if ($normalizedRoot.EndsWith([System.IO.Path]::DirectorySeparatorChar.ToString(), [System.StringComparison]::Ordinal) -or
         $normalizedRoot.EndsWith([System.IO.Path]::AltDirectorySeparatorChar.ToString(), [System.StringComparison]::Ordinal))
     {
@@ -208,6 +217,7 @@ function Assert-PathUnderRoot
         throw "$Label must stay under $normalizedRoot, but resolved to $normalizedPath."
     }
 
+    # Check existing ancestors too: a missing final directory may sit below a link that escapes the root.
     $relativePath = $normalizedPath.Substring($rootBoundary.Length)
     $currentPath = $normalizedRoot
     foreach ($pathSegment in ($relativePath -split '[\\/]'))
@@ -266,6 +276,7 @@ function Reset-Directory
         [string]$Label
     )
 
+    # Validate before either deletion or creation, since both operations can follow directory links.
     Assert-PathUnderRoot -Path $Path -RootPath $RootPath -Label $Label
 
     if (Test-Path -LiteralPath $Path)
@@ -293,6 +304,7 @@ function Prepare-RoslynKitPackageFeed
 
     if ($ResetFeed)
     {
+        # Clearing the whole feed is allowed only below this checkout.
         Reset-Directory -Path $resolvedPackageFeedPath -RootPath $Context.RepoRoot -Label $Label
         return $resolvedPackageFeedPath
     }
@@ -304,6 +316,7 @@ function Prepare-RoslynKitPackageFeed
 
     New-Item -ItemType Directory -Path $resolvedPackageFeedPath -Force | Out-Null
 
+    # Without a full reset, remove only the requested version before packing its replacement.
     if (-not [string]::IsNullOrWhiteSpace($Version))
     {
         $packagePath = Get-RoslynKitPackagePath -Context $Context -Version $Version -PackageFeedPath $resolvedPackageFeedPath
@@ -326,11 +339,13 @@ function Invoke-DotNet
         [switch]$PassThru
     )
 
+    # Run from the checkout to use the .NET Software Development Kit (SDK) selected by global.json.
     $result = Invoke-CapturedProcess -FilePath $Context.DotNet -Arguments $Arguments -WorkingDirectory $Context.RepoRoot
     Assert-ProcessSucceeded -Description "dotnet $($Arguments -join ' ')" -Result $result
 
     if ($PassThru)
     {
+        # Return only standard output so warnings cannot corrupt parsed JSON.
         return $result.StandardOutput
     }
 }
@@ -344,6 +359,7 @@ function Test-RoslynKitCommandVersionOutput
         [string]$ExpectedVersion
     )
 
+    # The executable can append build metadata (+...) to the exact NuGet package version.
     $escapedExpectedVersion = [Regex]::Escape($ExpectedVersion)
     $versionPattern = "\Aroslynkit version $escapedExpectedVersion(?:\+[0-9A-Za-z.-]+)?\z"
     return [Regex]::IsMatch(
@@ -441,6 +457,8 @@ function Assert-RoslynKitPackageExists
 
 function Invoke-RoslynKitPackageValidation
 {
+    # Install the exact local package, run the caller's checks, then verify its bytes are unchanged.
+    # Restore the caller's environment even if installation or checks fail.
     param(
         [Parameter(Mandatory = $true)]
         [pscustomobject]$Context,
@@ -459,6 +477,7 @@ function Invoke-RoslynKitPackageValidation
     $nugetConfigPath = Join-Path $ValidationRoot "NuGet.Config"
     Write-RoslynKitLocalNuGetConfig -PackageFeedPath $Context.PackageFeedPath -ConfigPath $nugetConfigPath
 
+    # Fresh caches prevent a previously installed copy of the same version from satisfying this check.
     $environment = @{
         NUGET_PACKAGES = (Join-Path $ValidationRoot "nuget-packages")
         DOTNET_CLI_HOME = (Join-Path $ValidationRoot "dotnet-cli-home")
@@ -492,13 +511,15 @@ function Invoke-RoslynKitPackageValidation
         $commandPath = Get-RoslynKitToolCommandPath -ToolPath $toolPath
         Assert-RoslynKitCommandVersion -CommandPath $commandPath -ExpectedVersion $Context.PackageVersion
 
-        # Keep the isolated cache active while the caller tests or promotes the staged package.
+        # Keep the isolated cache active while the caller tests or globally installs the package.
+        # Discard callback output so this helper returns only the validated package details.
         & $Action ([pscustomobject]@{
             CommandPath = $commandPath
             NuGetConfigPath = $nugetConfigPath
             OriginalDotNetCliHome = $previousEnvironment["DOTNET_CLI_HOME"]
         }) | Out-Null
 
+        # Compare against the starting hash before returning the validated package details.
         if ((Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash -ne $packageHash)
         {
             throw "The package changed during validation: $packagePath"
@@ -512,6 +533,7 @@ function Invoke-RoslynKitPackageValidation
     }
     finally
     {
+        # Restore absent variables as absent; an empty value can change dotnet's home/cache defaults.
         foreach ($name in $previousEnvironment.Keys)
         {
             if ($null -eq $previousEnvironment[$name])

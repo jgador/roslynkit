@@ -1,3 +1,4 @@
+# Keep prerelease development builds in a tool path separate from the global command.
 [CmdletBinding()]
 param(
     [string]$Version,
@@ -61,6 +62,7 @@ Write-Host "requested version: $Version"
 Write-Host "mode: side-by-side prerelease tool-path build, pack, and install or update"
 Write-Host ""
 
+# Build and pack immediately before installation so the selected version cannot use a stale feed artifact.
 Invoke-RoslynKitBuild -Context $context
 Invoke-RoslynKitPack -Context $context -PackageFeedPath $resolvedPackageFeedPath -Version $Version
 Assert-RoslynKitPackageExists -Context $context -Version $Version -PackageFeedPath $resolvedPackageFeedPath

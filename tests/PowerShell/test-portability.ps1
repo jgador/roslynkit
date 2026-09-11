@@ -1,3 +1,4 @@
+# Exercise Windows/Linux process and path behavior without building or installing RoslynKit.
 [CmdletBinding()]
 param()
 
@@ -30,6 +31,7 @@ function Assert-Throws {
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "../..")).Path
 . (Join-Path $repoRoot "scripts/common/packaging.ps1")
 
+# Real child processes expose quoting and stream bugs that a mocked invocation would hide.
 & {
     $processTestRoot = Join-Path $repoRoot ("artifacts/process-regression/" + [Guid]::NewGuid())
     $powerShellLocation = Join-Path $processTestRoot "PowerShell location [with spaces]"
@@ -46,6 +48,7 @@ $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "../..")).Path
 [Console]::Error.WriteLine("roundtrip-stderr")
 '@
 
+        # Deliberately diverge the two working directories to catch relative-path regressions.
         Set-Location -LiteralPath $powerShellLocation
         [Environment]::CurrentDirectory = $environmentCurrentDirectory
 
@@ -106,6 +109,7 @@ $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "../..")).Path
             Assert-True -Condition $nonzeroFailure.Error.Exception.Message.Contains($expectedText) -Message "Assert-ProcessSucceeded omitted '$expectedText' from a nonzero failure."
         }
 
+        # A finite child sleep also bounds the test if timeout termination stops working.
         $timeoutStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         $timeoutResult = Invoke-CapturedProcess `
             -FilePath (Get-Command pwsh -ErrorAction Stop).Source `
@@ -136,6 +140,7 @@ $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "../..")).Path
     }
 }
 
+# Cleanup must reject the protected root, similarly named siblings, and links leading outside it.
 $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) "roslynkit-portability-regression"
 $childPath = Join-Path $testRoot "packages"
 $siblingPath = "$testRoot-sibling"
@@ -171,6 +176,7 @@ try {
             throw
         }
 
+        # Windows junctions exercise the same boundary when symbolic-link privileges are unavailable.
         New-Item -ItemType Junction -Path $reparsePath -Target $outsideRoot | Out-Null
     }
 
@@ -193,6 +199,7 @@ finally {
     }
 }
 
+# Keep checked-in agent command examples compatible with the shells used on both platforms.
 $agentsInstructions = Get-Content -Raw -LiteralPath (Join-Path $repoRoot "AGENTS.md")
 Assert-True -Condition $agentsInstructions.Contains("pwsh -Command 'Get-Content AGENTS.md'") -Message "The agent instructions did not provide an explicit pwsh wrapper for PowerShell cmdlets under WSL or Linux."
 
@@ -224,6 +231,7 @@ foreach ($claudeWrapperPath in $claudeWrapperPaths) {
     Assert-False -Condition $claudeWrapper.Contains('!`powershell.exe -NoProfile -Command "Get-Content') -Message "$claudeWrapperPath retained the Windows-only PowerShell host."
 }
 
+# Scope replacements locally so failure scenarios exercise validation without running dotnet tool install.
 & {
     $packagingTestRoot = Join-Path $repoRoot ("artifacts/packaging-regression/" + [Guid]::NewGuid())
     $environmentNames = @(
@@ -379,6 +387,7 @@ foreach ($claudeWrapperPath in $claudeWrapperPaths) {
             }
         }
 
+        # Every exit path must preserve files outside staging and restore the caller's environment.
         foreach ($scenario in @("success", "install-failure", "version-rejection", "callback-failure", "package-mutation")) {
             $state = @{ Scenario = $scenario; InstallCalls = 0; VersionCalls = 0; CallbackCalls = 0; Error = $null }
             Set-Content -LiteralPath $packagePath -Value "original package"

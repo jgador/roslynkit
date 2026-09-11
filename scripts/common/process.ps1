@@ -1,3 +1,4 @@
+# Native-process execution shared by packaging and command tests.
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -23,6 +24,7 @@ function Invoke-CapturedProcess
     $startInfo.CreateNoWindow = $true
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
+    # Let .NET encode each argument for the platform, preserving empty values and embedded quotes.
     foreach ($argument in $Arguments)
     {
         $startInfo.ArgumentList.Add($argument)
@@ -37,11 +39,13 @@ function Invoke-CapturedProcess
             throw "Unable to start process '$FilePath'."
         }
 
+        # Drain both pipes while the command runs so a full pipe cannot block it from exiting.
         $standardOutputTask = $process.StandardOutput.ReadToEndAsync()
         $standardErrorTask = $process.StandardError.ReadToEndAsync()
         $timedOut = $false
         if ($TimeoutSeconds -eq 0)
         {
+            # Packaging operations can opt out of the command-test timeout.
             $process.WaitForExit()
         }
         elseif (-not $process.WaitForExit($TimeoutSeconds * 1000))
@@ -49,10 +53,12 @@ function Invoke-CapturedProcess
             $timedOut = $true
             try
             {
+                # Include child processes so a timed-out command does not leave build workers running.
                 $process.Kill($true)
             }
             catch [System.InvalidOperationException]
             {
+                # The process may finish between the timeout check and Kill.
                 if (-not $process.HasExited)
                 {
                     throw
@@ -62,6 +68,7 @@ function Invoke-CapturedProcess
             $process.WaitForExit()
         }
 
+        # Return failures as data so the command suite can finish collecting results before failing.
         return [pscustomobject]@{
             ExitCode = if ($timedOut) { -1 } else { $process.ExitCode }
             TimedOut = $timedOut
@@ -90,6 +97,7 @@ function Assert-ProcessSucceeded
         throw "$Description $reason.`nstdout:`n$($Result.StandardOutput)`nstderr:`n$($Result.StandardError)"
     }
 
+    # Successful output stays on the verbose stream to keep the caller's return values clean.
     foreach ($output in @($Result.StandardOutput, $Result.StandardError))
     {
         if (-not [string]::IsNullOrWhiteSpace($output))
@@ -101,6 +109,7 @@ function Assert-ProcessSucceeded
 
 function Format-Invocation
 {
+    # This is a PowerShell-readable diagnostic; process execution uses the original argument array.
     param(
         [Parameter(Mandatory = $true)]
         [string]$FilePath,
